@@ -1,0 +1,18 @@
+// Copyright (c) Abstract Machines
+syntax = "proto3";
+
+package absmach.certs;
+
+option go_package = "./certs";
+
+service CertsService {
+  rpc GetEntityID(entityReq) returns (entityRes) {}
+}
+
+message entityReq {
+  string serial_number = 1;
+}
+
+message entityRes {
+  string entity_id = 1;
+}
