@@ -23,38 +23,36 @@ func TestCreateCert(t *testing.T) {
 	id, err := idProvider.ID()
 	require.NoError(t, err)
 
+	// nonExistentEntityID, err := idProvider.ID()
+	// require.NoError(t, err)
+
 	serialNumber := big.NewInt(25)
 	serialNumber2 := big.NewInt(26)
 
 	testCases := []struct {
-		description string
+		desc string
 		cert        certs.Certificate
 		err         error
 	}{
 		{
-			description: "successful save",
+			desc: "successful save",
 			cert:        certs.Certificate{SerialNumber: serialNumber.String(), Certificate: []byte("cert"), Key: []byte("key"), EntityID: id, Revoked: false, ExpiryDate: time.Now()},
 			err:         nil,
 		},
 		{
-			description: "save with violating foreign key",
+			desc: "save with violating foreign key",
 			cert:        certs.Certificate{SerialNumber: serialNumber2.String(), Certificate: []byte("cert"), Key: []byte("key"), EntityID: id, Revoked: false, ExpiryDate: time.Now()},
 			err:         service.ErrConflict,
 		},
 		{
-			description: "save with invalid backend id",
+			desc: "save with invalid backend id",
 			cert:        certs.Certificate{SerialNumber: serialNumber.String(), Certificate: []byte("cert"), Key: []byte("key"), EntityID: "invalid", Revoked: false, ExpiryDate: time.Now()},
 			err:         service.ErrConflict,
 		},
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.description, func(t *testing.T) {
-			if tc.description == "save with violating foreign key" {
-				err := repo.CreateCert(context.Background(), certs.Certificate{SerialNumber: serialNumber2.String(), Certificate: []byte("cert"), Key: []byte("key"), EntityID: id, Revoked: false, ExpiryDate: time.Now()})
-				assert.NoError(t, err)
-			}
-
+		t.Run(tc.desc, func(t *testing.T) {
 			err := repo.CreateCert(context.Background(), tc.cert)
 			assert.True(t, errors.Contains(err, tc.err), "expected %v, got %v", tc.err, err)
 		})
@@ -75,24 +73,24 @@ func TestGetCert(t *testing.T) {
 	require.NoError(t, err)
 
 	testCases := []struct {
-		description string
+		desc string
 		id          string
 		err         error
 	}{
 		{
-			description: "successful view",
+			desc: "successful view",
 			id:          serialNumber.String(),
 			err:         nil,
 		},
 		{
-			description: "view with invalid id",
+			desc: "view with invalid id",
 			id:          invalidId,
 			err:         service.ErrNotFound,
 		},
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.description, func(t *testing.T) {
+		t.Run(tc.desc, func(t *testing.T) {
 			_, err := repo.RetrieveCert(context.Background(), tc.id)
 			assert.True(t, errors.Contains(err, tc.err), "expected %v, got %v", tc.err, err)
 		})
@@ -151,21 +149,22 @@ func TestListCerts(t *testing.T) {
 	}
 
 	testCases := []struct {
-		description string
+		desc string
+		userId      string
 		limit       uint64
 		offset      uint64
 		total       int
 		err         error
 	}{
 		{
-			description: "successful list",
+			desc: "successful list",
 			limit:       10,
 			offset:      0,
 			total:       10,
 			err:         nil,
 		},
 		{
-			description: "offset 20",
+			desc: "offset 20",
 			limit:       10,
 			offset:      20,
 			total:       5,
@@ -174,8 +173,8 @@ func TestListCerts(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.description, func(t *testing.T) {
-			_, err := repo.ListCerts(context.Background(), certs.PageMetadata{Limit: tc.limit, Offset: tc.offset})
+		t.Run(tc.desc, func(t *testing.T) {
+			_, err := repo.ListCerts(context.Background(),tc.userId, certs.PageMetadata{Limit: tc.limit, Offset: tc.offset})
 			assert.True(t, errors.Contains(err, tc.err), "expected %v, got %v", tc.err, err)
 		})
 	}

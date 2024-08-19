@@ -138,7 +138,7 @@ func main() {
 
 func newService(ctx context.Context, db *sqlx.DB, tracer trace.Tracer, logger *slog.Logger, dbConfig pgClient.Config, rootCA, rootCAKey string) (certs.Service, error) {
 	database := postgres.NewDatabase(db, dbConfig, tracer)
-	repo := cpostgres.NewRepository(database, logger)
+	repo := cpostgres.NewRepository(database)
 	svc, err := certs.NewService(ctx, repo, rootCA, rootCAKey)
 	if err != nil {
 		return nil, err

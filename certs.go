@@ -24,8 +24,8 @@ type Certificate struct {
 	DownloadUrl  string     `db:"-"`
 	CreatedBy    string     `db:"created_by"`
 	CreatedAt    time.Time  `db:"created_at"`
-	UpdatedBy    string     `db:"updated_by"`
-	UpdatedAt    time.Time  `db:"updated_at"`
+	UpdatedBy    *string     `db:"updated_by"`
+	UpdatedAt    *time.Time  `db:"updated_at"`
 }
 
 type CertificatePage struct {

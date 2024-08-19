@@ -145,8 +145,9 @@ func (s *service) RevokeCert(ctx context.Context, userId, serialNumber string) e
 	}
 	cert.Revoked = true
 	cert.ExpiryDate = time.Now()
-	cert.UpdatedBy = userId
-	cert.UpdatedAt = time.Now()
+	cert.UpdatedBy = &userId
+	now := time.Now()
+	cert.UpdatedAt = &now
 	return s.repo.UpdateCert(ctx, cert)
 }
 
@@ -222,8 +223,9 @@ func (s *service) RenewCert(ctx context.Context, userId, serialNumber string) er
 	}
 	cert.Certificate = pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: newCertBytes})
 	cert.ExpiryDate = oldCert.NotAfter
-	cert.UpdatedBy = userId
-	cert.UpdatedAt = time.Now()
+	cert.UpdatedBy = &userId
+	now := time.Now()
+	cert.UpdatedAt = &now
 	return s.repo.UpdateCert(ctx, cert)
 }
 

@@ -5,7 +5,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log/slog"
 
 	"github.com/absmach/certs"
 	"github.com/absmach/certs/internal/postgres"
@@ -33,13 +32,11 @@ var (
 
 type certsRepo struct {
 	db  postgres.Database
-	log *slog.Logger
 }
 
-func NewRepository(db postgres.Database, log *slog.Logger) certs.Repository {
+func NewRepository(db postgres.Database) certs.Repository {
 	return certsRepo{
 		db:  db,
-		log: log,
 	}
 }
 
@@ -89,13 +86,19 @@ func (repo certsRepo) ListCerts(ctx context.Context, userId string, pm certs.Pag
 	q := `SELECT serial_number, revoked, expiry_date, entity_id FROM certs %s LIMIT :limit OFFSET :offset`
 
 	if pm.EntityID != "" {
-		q = fmt.Sprintf(q, "WHERE entity_id = :entity_id AND created_by = $1")
+		q = fmt.Sprintf(q, "WHERE entity_id = :entity_id AND created_by = :created_by")
 	} else {
 		q = fmt.Sprintf(q, "")
 	}
 	var certificates []certs.Certificate
 
-	rows, err := repo.db.QueryxContext(ctx, q, userId, pm)
+	params := map[string]interface{}{
+        "limit":      pm.Limit,
+        "offset":     pm.Offset,
+        "entity_id":  pm.EntityID,
+        "created_by": userId,
+    }
+	rows, err := repo.db.NamedQueryContext(ctx, q, params)
 	if err != nil {
 		return certs.CertificatePage{}, HandleError(err, service.ErrViewEntity)
 	}
@@ -111,7 +114,7 @@ func (repo certsRepo) ListCerts(ctx context.Context, userId string, pm certs.Pag
 	}
 
 	q = `SELECT COUNT(*) FROM certs LIMIT :limit OFFSET :offset`
-	pm.Total, err = repo.total(ctx, q, pm)
+	pm.Total, err = repo.total(ctx, q, params)
 	if err != nil {
 		return certs.CertificatePage{}, errors.Wrap(service.ErrViewEntity, err)
 	}
