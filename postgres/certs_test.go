@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/absmach/certs"
-	"github.com/absmach/magistrala/pkg/errors"
+	"github.com/absmach/certs/pkg/errors"
 	"github.com/absmach/magistrala/pkg/errors/service"
 	"github.com/absmach/magistrala/pkg/ulid"
 	"github.com/stretchr/testify/assert"

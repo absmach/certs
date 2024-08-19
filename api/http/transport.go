@@ -10,9 +10,8 @@ import (
 	"strings"
 
 	"github.com/absmach/certs"
-	"github.com/absmach/magistrala"
-	"github.com/absmach/magistrala/pkg/api"
-	"github.com/absmach/magistrala/pkg/apiutil"
+	"github.com/absmach/certs/pkg/apiutil"
+	"github.com/absmach/certs/internal/api"
 	"github.com/go-chi/chi"
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -86,7 +85,7 @@ func MakeHandler(r *chi.Mux, svc certs.Service, logger *slog.Logger, instanceID 
 		).ServeHTTP)
 	})
 
-	r.Get("/health", magistrala.Health("computations", instanceID))
+	r.Get("/health", certs.Health("computations", instanceID))
 	r.Handle("/metrics", promhttp.Handler())
 
 	return r
@@ -94,7 +93,7 @@ func MakeHandler(r *chi.Mux, svc certs.Service, logger *slog.Logger, instanceID 
 
 func decodeView(_ context.Context, r *http.Request) (interface{}, error) {
 	req := viewReq{
-		token: apiutil.ExtractBearerToken(r),
+		userId: chi.URLParam(r, "userId"),
 		id:    chi.URLParam(r, "id"),
 	}
 	return req, nil
@@ -106,7 +105,7 @@ func decodeDownloadCerts(_ context.Context, r *http.Request) (interface{}, error
 		return nil, err
 	}
 	req := viewReq{
-		token: token,
+		userId: token,
 		id:    chi.URLParam(r, "id"),
 	}
 
@@ -149,7 +148,7 @@ func decodeIssueCert(_ context.Context, r *http.Request) (interface{}, error) {
 		return nil, err
 	}
 	req := issueCertReq{
-		token:      apiutil.ExtractBearerToken(r),
+		userId:     chi.URLParam(r, "userId"),
 		entityID:   chi.URLParam(r, "entityID"),
 		entityType: chi.URLParam(r, "entityType"),
 	}
@@ -161,12 +160,12 @@ func decodeIssueCert(_ context.Context, r *http.Request) (interface{}, error) {
 }
 
 func decodeListCerts(_ context.Context, r *http.Request) (interface{}, error) {
-	o, err := apiutil.ReadUintQuery(r, offsetKey, defOffset)
+	o, err := apiutil.ReadNumQuery[uint64](r, offsetKey, defOffset)
 	if err != nil {
 		return nil, err
 	}
 
-	l, err := apiutil.ReadUintQuery(r, limitKey, defLimit)
+	l, err := apiutil.ReadNumQuery[uint64](r, limitKey, defLimit)
 	if err != nil {
 		return nil, err
 	}
@@ -177,7 +176,7 @@ func decodeListCerts(_ context.Context, r *http.Request) (interface{}, error) {
 	}
 
 	req := listCertsReq{
-		token: apiutil.ExtractBearerToken(r),
+		userId: chi.URLParam(r, "userId"),
 		pm: certs.PageMetadata{
 			Offset:   o,
 			Limit:    l,

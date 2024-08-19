@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"log/slog"
+	"net/url"
 	"os"
 	"time"
 
@@ -13,17 +14,16 @@ import (
 	"github.com/absmach/certs/api"
 	certsgrpc "github.com/absmach/certs/api/grpc"
 	httpapi "github.com/absmach/certs/api/http"
+	jaegerClient "github.com/absmach/certs/internal/jaeger"
+	"github.com/absmach/certs/internal/postgres"
+	pgClient "github.com/absmach/certs/internal/postgres"
+	"github.com/absmach/certs/internal/prometheus"
+	"github.com/absmach/certs/internal/server"
+	grpcserver "github.com/absmach/certs/internal/server/grpc"
+	httpserver "github.com/absmach/certs/internal/server/http"
+	"github.com/absmach/certs/internal/uuid"
 	cpostgres "github.com/absmach/certs/postgres"
 	"github.com/absmach/certs/tracing"
-	"github.com/absmach/magistrala"
-	"github.com/absmach/magistrala/pkg/auth"
-	jaegerClient "github.com/absmach/magistrala/pkg/clients/jaeger"
-	pgClient "github.com/absmach/magistrala/pkg/clients/postgres"
-	"github.com/absmach/magistrala/pkg/postgres"
-	"github.com/absmach/magistrala/pkg/server"
-	grpcserver "github.com/absmach/magistrala/pkg/server/grpc"
-	httpserver "github.com/absmach/magistrala/pkg/server/http"
-	"github.com/absmach/magistrala/pkg/uuid"
 	"github.com/caarlos0/env/v10"
 	"github.com/go-chi/chi"
 	"github.com/jmoiron/sqlx"
@@ -45,11 +45,11 @@ const (
 )
 
 type config struct {
-	LogLevel   string `env:"AM_COMPUTATIONS_LOG_LEVEL"     envDefault:"info"`
-	JaegerURL  string `env:"AM_JAEGER_URL"                 envDefault:"http://jaeger:4318"`
-	InstanceID string `env:"AM_COMPUTATIONS_INSTANCE_ID"   envDefault:""`
-	CAKey      string `env:"AM_CERTS_CA_KEY" envDefault:""`
-	CACert     string `env:"AM_CERTS_CA_CERT" envDefault:""`
+	LogLevel   string  `env:"AM_COMPUTATIONS_LOG_LEVEL"     envDefault:"info"`
+	JaegerURL  url.URL `env:"AM_JAEGER_URL"                 envDefault:"http://jaeger:4318"`
+	InstanceID string  `env:"AM_COMPUTATIONS_INSTANCE_ID"   envDefault:""`
+	CAKey      string  `env:"AM_CERTS_CA_KEY" envDefault:""`
+	CACert     string  `env:"AM_CERTS_CA_CERT" envDefault:""`
 }
 
 func main() {
@@ -73,7 +73,11 @@ func main() {
 		}
 	}
 
-	db, err := pgClient.Setup(envPrefix, *cpostgres.Migration())
+	dbConfig := pgClient.Config{Name: defDB}
+	if err := env.ParseWithOptions(&dbConfig, env.Options{Prefix: envPrefix}); err != nil {
+		logger.Error(err.Error())
+	}
+	db, err := pgClient.Setup(dbConfig, *cpostgres.Migration())
 	if err != nil {
 		log.Fatalf(fmt.Sprintf("Failed to connect to %s database: %s", svcName, err))
 	}
@@ -90,24 +94,12 @@ func main() {
 	}()
 	tracer := tp.Tracer(svcName)
 
-	authConfig := auth.Config{}
-	if err := env.ParseWithOptions(&authConfig, env.Options{Prefix: envPrefixAuth}); err != nil {
-		logger.Error(fmt.Sprintf("failed to load %s gRPC client configuration : %s", svcName, err))
-	}
-
-	authClient, authHandler, err := auth.Setup(authConfig)
-	if err != nil {
-		logger.Error(err.Error())
-	}
-	defer authHandler.Close()
-
 	httpServerConfig := server.Config{Port: defSvcHTTPPort}
 	if err := env.ParseWithOptions(&httpServerConfig, env.Options{Prefix: envPrefixHTTP}); err != nil {
 		logger.Error(fmt.Sprintf("failed to load %s gRPC server configuration : %s", svcName, err))
 	}
 
-	logger.Info("Successfully connected to users grpc server " + authHandler.Secure())
-	svc, err := newService(ctx, db, authClient, tracer, logger, cfg.CACert, cfg.CAKey)
+	svc, err := newService(ctx, db, tracer, logger, dbConfig, cfg.CACert, cfg.CAKey)
 	if err != nil {
 		logger.Error(fmt.Sprintf("failed to create %s service: %s", svcName, err))
 		return
@@ -123,9 +115,9 @@ func main() {
 		reflection.Register(srv)
 		certs.RegisterCertsServiceServer(srv, certsgrpc.NewServer(svc))
 	}
-	gs := grpcserver.New(ctx, cancel, svcName, grpcServerConfig, registerCertsServiceServer, logger, nil, nil)
+	gs := grpcserver.NewServer(ctx, cancel, svcName, grpcServerConfig, registerCertsServiceServer, logger, nil, nil)
 
-	hs := httpserver.New(ctx, cancel, svcName, httpServerConfig, httpapi.MakeHandler(chi.NewMux(), svc, logger, cfg.InstanceID), logger)
+	hs := httpserver.NewServer(ctx, cancel, svcName, httpServerConfig, httpapi.MakeHandler(chi.NewMux(), svc, logger, cfg.InstanceID), logger)
 
 	g.Go(func() error {
 		return hs.Start()
@@ -144,16 +136,15 @@ func main() {
 	}
 }
 
-func newService(ctx context.Context, db *sqlx.DB, authClient magistrala.AuthServiceClient, tracer trace.Tracer, logger *slog.Logger, rootCA, rootCAKey string) (certs.Service, error) {
-	database := postgres.NewDatabase(db, tracer)
-	repo := cpostgres.NewRepository(database)
-	idp := uuid.New()
-	svc, err := certs.NewService(ctx, repo, authClient, idp, logger, rootCA, rootCAKey)
+func newService(ctx context.Context, db *sqlx.DB, tracer trace.Tracer, logger *slog.Logger, dbConfig pgClient.Config, rootCA, rootCAKey string) (certs.Service, error) {
+	database := postgres.NewDatabase(db, dbConfig, tracer)
+	repo := cpostgres.NewRepository(database, logger)
+	svc, err := certs.NewService(ctx, repo, rootCA, rootCAKey)
 	if err != nil {
 		return nil, err
 	}
 	svc = api.LoggingMiddleware(svc, logger)
-	counter, latency := internal.MakeMetrics(svcName, "api")
+	counter, latency := prometheus.MakeMetrics(svcName, "api")
 	svc = api.MetricsMiddleware(svc, counter, latency)
 	svc = tracing.New(svc, tracer)
 

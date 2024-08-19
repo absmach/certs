@@ -5,31 +5,52 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log/slog"
 
 	"github.com/absmach/certs"
-	"github.com/absmach/magistrala/pkg/errors"
-	"github.com/absmach/magistrala/pkg/errors/service"
-	"github.com/absmach/magistrala/pkg/postgres"
+	"github.com/absmach/certs/internal/postgres"
+	"github.com/absmach/certs/pkg/errors"
+	"github.com/absmach/certs/pkg/errors/service"
+	"github.com/jackc/pgx/v5/pgconn"
+)
+
+// Postgres error codes:
+// https://www.postgresql.org/docs/current/errcodes-appendix.html
+const (
+	errDuplicate      = "23505" // unique_violation
+	errTruncation     = "22001" // string_data_right_truncation
+	errFK             = "23503" // foreign_key_violation
+	errInvalid        = "22P02" // invalid_text_representation
+	errUntranslatable = "22P05" // untranslatable_character
+	errInvalidChar    = "22021" // character_not_in_repertoire
+)
+
+var (
+	ErrConflict        = errors.New("entity already exists")
+	ErrMalformedEntity = errors.New("malformed entity")
+	ErrCreateEntity    = errors.New("failed to create entity")
 )
 
 type certsRepo struct {
-	db postgres.Database
+	db  postgres.Database
+	log *slog.Logger
 }
 
-func NewRepository(db postgres.Database) certs.Repository {
+func NewRepository(db postgres.Database, log *slog.Logger) certs.Repository {
 	return certsRepo{
-		db: db,
+		db:  db,
+		log: log,
 	}
 }
 
 // CreateLog creates computation log in the database.
 func (repo certsRepo) CreateCert(ctx context.Context, cert certs.Certificate) error {
 	q := `
-	INSERT INTO certs (serial_number, certificate, key, entity_id, entity_type, revoked, expiry_date)
-	VALUES (:serial_number, :certificate, :key, :entity_id, :entity_type, :revoked, :expiry_date)`
+	INSERT INTO certs (serial_number, certificate, key, entity_id, entity_type, revoked, expiry_date, created_by, created_at)
+	VALUES (:serial_number, :certificate, :key, :entity_id, :entity_type, :revoked, :expiry_date, :created_by, :created_at)`
 	_, err := repo.db.NamedExecContext(ctx, q, cert)
 	if err != nil {
-		return postgres.HandleError(err, service.ErrCreateEntity)
+		return HandleError(err, service.ErrCreateEntity)
 	}
 	return nil
 }
@@ -49,10 +70,10 @@ func (repo certsRepo) RetrieveCert(ctx context.Context, serialNumber string) (ce
 
 // UpdateLog updates computation log in the database.
 func (repo certsRepo) UpdateCert(ctx context.Context, cert certs.Certificate) error {
-	q := `UPDATE certs SET certificate = :certificate, key = :key, revoked = :revoked, expiry_date = :expiry_date WHERE serial_number = :serial_number`
+	q := `UPDATE certs SET certificate = :certificate, key = :key, revoked = :revoked, expiry_date = :expiry_date, updated_by = :updated_by, updated_at = :updated_at WHERE serial_number = :serial_number`
 	res, err := repo.db.NamedExecContext(ctx, q, cert)
 	if err != nil {
-		return postgres.HandleError(err, service.ErrUpdateEntity)
+		return HandleError(err, service.ErrUpdateEntity)
 	}
 	count, err := res.RowsAffected()
 	if err != nil {
@@ -64,19 +85,19 @@ func (repo certsRepo) UpdateCert(ctx context.Context, cert certs.Certificate) er
 	return nil
 }
 
-func (repo certsRepo) ListCerts(ctx context.Context, pm certs.PageMetadata) (certs.CertificatePage, error) {
+func (repo certsRepo) ListCerts(ctx context.Context, userId string, pm certs.PageMetadata) (certs.CertificatePage, error) {
 	q := `SELECT serial_number, revoked, expiry_date, entity_id FROM certs %s LIMIT :limit OFFSET :offset`
 
 	if pm.EntityID != "" {
-		q = fmt.Sprintf(q, "WHERE entity_id = :entity_id")
+		q = fmt.Sprintf(q, "WHERE entity_id = :entity_id AND created_by = $1")
 	} else {
 		q = fmt.Sprintf(q, "")
 	}
 	var certificates []certs.Certificate
 
-	rows, err := repo.db.NamedQueryContext(ctx, q, pm)
+	rows, err := repo.db.QueryxContext(ctx, q, userId, pm)
 	if err != nil {
-		return certs.CertificatePage{}, postgres.HandleError(err, service.ErrViewEntity)
+		return certs.CertificatePage{}, HandleError(err, service.ErrViewEntity)
 	}
 	defer rows.Close()
 
@@ -113,4 +134,20 @@ func (repo certsRepo) total(ctx context.Context, query string, params interface{
 		}
 	}
 	return total, nil
+}
+
+func HandleError(wrapper, err error) error {
+	pqErr, ok := err.(*pgconn.PgError)
+	if ok {
+		switch pqErr.Code {
+		case errDuplicate:
+			return errors.Wrap(ErrConflict, err)
+		case errInvalid, errInvalidChar, errTruncation, errUntranslatable:
+			return errors.Wrap(ErrMalformedEntity, err)
+		case errFK:
+			return errors.Wrap(ErrCreateEntity, err)
+		}
+	}
+
+	return errors.Wrap(wrapper, err)
 }

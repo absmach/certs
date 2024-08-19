@@ -22,7 +22,7 @@ func renewCertEndpoint(svc certs.Service) endpoint.Endpoint {
 			return renewCertRes{}, err
 		}
 
-		if err = svc.RenewCert(ctx, req.token, req.id); err != nil {
+		if err = svc.RenewCert(ctx, req.userId, req.id); err != nil {
 			return renewCertRes{}, err
 		}
 
@@ -37,7 +37,7 @@ func revokeCertEndpoint(svc certs.Service) endpoint.Endpoint {
 			return revokeCertRes{}, err
 		}
 
-		if err = svc.RevokeCert(ctx, req.token, req.id); err != nil {
+		if err = svc.RevokeCert(ctx, req.userId, req.id); err != nil {
 			return revokeCertRes{}, err
 		}
 
@@ -52,7 +52,7 @@ func requestCertDownloadTokenEndpoint(svc certs.Service) endpoint.Endpoint {
 			return requestCertDownloadTokenRes{}, err
 		}
 
-		token, err := svc.RetrieveCertDownloadToken(ctx, req.token, req.id)
+		token, err := svc.RetrieveCertDownloadToken(ctx, req.id)
 		if err != nil {
 			return requestCertDownloadTokenRes{}, err
 		}
@@ -68,7 +68,7 @@ func downloadCertEndpoint(svc certs.Service) endpoint.Endpoint {
 			return downloadCertRes{}, err
 		}
 
-		cert, ca, err := svc.RetrieveCert(ctx, req.token, req.id)
+		cert, ca, err := svc.RetrieveCert(ctx, req.id)
 		if err != nil {
 			return downloadCertRes{}, err
 		}
@@ -84,7 +84,7 @@ func issueCertEndpoint(svc certs.Service) endpoint.Endpoint {
 			return issueCertRes{}, err
 		}
 
-		serialNumber, err := svc.IssueCert(ctx, req.token, req.entityID, certs.EntityType(req.entityType), req.IpAddrs)
+		serialNumber, err := svc.IssueCert(ctx, req.userId, req.entityID, certs.EntityType(req.entityType), req.IpAddrs)
 		if err != nil {
 			return issueCertRes{}, err
 		}
@@ -100,7 +100,7 @@ func listCertsEndpoint(svc certs.Service) endpoint.Endpoint {
 			return listCertsRes{}, err
 		}
 
-		certPage, err := svc.ListCerts(ctx, req.token, req.pm)
+		certPage, err := svc.ListCerts(ctx, req.userId, req.pm)
 		if err != nil {
 			return listCertsRes{}, err
 		}

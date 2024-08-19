@@ -5,10 +5,10 @@ import (
 	"context"
 
 	"github.com/absmach/certs"
-	"github.com/absmach/magistrala/pkg/apiutil"
-	"github.com/absmach/magistrala/pkg/errors"
-	"github.com/absmach/magistrala/pkg/errors/service"
-	"github.com/go-kit/kit/otelkit"
+	"github.com/absmach/certs/pkg/apiutil"
+	"github.com/absmach/certs/pkg/errors"
+	"github.com/absmach/certs/pkg/errors/service"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/go-kit/kit/otelkit"
 	kitgrpc "github.com/go-kit/kit/transport/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -52,7 +52,7 @@ func encodeError(err error) error {
 	switch {
 	case errors.Contains(err, nil):
 		return nil
-	case errors.Contains(err, errors.ErrMalformedEntity),
+	case errors.Contains(err, service.ErrMalformedEntity),
 		errors.Contains(err, apiutil.ErrMissingID),
 		errors.Contains(err, apiutil.ErrEmptyList),
 		errors.Contains(err, apiutil.ErrNameSize),
@@ -69,7 +69,7 @@ func encodeError(err error) error {
 		return status.Error(codes.NotFound, err.Error())
 	case errors.Contains(err, service.ErrConflict):
 		return status.Error(codes.AlreadyExists, err.Error())
-	case errors.Contains(err, errors.ErrUnsupportedContentType):
+	case errors.Contains(err, apiutil.ErrUnsupportedContentType):
 		return status.Error(codes.Unimplemented, err.Error())
 	case errors.Contains(err, service.ErrCreateEntity),
 		errors.Contains(err, service.ErrUpdateEntity),

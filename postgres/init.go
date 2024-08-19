@@ -17,6 +17,10 @@ func Migration() *migrate.MemoryMigrationSource {
                         expiry_date    TIMESTAMP,
 						entity_type    VARCHAR(20),
 						entity_id      VARCHAR(36),
+						created_by     VARCHAR(36),
+						created_at     TIMESTAMP,
+						updated_by     VARCHAR(36),
+						updated_at     TIMESTAMP,
                         PRIMARY KEY (serial_number)
                     )`,
 				},

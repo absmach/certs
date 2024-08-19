@@ -8,8 +8,8 @@ import (
 	"os"
 	"testing"
 
-	pgclient "github.com/absmach/magistrala/pkg/clients/postgres"
-	"github.com/absmach/magistrala/pkg/dockertest/v3"
+	pgclient "github.com/absmach/certs/internal/postgres"
+	"github.com/ory/dockertest/v3"
 	"github.com/jmoiron/sqlx"
 )
 

@@ -7,15 +7,15 @@ import (
 	"net/http"
 
 	"github.com/absmach/certs"
-	"github.com/absmach/magistrala"
+	"github.com/absmach/certs/internal/api"
 	"golang.org/x/crypto/ocsp"
 )
 
 var (
-	_ magistrala.Response = (*revokeCertRes)(nil)
-	_ magistrala.Response = (*issueCertRes)(nil)
-	_ magistrala.Response = (*renewCertRes)(nil)
-	_ magistrala.Response = (*ocspRes)(nil)
+	_ api.Response = (*revokeCertRes)(nil)
+	_ api.Response = (*issueCertRes)(nil)
+	_ api.Response = (*renewCertRes)(nil)
+	_ api.Response = (*ocspRes)(nil)
 )
 
 type renewCertRes struct {

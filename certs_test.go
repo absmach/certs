@@ -13,15 +13,10 @@ import (
 	"testing"
 	"time"
 
-	authmocks "github.com/absmach/auth/mocks"
 	"github.com/absmach/certs"
 	"github.com/absmach/certs/mocks"
-	"github.com/absmach/magistrala"
-	mglog "github.com/absmach/magistrala/logger"
-	"github.com/absmach/magistrala/pkg/errors"
-	"github.com/absmach/magistrala/pkg/errors/service"
-	"github.com/absmach/magistrala/pkg/uuid"
-	"github.com/golang-jwt/jwt"
+	"github.com/absmach/certs/pkg/errors"
+	"github.com/absmach/certs/pkg/errors/service"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
@@ -29,17 +24,12 @@ import (
 const serialNumber = "serial number"
 
 var (
-	idProvider   = uuid.New()
-	validToken   = "token"
+	user   = "userid"
 	invalidToken = "123"
 )
 
 func TestIssueCert(t *testing.T) {
-	users := new(authmocks.AuthServiceClient)
-	cRepo := new(mocks.MockRepository)
-
-	validToken := "validToken"
-	invalidToken := "invalidToken"
+	cRepo := new(mocks.Repository)
 
 	rootCAKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	require.NoError(t, err)
@@ -80,46 +70,38 @@ func TestIssueCert(t *testing.T) {
 		listCall.Unset()
 	})
 
-	svcNoCert, err := certs.NewService(context.Background(), cRepo, users, idProvider, mglog.NewMock(), "", "")
+	svcNoCert, err := certs.NewService(context.Background(), cRepo, "", "")
 	require.NoError(t, err)
 
-	svc, err := certs.NewService(context.Background(), cRepo, users, idProvider, mglog.NewMock(), caCertFile.Name(), caKeyFile.Name())
+	svc, err := certs.NewService(context.Background(), cRepo, caCertFile.Name(), caKeyFile.Name())
 	require.NoError(t, err)
 
 	testCases := []struct {
-		name      string
-		token     string
+		desc      string
+		userId    string
 		backendId string
 		err       error
 	}{
 		{
-			name:      "successful issue",
-			token:     validToken,
+			desc:      "successful issue",
+			userId:    user,
 			backendId: "backendId",
 			err:       nil,
 		},
 		{
-			name:      "failed to identify",
-			token:     invalidToken,
-			backendId: "backendId",
-			err:       service.ErrAuthentication,
-		},
-		{
-			name:      "missing root CA",
-			token:     validToken,
+			desc:      "missing root CA",
 			backendId: "backendId",
 			err:       certs.ErrRootCANotFound,
 		},
 		{
-			name:      "failed repo create cert",
-			token:     validToken,
+			desc:      "failed repo create cert",
 			backendId: "backendId",
 			err:       service.ErrCreateEntity,
 		},
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
+		t.Run(tc.desc, func(t *testing.T) {
 			if tc.err == service.ErrCreateEntity {
 				repoCall1 := cRepo.On("CreateCert", mock.Anything, mock.Anything).Return(tc.err)
 				defer repoCall1.Unset()
@@ -127,26 +109,10 @@ func TestIssueCert(t *testing.T) {
 				repoCall1 := cRepo.On("CreateCert", mock.Anything, mock.Anything).Return(nil)
 				defer repoCall1.Unset()
 			}
-			id, err := idProvider.ID()
-			require.NoError(t, err)
-			switch tc.token {
-			case validToken:
-				idCall := users.On("Identify", mock.Anything, mock.Anything).Return(&magistrala.IdentityRes{Id: id}, nil)
-				defer idCall.Unset()
-			case invalidToken:
-				idCall := users.On("Identify", mock.Anything, mock.Anything).Return(&magistrala.IdentityRes{}, service.ErrAuthentication)
-				defer idCall.Unset()
-			}
 
-			repoCall2 := users.On("Authorize", mock.Anything, mock.Anything).Return(&magistrala.AuthorizeRes{Authorized: true}, nil)
-			defer repoCall2.Unset()
-
-			repoCall3 := users.On("AddPolicies", mock.Anything, mock.Anything).Return(&magistrala.AddPoliciesRes{Added: true}, nil)
-			defer repoCall3.Unset()
-
-			_, err = svc.IssueCert(context.Background(), tc.token, tc.backendId, certs.EntityTypeBackend, []string{})
-			if tc.name == "missing root CA" {
-				_, err = svcNoCert.IssueCert(context.Background(), tc.token, tc.backendId, certs.EntityTypeBackend, []string{})
+			_, err = svc.IssueCert(context.Background(), tc.userId, tc.backendId, certs.EntityTypeBackend, []string{})
+			if tc.desc == "missing root CA" {
+				_, err = svcNoCert.IssueCert(context.Background(), tc.userId, tc.backendId, certs.EntityTypeBackend, []string{})
 			}
 
 			require.True(t, errors.Contains(err, tc.err), "expected error %v, got %v", tc.err, err)
@@ -155,50 +121,42 @@ func TestIssueCert(t *testing.T) {
 }
 
 func TestRevokeCert(t *testing.T) {
-	users := new(authmocks.AuthServiceClient)
-	cRepo := new(mocks.MockRepository)
+	cRepo := new(mocks.Repository)
 
 	invalidSerialNumber := "invalid serial number"
 
-	listCall := cRepo.On("ListCerts", mock.Anything, mock.Anything).Return(certs.CertificatePage{}, nil)
+	listCall := cRepo.On("ListCerts", mock.Anything, mock.Anything, mock.Anything).Return(certs.CertificatePage{}, nil)
 	t.Cleanup(func() {
 		listCall.Unset()
 	})
 
-	svc, err := certs.NewService(context.Background(), cRepo, users, idProvider, mglog.NewMock(), "", "")
+	svc, err := certs.NewService(context.Background(), cRepo, "", "")
 	require.NoError(t, err)
 
 	testCases := []struct {
-		name         string
-		token        string
+		desc         string
+		userId       string
 		serial       string
 		err          error
 		shouldRevoke bool
 	}{
 		{
-			name:         "successful revoke",
-			token:        validToken,
+			desc:         "successful revoke",
+			userId:       user,
 			serial:       serialNumber,
 			err:          nil,
 			shouldRevoke: true,
 		},
 		{
-			name:         "failed to identify",
-			token:        invalidToken,
-			serial:       serialNumber,
-			err:          service.ErrAuthentication,
-			shouldRevoke: false,
-		},
-		{
-			name:         "failed repo get cert",
-			token:        validToken,
+			desc:         "failed repo get cert",
+			userId:       user,
 			serial:       invalidSerialNumber,
 			err:          service.ErrViewEntity,
 			shouldRevoke: false,
 		},
 		{
-			name:         "failed repo update cert",
-			token:        validToken,
+			desc:         "failed repo update cert",
+			userId:       user,
 			serial:       serialNumber,
 			err:          service.ErrUpdateEntity,
 			shouldRevoke: false,
@@ -206,7 +164,7 @@ func TestRevokeCert(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
+		t.Run(tc.desc, func(t *testing.T) {
 			if tc.shouldRevoke {
 				repoCall1 := cRepo.On("UpdateCert", mock.Anything, mock.Anything).Return(nil)
 				defer repoCall1.Unset()
@@ -224,91 +182,45 @@ func TestRevokeCert(t *testing.T) {
 				defer repoCall2.Unset()
 			}
 
-			id, err := idProvider.ID()
-			require.NoError(t, err)
-			switch tc.token {
-			case validToken:
-				idCall := users.On("Identify", mock.Anything, mock.Anything).Return(&magistrala.IdentityRes{Id: id}, nil)
-				defer idCall.Unset()
-			case invalidToken:
-				idCall := users.On("Identify", mock.Anything, mock.Anything).Return(&magistrala.IdentityRes{}, service.ErrAuthentication)
-				defer idCall.Unset()
-			}
-
-			repoCall3 := users.On("AddPolicies", mock.Anything, mock.Anything).Return(&magistrala.AddPoliciesRes{Added: true}, nil)
-			repoCall4 := users.On("Authorize", mock.Anything, mock.Anything).Return(&magistrala.AuthorizeRes{Authorized: true}, nil)
-			defer repoCall3.Unset()
-			defer repoCall4.Unset()
-
-			err = svc.RevokeCert(context.Background(), tc.token, tc.serial)
+			err = svc.RevokeCert(context.Background(), tc.userId, tc.serial)
 			require.True(t, errors.Contains(err, tc.err), "expected error %v, got %v", tc.err, err)
 		})
 	}
 }
 
 func TestGetCertDownloadToken(t *testing.T) {
-	users := new(authmocks.AuthServiceClient)
-	cRepo := new(mocks.MockRepository)
+	cRepo := new(mocks.Repository)
 
 	listCall := cRepo.On("ListCerts", mock.Anything, mock.Anything).Return(certs.CertificatePage{}, nil)
 	t.Cleanup(func() {
 		listCall.Unset()
 	})
 
-	svc, err := certs.NewService(context.Background(), cRepo, users, idProvider, mglog.NewMock(), "", "")
+	svc, err := certs.NewService(context.Background(), cRepo, "", "")
 	require.NoError(t, err)
 
 	testCases := []struct {
-		name   string
-		token  string
+		desc   string
 		serial string
 		err    error
 	}{
 		{
-			name:   "successful get cert download token",
-			token:  validToken,
+			desc:   "successful get cert download token",
 			serial: serialNumber,
 			err:    nil,
-		},
-		{
-			name:   "failed to identify",
-			token:  invalidToken,
-			serial: serialNumber,
-			err:    service.ErrAuthentication,
 		},
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			id, err := idProvider.ID()
-			require.NoError(t, err)
-			switch tc.token {
-			case validToken:
-				idCall := users.On("Identify", mock.Anything, mock.Anything).Return(&magistrala.IdentityRes{Id: id}, nil)
-				defer idCall.Unset()
-			case invalidToken:
-				idCall := users.On("Identify", mock.Anything, mock.Anything).Return(&magistrala.IdentityRes{}, service.ErrAuthentication)
-				defer idCall.Unset()
-			}
-
-			repoCall3 := users.On("AddPolicies", mock.Anything, mock.Anything).Return(&magistrala.AddPoliciesRes{Added: true}, nil)
-			repoCall4 := users.On("Authorize", mock.Anything, mock.Anything).Return(&magistrala.AuthorizeRes{Authorized: true}, nil)
-			defer repoCall3.Unset()
-			defer repoCall4.Unset()
-
-			_, err = svc.RetrieveCertDownloadToken(context.Background(), tc.token, tc.serial)
+		t.Run(tc.desc, func(t *testing.T) {
+			_, err = svc.RetrieveCertDownloadToken(context.Background(), tc.serial)
 			require.True(t, errors.Contains(err, tc.err), "expected error %v, got %v", tc.err, err)
 		})
 	}
 }
 
 func TestGetCert(t *testing.T) {
-	users := new(authmocks.AuthServiceClient)
-	cRepo := new(mocks.MockRepository)
-
-	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{ExpiresAt: time.Now().Add(time.Minute * 5).Unix(), Issuer: certs.Organization, Subject: "certs"})
-	validToken, err := jwtToken.SignedString([]byte(serialNumber))
-	require.NoError(t, err)
+	cRepo := new(mocks.Repository)
 
 	rootCAKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	require.NoError(t, err)
@@ -349,37 +261,31 @@ func TestGetCert(t *testing.T) {
 		listCall.Unset()
 	})
 
-	svc, err := certs.NewService(context.Background(), cRepo, users, idProvider, mglog.NewMock(), caCertFile.Name(), caKeyFile.Name())
+	svc, err := certs.NewService(context.Background(), cRepo, caCertFile.Name(), caKeyFile.Name())
 	require.NoError(t, err)
 
 	testCases := []struct {
-		name   string
-		token  string
+		desc   string
+		userId string
 		serial string
 		err    error
 	}{
 		{
-			name:   "successful get cert",
-			token:  validToken,
+			desc:   "successful get cert",
+			userId: user,
 			serial: serialNumber,
 			err:    nil,
 		},
 		{
-			name:   "failed to identify",
-			token:  invalidToken,
-			serial: serialNumber,
-			err:    service.ErrMalformedEntity,
-		},
-		{
-			name:   "failed repo get cert",
-			token:  validToken,
+			desc:   "failed repo get cert",
+			userId: user,
 			serial: serialNumber,
 			err:    service.ErrViewEntity,
 		},
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
+		t.Run(tc.desc, func(t *testing.T) {
 			if tc.err == service.ErrViewEntity {
 				repoCall1 := cRepo.On("RetrieveCert", mock.Anything, mock.Anything).Return(certs.Certificate{}, tc.err)
 				defer repoCall1.Unset()
@@ -388,15 +294,14 @@ func TestGetCert(t *testing.T) {
 				defer repoCall1.Unset()
 			}
 
-			_, _, err = svc.RetrieveCert(context.Background(), tc.token, tc.serial)
+			_, _, err = svc.RetrieveCert(context.Background(), tc.serial)
 			require.True(t, errors.Contains(err, tc.err), "expected error %v, got %v", tc.err, err)
 		})
 	}
 }
 
 func TestRenewCert(t *testing.T) {
-	users := new(authmocks.AuthServiceClient)
-	cRepo := new(mocks.MockRepository)
+	cRepo := new(mocks.Repository)
 
 	serialNumber := big.NewInt(1)
 	expiredSerialNumber := big.NewInt(2)
@@ -485,55 +390,49 @@ func TestRenewCert(t *testing.T) {
 		listCall.Unset()
 	})
 
-	svc, err := certs.NewService(context.Background(), cRepo, users, idProvider, mglog.NewMock(), caCertFile.Name(), caKeyFile.Name())
+	svc, err := certs.NewService(context.Background(), cRepo, caCertFile.Name(), caKeyFile.Name())
 	require.NoError(t, err)
 
 	testCases := []struct {
-		name   string
-		token  string
+		desc   string
+		userId string
 		serial string
 		err    error
 	}{
 		{
-			name:   "successful renew cert",
-			token:  validToken,
+			desc:   "successful renew cert",
+			userId: user,
 			serial: serialNumber.String(),
 			err:    nil,
 		},
 		{
-			name:   "failed to identify",
-			token:  invalidToken,
-			serial: serialNumber.String(),
-			err:    service.ErrAuthentication,
-		},
-		{
-			name:   "failed repo get cert",
-			token:  validToken,
+			desc:   "failed repo get cert",
+			userId: user,
 			serial: serialNumber.String(),
 			err:    service.ErrViewEntity,
 		},
 		{
-			name:   "renew expired cert",
-			token:  validToken,
+			desc:   "renew expired cert",
+			userId: user,
 			serial: expiredSerialNumber.String(),
 			err:    certs.ErrCertExpired,
 		},
 		{
-			name:   "renew revoked cert",
-			token:  validToken,
+			desc:   "renew revoked cert",
+			userId: user,
 			serial: revokedSerialNumber.String(),
 			err:    certs.ErrCertRevoked,
 		},
 		{
-			name:   "failed repo update cert",
-			token:  validToken,
+			desc:   "failed repo update cert",
+			userId: user,
 			serial: serialNumber.String(),
 			err:    service.ErrUpdateEntity,
 		},
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
+		t.Run(tc.desc, func(t *testing.T) {
 			if tc.err == service.ErrViewEntity {
 				repoCall1 := cRepo.On("RetrieveCert", mock.Anything, mock.Anything).Return(certs.Certificate{}, tc.err)
 				defer repoCall1.Unset()
@@ -572,17 +471,6 @@ func TestRenewCert(t *testing.T) {
 				}
 			}
 
-			id, err := idProvider.ID()
-			require.NoError(t, err)
-			switch tc.token {
-			case validToken:
-				idCall := users.On("Identify", mock.Anything, mock.Anything).Return(&magistrala.IdentityRes{Id: id}, nil)
-				defer idCall.Unset()
-			case invalidToken:
-				idCall := users.On("Identify", mock.Anything, mock.Anything).Return(&magistrala.IdentityRes{}, service.ErrAuthentication)
-				defer idCall.Unset()
-			}
-
 			if tc.err == service.ErrUpdateEntity {
 				repoCall2 := cRepo.On("UpdateCert", mock.Anything, mock.Anything).Return(service.ErrUpdateEntity)
 				defer repoCall2.Unset()
@@ -591,10 +479,7 @@ func TestRenewCert(t *testing.T) {
 				defer repoCall2.Unset()
 			}
 
-			repoCall3 := users.On("Authorize", mock.Anything, mock.Anything).Return(&magistrala.AuthorizeRes{Authorized: true}, nil)
-			defer repoCall3.Unset()
-
-			err = svc.RenewCert(context.Background(), tc.token, tc.serial)
+			err = svc.RenewCert(context.Background(), tc.userId, tc.serial)
 			require.True(t, errors.Contains(err, tc.err), "expected error %v, got %v", tc.err, err)
 		})
 	}
