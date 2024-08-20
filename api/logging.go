@@ -37,7 +37,7 @@ func (lm *loggingMiddleware) RenewCert(ctx context.Context, userId, serialNumber
 	return lm.svc.RenewCert(ctx, userId, serialNumber)
 }
 
-func (lm *loggingMiddleware) RetrieveCert(ctx context.Context, serialNumber string) (cert certs.Certificate, ca []byte, err error) {
+func (lm *loggingMiddleware) RetrieveCert(ctx context.Context, token, serialNumber string) (cert certs.Certificate, ca []byte, err error) {
 	defer func(begin time.Time) {
 		message := fmt.Sprintf("Method get_cert for cert %s took %s to complete", serialNumber, time.Since(begin))
 		if err != nil {
@@ -46,7 +46,7 @@ func (lm *loggingMiddleware) RetrieveCert(ctx context.Context, serialNumber stri
 		}
 		lm.logger.Info(message)
 	}(time.Now())
-	return lm.svc.RetrieveCert(ctx, serialNumber)
+	return lm.svc.RetrieveCert(ctx, token, serialNumber)
 }
 
 func (lm *loggingMiddleware) RevokeCert(ctx context.Context, userId, serialNumber string) (err error) {

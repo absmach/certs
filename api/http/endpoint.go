@@ -65,12 +65,12 @@ func requestCertDownloadTokenEndpoint(svc certs.Service) endpoint.Endpoint {
 
 func downloadCertEndpoint(svc certs.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
-		req := request.(viewReq)
+		req := request.(downloadReq)
 		if err := req.validate(); err != nil {
 			return downloadCertRes{}, err
 		}
 
-		cert, ca, err := svc.RetrieveCert(ctx, req.id)
+		cert, ca, err := svc.RetrieveCert(ctx, req.token, req.id)
 		if err != nil {
 			return downloadCertRes{}, err
 		}

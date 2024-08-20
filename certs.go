@@ -31,8 +31,8 @@ type Certificate struct {
 }
 
 type CertificatePage struct {
-	Certificates []Certificate `json:"certificates"`
 	PageMetadata
+	Certificates []Certificate `json:"certificates"`
 }
 
 type PageMetadata struct {
@@ -51,7 +51,7 @@ type Service interface {
 	RevokeCert(ctx context.Context, userId, serialNumber string) error
 
 	// RetrieveCert retrieves a certificate record from the database.
-	RetrieveCert(ctx context.Context, serialNumber string) (Certificate, []byte, error)
+	RetrieveCert(ctx context.Context, token string, serialNumber string) (Certificate, []byte, error)
 
 	// ListCerts retrieves the certificates from the database while applying filters.
 	ListCerts(ctx context.Context, userId string, pm PageMetadata) (CertificatePage, error)

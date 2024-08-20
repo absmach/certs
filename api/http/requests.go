@@ -16,6 +16,18 @@ var (
 	ErrMissingEntityType = errors.New("missing entity type")
 )
 
+type downloadReq struct {
+	id    string
+	token string
+}
+
+func (req downloadReq) validate() error {
+	if req.id == "" {
+		return ErrMissingEntityID
+	}
+	return nil
+}
+
 type viewReq struct {
 	userId string
 	id     string

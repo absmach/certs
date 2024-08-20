@@ -19,6 +19,7 @@ import (
 	"github.com/absmach/certs/mocks"
 	"github.com/absmach/certs/pkg/errors"
 	"github.com/absmach/certs/pkg/errors/service"
+	"github.com/golang-jwt/jwt"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
@@ -26,7 +27,7 @@ import (
 const serialNumber = "serial number"
 
 var (
-	user   = "userid"
+	user         = "userid"
 	invalidToken = "123"
 )
 
@@ -224,6 +225,10 @@ func TestGetCertDownloadToken(t *testing.T) {
 func TestGetCert(t *testing.T) {
 	cRepo := new(mocks.Repository)
 
+	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{ExpiresAt: time.Now().Add(time.Minute * 5).Unix(), Issuer: certs.Organization, Subject: "certs"})
+	validToken, err := jwtToken.SignedString([]byte(serialNumber))
+	require.NoError(t, err)
+
 	rootCAKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	require.NoError(t, err)
 	rootCACert, err := x509.CreateCertificate(rand.Reader, &x509.Certificate{
@@ -268,18 +273,28 @@ func TestGetCert(t *testing.T) {
 
 	testCases := []struct {
 		desc   string
+		token  string
 		userId string
 		serial string
 		err    error
 	}{
 		{
 			desc:   "successful get cert",
+			token: validToken,
 			userId: user,
 			serial: serialNumber,
 			err:    nil,
 		},
 		{
+			desc: "failed token validation",
+			token: invalidToken,
+			userId: user,
+			serial: serialNumber,
+			err:    service.ErrMalformedEntity,
+		},
+		{
 			desc:   "failed repo get cert",
+			token: validToken,
 			userId: user,
 			serial: serialNumber,
 			err:    service.ErrViewEntity,
@@ -296,7 +311,7 @@ func TestGetCert(t *testing.T) {
 				defer repoCall1.Unset()
 			}
 
-			_, _, err = svc.RetrieveCert(context.Background(), tc.serial)
+			_, _, err = svc.RetrieveCert(context.Background(), tc.token, tc.serial)
 			require.True(t, errors.Contains(err, tc.err), "expected error %v, got %v", tc.err, err)
 		})
 	}

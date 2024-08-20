@@ -37,12 +37,12 @@ func (mm *metricsMiddleware) RenewCert(ctx context.Context, token, cmpId string)
 	return mm.svc.RenewCert(ctx, token, cmpId)
 }
 
-func (mm *metricsMiddleware) RetrieveCert(ctx context.Context, serialNumber string) (certs.Certificate, []byte, error) {
+func (mm *metricsMiddleware) RetrieveCert(ctx context.Context, token, serialNumber string) (certs.Certificate, []byte, error) {
 	defer func(begin time.Time) {
 		mm.counter.With("method", "get_certificate").Add(1)
 		mm.latency.With("method", "get_certificate").Observe(time.Since(begin).Seconds())
 	}(time.Now())
-	return mm.svc.RetrieveCert(ctx, serialNumber)
+	return mm.svc.RetrieveCert(ctx, token, serialNumber)
 }
 
 func (mm *metricsMiddleware) RevokeCert(ctx context.Context, userId, serialNumber string) error {

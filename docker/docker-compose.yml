@@ -31,6 +31,7 @@ services:
       - AM_CERTS_GRPC_PORT=${AM_CERTS_GRPC_PORT}
       - AM_CERTS_CA_KEY=${AM_CERTS_CA_KEY}
       - AM_CERTS_CA_CERT=${AM_CERTS_CA_CERT}
+      - AM_JAEGER_URL=${AM_JAEGER_URL}
     ports:
       - "${AM_CERTS_HTTP_PORT}:${AM_CERTS_HTTP_PORT}"
       - "${AM_CERTS_GRPC_PORT}:${AM_CERTS_GRPC_PORT}"
@@ -52,3 +53,16 @@ services:
       - "5454:5432"
     volumes:
       - certs-db-volume:/var/lib/postgresql/data
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.53.0
+    container_name: certs-jaeger
+    environment:
+      COLLECTOR_OTLP_ENABLED: ${AM_JAEGER_COLLECTOR_OTLP_ENABLED}
+    restart: on-failure
+    networks:
+      - certs-base-net
+    ports:
+      - ${AM_JAEGER_FRONTEND}:${AM_JAEGER_FRONTEND}
+      - ${AM_JAEGER_OLTP_HTTP_PORT}:${AM_JAEGER_OLTP_HTTP_PORT}
+  

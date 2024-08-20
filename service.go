@@ -155,7 +155,12 @@ func (s *service) RevokeCert(ctx context.Context, userId, serialNumber string) e
 // It requires a valid authentication token to be provided.
 // If the token is invalid or expired, an error is returned.
 // The function returns the retrieved certificate and any error encountered.
-func (s *service) RetrieveCert(ctx context.Context, serialNumber string) (Certificate, []byte, error) {
+func (s *service) RetrieveCert(ctx context.Context, token string, serialNumber string) (Certificate, []byte, error) {
+	if _, err := jwt.ParseWithClaims(token, &jwt.StandardClaims{Issuer: Organization, Subject: "certs"}, func(token *jwt.Token) (interface{}, error) {
+		return []byte(serialNumber), nil
+	}); err != nil {
+		return Certificate{}, []byte{}, errors.Wrap(err, svcerr.ErrMalformedEntity)
+	}
 	cert, err := s.repo.RetrieveCert(ctx, serialNumber)
 	if err != nil {
 		return Certificate{}, []byte{}, err

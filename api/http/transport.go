@@ -18,7 +18,7 @@ import (
 	"github.com/go-chi/chi"
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"go.opentelemetry.io/contrib/instrumentation/github.com/go-kit/kit/otelkit"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"golang.org/x/crypto/ocsp"
 )
 
@@ -39,57 +39,59 @@ func MakeHandler(r *chi.Mux, svc certs.Service, logger *slog.Logger, instanceID 
 
 	r.Route("/users/{userId}", func(r chi.Router) {
 		r.Route("/certs", func(r chi.Router) {
-			r.Post("/issue/{entityType}/{entityID}", kithttp.NewServer(
-				otelkit.EndpointMiddleware(otelkit.WithOperation("issue_cert"))(issueCertEndpoint(svc)),
+			r.Post("/issue/{entityType}/{entityID}", otelhttp.NewHandler(kithttp.NewServer(
+				issueCertEndpoint(svc),
 				decodeIssueCert,
 				api.EncodeResponse,
 				opts...,
-			).ServeHTTP)
+			), "issue_cert").ServeHTTP)
 
-			r.Patch("/{id}/renew", kithttp.NewServer(
-				otelkit.EndpointMiddleware(otelkit.WithOperation("renew_cert"))(renewCertEndpoint(svc)),
+			r.Patch("/{id}/renew", otelhttp.NewHandler(kithttp.NewServer(
+				renewCertEndpoint(svc),
 				decodeView,
 				api.EncodeResponse,
 				opts...,
-			).ServeHTTP)
+			), "renew_cert").ServeHTTP)
 
-			r.Patch("/{id}/revoke", kithttp.NewServer(
-				otelkit.EndpointMiddleware(otelkit.WithOperation("revoke_cert"))(revokeCertEndpoint(svc)),
+			r.Patch("/{id}/revoke", otelhttp.NewHandler(kithttp.NewServer(
+				revokeCertEndpoint(svc),
 				decodeView,
 				api.EncodeResponse,
 				opts...,
-			).ServeHTTP)
-			r.Get("/{id}/download/token", kithttp.NewServer(
-				otelkit.EndpointMiddleware(otelkit.WithOperation("retrieve_certs_download_token"))(requestCertDownloadTokenEndpoint(svc)),
+			), "revoke_cert").ServeHTTP)
+
+			r.Get("/{id}/download/token", otelhttp.NewHandler(kithttp.NewServer(
+				requestCertDownloadTokenEndpoint(svc),
 				decodeView,
 				api.EncodeResponse,
 				opts...,
-			).ServeHTTP)
-			r.Get("/{id}/download", kithttp.NewServer(
-				otelkit.EndpointMiddleware(otelkit.WithOperation("download_certs"))(downloadCertEndpoint(svc)),
-				decodeDownloadCerts,
-				api.EncodeResponse,
-				opts...,
-			).ServeHTTP)
-			r.Get("/", kithttp.NewServer(
-				otelkit.EndpointMiddleware(otelkit.WithOperation("list_cert"))(listCertsEndpoint(svc)),
+			), "get_download_token").ServeHTTP)
+
+			r.Get("/", otelhttp.NewHandler(kithttp.NewServer(
+				listCertsEndpoint(svc),
 				decodeListCerts,
 				api.EncodeResponse,
 				opts...,
-			).ServeHTTP)
+			), "list_certs").ServeHTTP)
 		})
 	})
 
 	r.Route("/certs", func(r chi.Router) {
-		r.Post("/ocsp", kithttp.NewServer(
-			otelkit.EndpointMiddleware(otelkit.WithOperation("ocsp"))(ocspEndpoint(svc)),
+		r.Get("/{id}/download", otelhttp.NewHandler(kithttp.NewServer(
+			downloadCertEndpoint(svc),
+			decodeDownloadCerts,
+			api.EncodeResponse,
+			opts...,
+		), "download_cert").ServeHTTP)
+		r.Post("/ocsp", otelhttp.NewHandler(kithttp.NewServer(
+			ocspEndpoint(svc),
 			decodeOCSPRequest,
 			encodeOSCPResponse,
 			opts...,
-		).ServeHTTP)
+		), "ocsp").ServeHTTP)
 	})
 
-	r.Get("/health", certs.Health("computations", instanceID))
+	r.Get("/health", certs.Health("certs", instanceID))
 	r.Handle("/metrics", promhttp.Handler())
 
 	return r
@@ -104,9 +106,13 @@ func decodeView(_ context.Context, r *http.Request) (interface{}, error) {
 }
 
 func decodeDownloadCerts(_ context.Context, r *http.Request) (interface{}, error) {
-	req := viewReq{
-		userId: chi.URLParam(r, "userId"),
-		id:     chi.URLParam(r, "id"),
+	token, err := apiutil.ReadStringQuery(r, "token", "")
+	if err != nil {
+		return nil, err
+	}
+	req := downloadReq{
+		token: token,
+		id:    chi.URLParam(r, "id"),
 	}
 
 	return req, nil

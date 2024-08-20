@@ -86,11 +86,12 @@ func (repo certsRepo) UpdateCert(ctx context.Context, cert certs.Certificate) er
 
 func (repo certsRepo) ListCerts(ctx context.Context, userId string, pm certs.PageMetadata) (certs.CertificatePage, error) {
 	q := `SELECT serial_number, revoked, expiry_date, entity_id FROM certs %s LIMIT :limit OFFSET :offset`
-
+	condition := ``
 	if pm.EntityID != "" {
-		q = fmt.Sprintf(q, "WHERE entity_id = :entity_id AND created_by = :created_by")
+		condition = `WHERE entity_id = :entity_id AND created_by = :created_by`
+		q = fmt.Sprintf(q, condition)
 	} else {
-		q = fmt.Sprintf(q, "")
+		q = fmt.Sprintf(q, condition)
 	}
 	var certificates []certs.Certificate
 
@@ -115,14 +116,14 @@ func (repo certsRepo) ListCerts(ctx context.Context, userId string, pm certs.Pag
 		certificates = append(certificates, *cert)
 	}
 
-	q = `SELECT COUNT(*) FROM certs LIMIT :limit OFFSET :offset`
+	q = fmt.Sprintf(`SELECT COUNT(*) FROM certs %s LIMIT :limit OFFSET :offset`, condition)
 	pm.Total, err = repo.total(ctx, q, params)
 	if err != nil {
 		return certs.CertificatePage{}, errors.Wrap(service.ErrViewEntity, err)
 	}
 	return certs.CertificatePage{
-		Certificates: certificates,
 		PageMetadata: pm,
+		Certificates: certificates,
 	}, nil
 }
 

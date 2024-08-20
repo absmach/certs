@@ -35,10 +35,10 @@ func (tm *tracingMiddleware) RevokeCert(ctx context.Context, token, serialNumber
 	return tm.svc.RevokeCert(ctx, token, serialNumber)
 }
 
-func (tm *tracingMiddleware) RetrieveCert(ctx context.Context, serialNumber string) (certs.Certificate, []byte, error) {
+func (tm *tracingMiddleware) RetrieveCert(ctx context.Context, token, serialNumber string) (certs.Certificate, []byte, error) {
 	ctx, span := tm.tracer.Start(ctx, "get_cert")
 	defer span.End()
-	return tm.svc.RetrieveCert(ctx, serialNumber)
+	return tm.svc.RetrieveCert(ctx, token, serialNumber)
 }
 
 func (tm *tracingMiddleware) RetrieveCertDownloadToken(ctx context.Context, serialNumber string) (string, error) {
