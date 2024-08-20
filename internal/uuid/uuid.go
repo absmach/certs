@@ -5,7 +5,7 @@ package uuid
 
 import (
 	"github.com/gofrs/uuid"
-	"github.com/pkg/errors"
+	"github.com/absmach/certs/pkg/errors"
 )
 
 // ErrGeneratingID indicates error in generating UUID.
@@ -26,7 +26,7 @@ type IDProvider interface {
 func (up *uuidProvider) ID() (string, error) {
 	id, err := uuid.NewV4()
 	if err != nil {
-		return "", errors.Wrap(ErrGeneratingID, err.Error())
+		return "", errors.Wrap(ErrGeneratingID, err)
 	}
 
 	return id.String(), nil

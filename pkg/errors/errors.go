@@ -3,12 +3,16 @@
 
 package errors
 
+import "encoding/json"
+
 type Error interface {
 	Error() string
 
 	Msg() string
 
 	Err() Error
+
+	MarshalJSON() ([]byte, error)
 }
 
 var _ Error = (*customError)(nil)
@@ -41,6 +45,20 @@ func (ce *customError) Msg() string {
 
 func (ce *customError) Err() Error {
 	return ce.err
+}
+
+func (ce *customError) MarshalJSON() ([]byte, error) {
+	var val string
+	if e := ce.Err(); e != nil {
+		val = e.Msg()
+	}
+	return json.Marshal(&struct {
+		Err string `json:"error"`
+		Msg string `json:"message"`
+	}{
+		Err: val,
+		Msg: ce.Msg(),
+	})
 }
 
 func Contains(e1, e2 error) bool {
