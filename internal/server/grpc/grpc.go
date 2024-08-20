@@ -1,4 +1,5 @@
-// Copyright (c) Ultraviolet
+// Copyright (c) Abstract Machines
+// SPDX-License-Identifier: Apache-2.0
 
 package grpc
 
@@ -12,6 +13,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/absmach/certs/internal/certs"
 	"github.com/absmach/certs/internal/server"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
@@ -20,7 +22,6 @@ import (
 	"google.golang.org/grpc/health"
 	grpchealth "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/stats"
-	"github.com/absmach/certs/internal/certs"
 )
 
 type serviceRegister func(srv *grpc.Server)

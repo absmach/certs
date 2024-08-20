@@ -1,4 +1,6 @@
-// Copyright (c) Ultraviolet
+// Copyright (c) Abstract Machines
+// SPDX-License-Identifier: Apache-2.0
+
 package postgres
 
 import (
@@ -31,12 +33,12 @@ var (
 )
 
 type certsRepo struct {
-	db  postgres.Database
+	db postgres.Database
 }
 
 func NewRepository(db postgres.Database) certs.Repository {
 	return certsRepo{
-		db:  db,
+		db: db,
 	}
 }
 
@@ -93,11 +95,11 @@ func (repo certsRepo) ListCerts(ctx context.Context, userId string, pm certs.Pag
 	var certificates []certs.Certificate
 
 	params := map[string]interface{}{
-        "limit":      pm.Limit,
-        "offset":     pm.Offset,
-        "entity_id":  pm.EntityID,
-        "created_by": userId,
-    }
+		"limit":      pm.Limit,
+		"offset":     pm.Offset,
+		"entity_id":  pm.EntityID,
+		"created_by": userId,
+	}
 	rows, err := repo.db.NamedQueryContext(ctx, q, params)
 	if err != nil {
 		return certs.CertificatePage{}, handleError(service.ErrViewEntity, err)

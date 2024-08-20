@@ -56,11 +56,13 @@ func EncodeError(_ context.Context, err error, w http.ResponseWriter) {
 
 	w.Header().Set("Content-Type", ContentType)
 	switch {
-	case errors.Contains(err, svcerr.ErrAuthorization):
+	case errors.Contains(err, svcerr.ErrAuthorization),
+		errors.Contains(err, svcerr.ErrCertExpired):
 		err = unwrap(err)
 		w.WriteHeader(http.StatusForbidden)
 
 	case errors.Contains(err, svcerr.ErrAuthentication),
+		errors.Contains(err, svcerr.ErrCertRevoked),
 		errors.Contains(err, apiutil.ErrBearerToken):
 		err = unwrap(err)
 		w.WriteHeader(http.StatusUnauthorized)
@@ -82,7 +84,8 @@ func EncodeError(_ context.Context, err error, w http.ResponseWriter) {
 		err = unwrap(err)
 		w.WriteHeader(http.StatusUnprocessableEntity)
 
-	case errors.Contains(err, svcerr.ErrNotFound):
+	case errors.Contains(err, svcerr.ErrNotFound),
+		errors.Contains(err, svcerr.ErrRootCANotFound):
 		err = unwrap(err)
 		w.WriteHeader(http.StatusNotFound)
 

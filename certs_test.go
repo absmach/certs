@@ -1,4 +1,6 @@
-// Copyright (c) Ultraviolet
+// Copyright (c) Abstract Machines
+// SPDX-License-Identifier: Apache-2.0
+
 package certs_test
 
 import (
@@ -91,7 +93,7 @@ func TestIssueCert(t *testing.T) {
 		{
 			desc:      "missing root CA",
 			backendId: "backendId",
-			err:       certs.ErrRootCANotFound,
+			err:       service.ErrRootCANotFound,
 		},
 		{
 			desc:      "failed repo create cert",
@@ -415,13 +417,13 @@ func TestRenewCert(t *testing.T) {
 			desc:   "renew expired cert",
 			userId: user,
 			serial: expiredSerialNumber.String(),
-			err:    certs.ErrCertExpired,
+			err:    service.ErrCertExpired,
 		},
 		{
 			desc:   "renew revoked cert",
 			userId: user,
 			serial: revokedSerialNumber.String(),
-			err:    certs.ErrCertRevoked,
+			err:    service.ErrCertRevoked,
 		},
 		{
 			desc:   "failed repo update cert",

@@ -1,4 +1,6 @@
-// Copyright (c) Ultraviolet
+// Copyright (c) Abstract Machines
+// SPDX-License-Identifier: Apache-2.0
+
 package api
 
 import (
@@ -72,7 +74,7 @@ func (mm *metricsMiddleware) ListCerts(ctx context.Context, userId string, pm ce
 		mm.counter.With("method", "list_certificates").Add(1)
 		mm.latency.With("method", "list_certificates").Observe(time.Since(begin).Seconds())
 	}(time.Now())
-	return mm.svc.ListCerts(ctx,userId, pm)
+	return mm.svc.ListCerts(ctx, userId, pm)
 }
 
 func (mm *metricsMiddleware) OCSP(ctx context.Context, serialNumber string) (*certs.Certificate, int, *x509.Certificate, error) {

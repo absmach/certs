@@ -1,7 +1,9 @@
+// Copyright (c) Abstract Machines
+// SPDX-License-Identifier: Apache-2.0
+
 package service
 
 import "github.com/absmach/certs/pkg/errors"
-
 
 var (
 	// ErrNotFound indicates a non-existent entity request.
@@ -31,6 +33,12 @@ var (
 	// ErrMalformedEntity indicates a malformed entity specification.
 	ErrMalformedEntity = errors.New("malformed entity specification")
 
-	// ErrNoCaCertKey indicates that the CA certificate or key is missing.
-	ErrNoCaCertKey = errors.New("CA certificate or key is missing")
+	// ErrNoCaCertKey indicates that the root CA certificate or key is missing.
+	ErrRootCANotFound = errors.New("root CA not found")
+
+	// ErrCertExpired indicates that the certificate expired before renewal.
+	ErrCertExpired = errors.New("certificate expired before renewal")
+
+	// ErrCertRevoked indicates that the certificate has been revoked and cannot be renewed.
+	ErrCertRevoked = errors.New("certificate has been revoked and cannot be renewed")
 )

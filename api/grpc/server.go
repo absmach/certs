@@ -1,4 +1,6 @@
-// Copyright (c) Ultraviolet
+// Copyright (c) Abstract Machines
+// SPDX-License-Identifier: Apache-2.0
+
 package grpc
 
 import (
@@ -8,8 +10,8 @@ import (
 	"github.com/absmach/certs/pkg/apiutil"
 	"github.com/absmach/certs/pkg/errors"
 	"github.com/absmach/certs/pkg/errors/service"
-	"go.opentelemetry.io/contrib/instrumentation/github.com/go-kit/kit/otelkit"
 	kitgrpc "github.com/go-kit/kit/transport/grpc"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/go-kit/kit/otelkit"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

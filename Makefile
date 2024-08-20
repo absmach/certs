@@ -1,3 +1,6 @@
+# Copyright (c) Abstract Machines
+# SPDX-License-Identifier: Apache-2.0
+
 AM_DOCKER_IMAGE_NAME_PREFIX ?= absmach
 BUILD_DIR = build
 SERVICES = certs

@@ -1,8 +1,6 @@
 # Copyright (c) Abstract Machines
 # SPDX-License-Identifier: Apache-2.0
 
-name: certs
-
 networks:
   certs-base-net:
     driver: bridge
@@ -37,11 +35,7 @@ services:
       - "${AM_CERTS_HTTP_PORT}:${AM_CERTS_HTTP_PORT}"
       - "${AM_CERTS_GRPC_PORT}:${AM_CERTS_GRPC_PORT}"
     volumes:
-    - type: bind
-      source: ./ssl/
-      target: /ssl/
-      bind:
-        create_host_path: true
+    - ./ssl/:/ssl/
 
   certs-db:
     image: postgres:16.2-alpine

@@ -1,4 +1,6 @@
-// Copyright (c) Ultraviolet
+// Copyright (c) Abstract Machines
+// SPDX-License-Identifier: Apache-2.0
+
 package http
 
 import (
@@ -9,14 +11,14 @@ import (
 )
 
 var (
-	ErrMissingUserId      = errors.New("missing user ID")
+	ErrMissingUserId     = errors.New("missing user ID")
 	ErrMissingEntityID   = errors.New("missing entity ID")
 	ErrMissingEntityType = errors.New("missing entity type")
 )
 
 type viewReq struct {
 	userId string
-	id    string
+	id     string
 }
 
 func (req viewReq) validate() error {
@@ -27,7 +29,7 @@ func (req viewReq) validate() error {
 }
 
 type issueCertReq struct {
-	userId      string   `json:"-"`
+	userId     string   `json:"-"`
 	entityID   string   `json:"-"`
 	entityType string   `json:"-"`
 	IpAddrs    []string `json:"ip_addresses"`
@@ -48,7 +50,7 @@ func (req issueCertReq) validate() error {
 
 type listCertsReq struct {
 	userId string
-	pm    certs.PageMetadata
+	pm     certs.PageMetadata
 }
 
 func (req listCertsReq) validate() error {

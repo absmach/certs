@@ -1,4 +1,6 @@
-// Copyright (c) Ultraviolet
+// Copyright (c) Abstract Machines
+// SPDX-License-Identifier: Apache-2.0
+
 package postgres
 
 import (
@@ -15,7 +17,7 @@ import (
 )
 
 var (
-	id = "bfead30d-5a1d-40f3-be21-fd8ffad49db0"
+	id        = "bfead30d-5a1d-40f3-be21-fd8ffad49db0"
 	invalidId = "invalid"
 )
 
@@ -26,13 +28,13 @@ func TestCreateCert(t *testing.T) {
 
 	testCases := []struct {
 		desc string
-		cert        certs.Certificate
-		err         error
+		cert certs.Certificate
+		err  error
 	}{
 		{
 			desc: "successful save",
-			cert:        certs.Certificate{SerialNumber: serialNumber.String(), Certificate: []byte("cert"), Key: []byte("key"), EntityID: id, Revoked: false, ExpiryDate: time.Now()},
-			err:         nil,
+			cert: certs.Certificate{SerialNumber: serialNumber.String(), Certificate: []byte("cert"), Key: []byte("key"), EntityID: id, Revoked: false, ExpiryDate: time.Now()},
+			err:  nil,
 		},
 		// {
 		// 	desc: "save with violating foreign key",
@@ -41,8 +43,8 @@ func TestCreateCert(t *testing.T) {
 		// },
 		{
 			desc: "save with invalid backend id",
-			cert:        certs.Certificate{SerialNumber: serialNumber.String(), Certificate: []byte("cert"), Key: []byte("key"), EntityID: "invalid", Revoked: false, ExpiryDate: time.Now()},
-			err:         service.ErrConflict,
+			cert: certs.Certificate{SerialNumber: serialNumber.String(), Certificate: []byte("cert"), Key: []byte("key"), EntityID: "invalid", Revoked: false, ExpiryDate: time.Now()},
+			err:  service.ErrConflict,
 		},
 	}
 
@@ -64,18 +66,18 @@ func TestGetCert(t *testing.T) {
 
 	testCases := []struct {
 		desc string
-		id          string
-		err         error
+		id   string
+		err  error
 	}{
 		{
 			desc: "successful view",
-			id:          serialNumber.String(),
-			err:         nil,
+			id:   serialNumber.String(),
+			err:  nil,
 		},
 		{
 			desc: "view with invalid id",
-			id:          invalidId,
-			err:         service.ErrNotFound,
+			id:   invalidId,
+			err:  service.ErrNotFound,
 		},
 	}
 
@@ -131,32 +133,32 @@ func TestListCerts(t *testing.T) {
 	}
 
 	testCases := []struct {
-		desc string
-		userId      string
-		limit       uint64
-		offset      uint64
-		total       int
-		err         error
+		desc   string
+		userId string
+		limit  uint64
+		offset uint64
+		total  int
+		err    error
 	}{
 		{
-			desc: "successful list",
-			limit:       10,
-			offset:      0,
-			total:       10,
-			err:         nil,
+			desc:   "successful list",
+			limit:  10,
+			offset: 0,
+			total:  10,
+			err:    nil,
 		},
 		{
-			desc: "offset 20",
-			limit:       10,
-			offset:      20,
-			total:       5,
-			err:         nil,
+			desc:   "offset 20",
+			limit:  10,
+			offset: 20,
+			total:  5,
+			err:    nil,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			_, err := repo.ListCerts(context.Background(),tc.userId, certs.PageMetadata{Limit: tc.limit, Offset: tc.offset})
+			_, err := repo.ListCerts(context.Background(), tc.userId, certs.PageMetadata{Limit: tc.limit, Offset: tc.offset})
 			assert.True(t, errors.Contains(err, tc.err), "expected %v, got %v", tc.err, err)
 		})
 	}

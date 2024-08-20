@@ -1,4 +1,6 @@
-// Copyright (c) Ultraviolet
+// Copyright (c) Abstract Machines
+// SPDX-License-Identifier: Apache-2.0
+
 package certs
 
 import (
@@ -26,11 +28,8 @@ const (
 
 var (
 	serialNumberLimit          = new(big.Int).Lsh(big.NewInt(1), 128)
-	ErrCertExpired             = errors.New("certificate expired before renewal")
-	ErrCertRevoked             = errors.New("certificate has been revoked and cannot be renewed")
-	ErrRootCANotFound          = errors.New("root CA not found")
 	errFailedReadingPrivateKey = errors.New("failed to read private key")
-	ErrNotFound = errors.New("entity not found")
+	ErrNotFound                = errors.New("entity not found")
 )
 
 type service struct {
@@ -47,7 +46,7 @@ func NewService(ctx context.Context, repo Repository, rootCACert, rootCAkey stri
 	if rootCAkey != "" && rootCACert != "" {
 		file, err := os.ReadFile(rootCACert)
 		if err != nil {
-			return &service{}, errors.Wrap(svcerr.ErrNoCaCertKey,err)
+			return &service{}, err
 		}
 		rootPem, _ := pem.Decode(file)
 		cert, err = x509.ParseCertificate(rootPem.Bytes)
@@ -97,7 +96,7 @@ func (s *service) IssueCert(ctx context.Context, userId, entityID string, entity
 	}
 
 	if s.rootCACert == nil || s.rootCAKey == nil {
-		return "", ErrRootCANotFound
+		return "", svcerr.ErrRootCANotFound
 	}
 
 	template := x509.Certificate{
@@ -164,7 +163,7 @@ func (s *service) RetrieveCert(ctx context.Context, serialNumber string) (Certif
 	return cert, pem.EncodeToMemory(&pem.Block{Bytes: s.rootCACert.Raw, Type: "CERTIFICATE"}), nil
 }
 
-func (s *service) ListCerts(ctx context.Context,userId string, pm PageMetadata) (CertificatePage, error) {
+func (s *service) ListCerts(ctx context.Context, userId string, pm PageMetadata) (CertificatePage, error) {
 	certPg, err := s.repo.ListCerts(ctx, userId, pm)
 	if err != nil {
 		return CertificatePage{}, err
@@ -198,7 +197,7 @@ func (s *service) RenewCert(ctx context.Context, userId, serialNumber string) er
 		return err
 	}
 	if cert.Revoked {
-		return ErrCertRevoked
+		return svcerr.ErrCertRevoked
 	}
 	pemBlock, _ := pem.Decode(cert.Certificate)
 	oldCert, err := x509.ParseCertificate(pemBlock.Bytes)
@@ -206,7 +205,7 @@ func (s *service) RenewCert(ctx context.Context, userId, serialNumber string) er
 		return err
 	}
 	if !oldCert.NotAfter.After(time.Now()) {
-		return ErrCertExpired
+		return svcerr.ErrCertExpired
 	}
 	oldCert.NotBefore = time.Now()
 	oldCert.NotAfter = time.Now().Add(certValidityPeriod)
@@ -216,7 +215,7 @@ func (s *service) RenewCert(ctx context.Context, userId, serialNumber string) er
 		return err
 	}
 	if s.rootCACert == nil || s.rootCAKey == nil {
-		return ErrRootCANotFound
+		return svcerr.ErrRootCANotFound
 	}
 	newCertBytes, err := x509.CreateCertificate(rand.Reader, oldCert, s.rootCACert, &privKey.PublicKey, s.rootCAKey)
 	if err != nil {
