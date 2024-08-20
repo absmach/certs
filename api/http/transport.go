@@ -141,23 +141,19 @@ func decodeOCSPRequest(_ context.Context, r *http.Request) (interface{}, error) 
 }
 
 func decodeIssueCert(_ context.Context, r *http.Request) (interface{}, error) {
-	fmt.Println("Am here 1")
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("Body: %+v\n", body)
 	req := issueCertReq{
 		userId:     chi.URLParam(r, "userId"),
 		entityID:   chi.URLParam(r, "entityID"),
 		entityType: chi.URLParam(r, "entityType"),
 	}
-	fmt.Printf("Req: %+v\n", req)
 	if err := json.Unmarshal(body, &req); err != nil {
 		fmt.Println(err)
 		return nil, err
 	}
-	fmt.Println("Am here 3")
 
 	return req, nil
 }
