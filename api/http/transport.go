@@ -4,7 +4,6 @@ package http
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -13,6 +12,7 @@ import (
 	"github.com/absmach/certs"
 	"github.com/absmach/certs/internal/api"
 	"github.com/absmach/certs/pkg/apiutil"
+	"github.com/absmach/certs/pkg/errors"
 	"github.com/go-chi/chi"
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -151,8 +151,7 @@ func decodeIssueCert(_ context.Context, r *http.Request) (interface{}, error) {
 		entityType: chi.URLParam(r, "entityType"),
 	}
 	if err := json.Unmarshal(body, &req); err != nil {
-		fmt.Println(err)
-		return nil, err
+		return nil, errors.Wrap(apiutil.ErrInvalidRequest, err)
 	}
 
 	return req, nil

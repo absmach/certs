@@ -14,54 +14,8 @@ import (
 )
 
 const (
-	MemberKindKey    = "member_kind"
-	PermissionKey    = "permission"
-	RelationKey      = "relation"
-	StatusKey        = "status"
-	OffsetKey        = "offset"
-	OrderKey         = "order"
-	LimitKey         = "limit"
-	MetadataKey      = "metadata"
-	ParentKey        = "parent_id"
-	OwnerKey         = "owner_id"
-	ClientKey        = "client"
-	IdentityKey      = "identity"
-	GroupKey         = "group"
-	ActionKey        = "action"
-	TagKey           = "tag"
-	NameKey          = "name"
-	TotalKey         = "total"
-	SubjectKey       = "subject"
-	ObjectKey        = "object"
-	LevelKey         = "level"
-	TreeKey          = "tree"
-	DirKey           = "dir"
-	ListPerms        = "list_perms"
-	VisibilityKey    = "visibility"
-	SharedByKey      = "shared_by"
-	TokenKey         = "token"
-	DefPermission    = "view"
-	DefTotal         = uint64(100)
-	DefOffset        = 0
-	DefOrder         = "updated_at"
-	DefDir           = "asc"
-	DefLimit         = 10
-	DefLevel         = 0
-	DefStatus        = "enabled"
-	DefListPerms     = false
-	SharedVisibility = "shared"
-	MyVisibility     = "mine"
-	AllVisibility    = "all"
 	// ContentType represents JSON content type.
 	ContentType = "application/json"
-
-	// MaxNameSize limits name size to prevent making them too complex.
-	MaxLimitSize = 100
-	MaxNameSize  = 1024
-	NameOrder    = "name"
-	IDOrder      = "id"
-	AscDir       = "asc"
-	DescDir      = "desc"
 )
 
 // Response contains HTTP response specific methods.
@@ -117,6 +71,7 @@ func EncodeError(_ context.Context, err error, w http.ResponseWriter) {
 		errors.Contains(err, apiutil.ErrNameSize),
 		errors.Contains(err, apiutil.ErrInvalidQueryParams),
 		errors.Contains(err, apiutil.ErrValidation),
+		errors.Contains(err, apiutil.ErrInvalidRequest),
 		errors.Contains(err, svcerr.ErrViewEntity):
 		err = unwrap(err)
 		w.WriteHeader(http.StatusBadRequest)

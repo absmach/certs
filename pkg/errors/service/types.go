@@ -30,4 +30,7 @@ var (
 
 	// ErrMalformedEntity indicates a malformed entity specification.
 	ErrMalformedEntity = errors.New("malformed entity specification")
+
+	// ErrNoCaCertKey indicates that the CA certificate or key is missing.
+	ErrNoCaCertKey = errors.New("CA certificate or key is missing")
 )

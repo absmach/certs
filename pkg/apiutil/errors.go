@@ -38,4 +38,7 @@ var (
 
 	// ErrInvalidQueryParams indicates invalid query parameters.
 	ErrInvalidQueryParams = errors.New("invalid query parameters")
+
+	// ErrInvalidRequest indicates that the request is invalid.
+	ErrInvalidRequest = errors.New("invalid request")
 )

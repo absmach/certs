@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/absmach/certs/pkg/errors"
+	svcerr "github.com/absmach/certs/pkg/errors/service"
 	"github.com/golang-jwt/jwt"
 	"golang.org/x/crypto/ocsp"
 )
@@ -46,7 +47,7 @@ func NewService(ctx context.Context, repo Repository, rootCACert, rootCAkey stri
 	if rootCAkey != "" && rootCACert != "" {
 		file, err := os.ReadFile(rootCACert)
 		if err != nil {
-			return &service{}, err
+			return &service{}, errors.Wrap(svcerr.ErrNoCaCertKey,err)
 		}
 		rootPem, _ := pem.Decode(file)
 		cert, err = x509.ParseCertificate(rootPem.Bytes)
