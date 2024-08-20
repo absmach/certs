@@ -3,7 +3,7 @@ package postgres
 import (
 	"fmt"
 
-	"github.com/absmach/magistrala/pkg/errors"
+	"github.com/absmach/certs/pkg/errors"
 	_ "github.com/jackc/pgx/v5/stdlib" // required for SQL access
 	"github.com/jmoiron/sqlx"
 	migrate "github.com/rubenv/sql-migrate"
@@ -17,8 +17,8 @@ var (
 type Config struct {
 	Host        string `env:"HOST"           envDefault:"localhost"`
 	Port        string `env:"PORT"           envDefault:"5432"`
-	User        string `env:"USER"           envDefault:"magistrala"`
-	Pass        string `env:"PASS"           envDefault:"magistrala"`
+	User        string `env:"USER"           envDefault:"absmach"`
+	Pass        string `env:"PASS"           envDefault:"absmach"`
 	Name        string `env:"NAME"           envDefault:""`
 	SSLMode     string `env:"SSL_MODE"       envDefault:"disable"`
 	SSLCert     string `env:"SSL_CERT"       envDefault:""`
@@ -28,10 +28,6 @@ type Config struct {
 
 // Setup creates a connection to the PostgreSQL instance and applies any
 // unapplied database migrations. A non-nil error is returned to indicate failure.
-//
-// For example:
-//
-//	db, err := postgres.Setup(postgres.Config{}, migrate.MemoryMigrationSource{})
 func Setup(cfg Config, migrations migrate.MemoryMigrationSource) (*sqlx.DB, error) {
 	db, err := Connect(cfg)
 	if err != nil {
@@ -74,10 +70,6 @@ func migrateDB(db *sqlx.DB, migrations migrate.MemoryMigrationSource) error {
 }
 
 // Connect creates a connection to the PostgreSQL instance.
-//
-// For example:
-//
-//	db, err := postgres.Connect(postgres.Config{})
 func Connect(cfg Config) (*sqlx.DB, error) {
 	url := fmt.Sprintf("host=%s port=%s user=%s dbname=%s password=%s sslmode=%s sslcert=%s sslkey=%s sslrootcert=%s", cfg.Host, cfg.Port, cfg.User, cfg.Name, cfg.Pass, cfg.SSLMode, cfg.SSLCert, cfg.SSLKey, cfg.SSLRootCert)
 

@@ -4,14 +4,15 @@ package http
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"strings"
 
 	"github.com/absmach/certs"
-	"github.com/absmach/certs/pkg/apiutil"
 	"github.com/absmach/certs/internal/api"
+	"github.com/absmach/certs/pkg/apiutil"
 	"github.com/go-chi/chi"
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -34,49 +35,50 @@ func MakeHandler(r *chi.Mux, svc certs.Service, logger *slog.Logger, instanceID 
 		kithttp.ServerErrorEncoder(apiutil.LoggingErrorEncoder(logger, api.EncodeError)),
 	}
 
+	r.Route("/users/{userId}", func(r chi.Router) {
+		r.Route("/certs", func(r chi.Router) {
+			r.Post("/issue/{entityType}/{entityID}", kithttp.NewServer(
+				otelkit.EndpointMiddleware(otelkit.WithOperation("issue_cert"))(issueCertEndpoint(svc)),
+				decodeIssueCert,
+				api.EncodeResponse,
+				opts...,
+			).ServeHTTP)
+
+			r.Patch("/{id}/renew", kithttp.NewServer(
+				otelkit.EndpointMiddleware(otelkit.WithOperation("renew_cert"))(renewCertEndpoint(svc)),
+				decodeView,
+				api.EncodeResponse,
+				opts...,
+			).ServeHTTP)
+
+			r.Patch("/{id}/revoke", kithttp.NewServer(
+				otelkit.EndpointMiddleware(otelkit.WithOperation("revoke_cert"))(revokeCertEndpoint(svc)),
+				decodeView,
+				api.EncodeResponse,
+				opts...,
+			).ServeHTTP)
+			r.Get("/{id}/download/token", kithttp.NewServer(
+				otelkit.EndpointMiddleware(otelkit.WithOperation("retrieve_certs_download_token"))(requestCertDownloadTokenEndpoint(svc)),
+				decodeView,
+				api.EncodeResponse,
+				opts...,
+			).ServeHTTP)
+			r.Get("/{id}/download", kithttp.NewServer(
+				otelkit.EndpointMiddleware(otelkit.WithOperation("download_certs"))(downloadCertEndpoint(svc)),
+				decodeDownloadCerts,
+				api.EncodeResponse,
+				opts...,
+			).ServeHTTP)
+			r.Get("/", kithttp.NewServer(
+				otelkit.EndpointMiddleware(otelkit.WithOperation("list_cert"))(listCertsEndpoint(svc)),
+				decodeListCerts,
+				api.EncodeResponse,
+				opts...,
+			).ServeHTTP)
+		})
+	})
+
 	r.Route("/certs", func(r chi.Router) {
-		r.Patch("/{id}/renew", kithttp.NewServer(
-			otelkit.EndpointMiddleware(otelkit.WithOperation("renew_cert"))(renewCertEndpoint(svc)),
-			decodeView,
-			api.EncodeResponse,
-			opts...,
-		).ServeHTTP)
-
-		r.Patch("/{id}/revoke", kithttp.NewServer(
-			otelkit.EndpointMiddleware(otelkit.WithOperation("revoke_cert"))(revokeCertEndpoint(svc)),
-			decodeView,
-			api.EncodeResponse,
-			opts...,
-		).ServeHTTP)
-
-		r.Get("/{id}/download/token", kithttp.NewServer(
-			otelkit.EndpointMiddleware(otelkit.WithOperation("retrieve_certs_download_token"))(requestCertDownloadTokenEndpoint(svc)),
-			decodeView,
-			api.EncodeResponse,
-			opts...,
-		).ServeHTTP)
-
-		r.Get("/{id}/download", kithttp.NewServer(
-			otelkit.EndpointMiddleware(otelkit.WithOperation("download_certs"))(downloadCertEndpoint(svc)),
-			decodeDownloadCerts,
-			api.EncodeResponse,
-			opts...,
-		).ServeHTTP)
-
-		r.Post("/issue/{entityType}/{entityID}", kithttp.NewServer(
-			otelkit.EndpointMiddleware(otelkit.WithOperation("issue_cert"))(issueCertEndpoint(svc)),
-			decodeIssueCert,
-			api.EncodeResponse,
-			opts...,
-		).ServeHTTP)
-
-		r.Get("/", kithttp.NewServer(
-			otelkit.EndpointMiddleware(otelkit.WithOperation("list_cert"))(listCertsEndpoint(svc)),
-			decodeListCerts,
-			api.EncodeResponse,
-			opts...,
-		).ServeHTTP)
-
 		r.Post("/ocsp", kithttp.NewServer(
 			otelkit.EndpointMiddleware(otelkit.WithOperation("ocsp"))(ocspEndpoint(svc)),
 			decodeOCSPRequest,
@@ -94,19 +96,15 @@ func MakeHandler(r *chi.Mux, svc certs.Service, logger *slog.Logger, instanceID 
 func decodeView(_ context.Context, r *http.Request) (interface{}, error) {
 	req := viewReq{
 		userId: chi.URLParam(r, "userId"),
-		id:    chi.URLParam(r, "id"),
+		id:     chi.URLParam(r, "id"),
 	}
 	return req, nil
 }
 
 func decodeDownloadCerts(_ context.Context, r *http.Request) (interface{}, error) {
-	token, err := apiutil.ReadStringQuery(r, "token", "")
-	if err != nil {
-		return nil, err
-	}
 	req := viewReq{
-		userId: token,
-		id:    chi.URLParam(r, "id"),
+		userId: chi.URLParam(r, "userId"),
+		id:     chi.URLParam(r, "id"),
 	}
 
 	return req, nil
@@ -143,18 +141,23 @@ func decodeOCSPRequest(_ context.Context, r *http.Request) (interface{}, error) 
 }
 
 func decodeIssueCert(_ context.Context, r *http.Request) (interface{}, error) {
+	fmt.Println("Am here 1")
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		return nil, err
 	}
+	fmt.Printf("Body: %+v\n", body)
 	req := issueCertReq{
 		userId:     chi.URLParam(r, "userId"),
 		entityID:   chi.URLParam(r, "entityID"),
 		entityType: chi.URLParam(r, "entityType"),
 	}
+	fmt.Printf("Req: %+v\n", req)
 	if err := json.Unmarshal(body, &req); err != nil {
+		fmt.Println(err)
 		return nil, err
 	}
+	fmt.Println("Am here 3")
 
 	return req, nil
 }

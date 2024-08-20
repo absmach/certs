@@ -3,7 +3,8 @@ package http
 
 import (
 	"github.com/absmach/certs"
-	"github.com/absmach/magistrala/pkg/errors"
+	"github.com/absmach/certs/pkg/errors"
+	"github.com/absmach/certs/pkg/errors/service"
 	"golang.org/x/crypto/ocsp"
 )
 
@@ -34,13 +35,13 @@ type issueCertReq struct {
 
 func (req issueCertReq) validate() error {
 	if req.userId == "" {
-		return errors.Wrap(errors.ErrMalformedEntity, ErrMissingUserId)
+		return errors.Wrap(service.ErrMalformedEntity, ErrMissingUserId)
 	}
 	if req.entityID == "" {
-		return errors.Wrap(errors.ErrMalformedEntity, ErrMissingEntityID)
+		return errors.Wrap(service.ErrMalformedEntity, ErrMissingEntityID)
 	}
 	if req.entityType == "" {
-		return errors.Wrap(errors.ErrMalformedEntity, ErrMissingEntityType)
+		return errors.Wrap(service.ErrMalformedEntity, ErrMissingEntityType)
 	}
 	return nil
 }
@@ -52,7 +53,7 @@ type listCertsReq struct {
 
 func (req listCertsReq) validate() error {
 	if req.userId == "" {
-		return errors.Wrap(errors.ErrMalformedEntity, ErrMissingUserId)
+		return errors.Wrap(service.ErrMalformedEntity, ErrMissingUserId)
 	}
 	return nil
 }
@@ -64,7 +65,7 @@ type ocspReq struct {
 
 func (req ocspReq) validate() error {
 	if req.req == nil {
-		return errors.ErrMalformedEntity
+		return service.ErrMalformedEntity
 	}
 	return nil
 }

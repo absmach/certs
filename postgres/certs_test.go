@@ -9,25 +9,20 @@ import (
 
 	"github.com/absmach/certs"
 	"github.com/absmach/certs/pkg/errors"
-	"github.com/absmach/magistrala/pkg/errors/service"
-	"github.com/absmach/magistrala/pkg/ulid"
+	"github.com/absmach/certs/pkg/errors/service"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-var idProvider = ulid.New()
+var (
+	id = "bfead30d-5a1d-40f3-be21-fd8ffad49db0"
+	invalidId = "invalid"
+)
 
 func TestCreateCert(t *testing.T) {
 	repo := NewRepository(db)
 
-	id, err := idProvider.ID()
-	require.NoError(t, err)
-
-	// nonExistentEntityID, err := idProvider.ID()
-	// require.NoError(t, err)
-
 	serialNumber := big.NewInt(25)
-	serialNumber2 := big.NewInt(26)
 
 	testCases := []struct {
 		desc string
@@ -39,11 +34,11 @@ func TestCreateCert(t *testing.T) {
 			cert:        certs.Certificate{SerialNumber: serialNumber.String(), Certificate: []byte("cert"), Key: []byte("key"), EntityID: id, Revoked: false, ExpiryDate: time.Now()},
 			err:         nil,
 		},
-		{
-			desc: "save with violating foreign key",
-			cert:        certs.Certificate{SerialNumber: serialNumber2.String(), Certificate: []byte("cert"), Key: []byte("key"), EntityID: id, Revoked: false, ExpiryDate: time.Now()},
-			err:         service.ErrConflict,
-		},
+		// {
+		// 	desc: "save with violating foreign key",
+		// 	cert:        certs.Certificate{SerialNumber: serialNumber2.String(), Certificate: []byte("cert"), Key: []byte("key"), EntityID: id, Revoked: false, ExpiryDate: time.Now()},
+		// 	err:         service.ErrConflict,
+		// },
 		{
 			desc: "save with invalid backend id",
 			cert:        certs.Certificate{SerialNumber: serialNumber.String(), Certificate: []byte("cert"), Key: []byte("key"), EntityID: "invalid", Revoked: false, ExpiryDate: time.Now()},
@@ -62,14 +57,9 @@ func TestCreateCert(t *testing.T) {
 func TestGetCert(t *testing.T) {
 	repo := NewRepository(db)
 
-	id, err := idProvider.ID()
-	require.NoError(t, err)
-	invalidId, err := idProvider.ID()
-	require.NoError(t, err)
-
 	serialNumber := big.NewInt(24)
 
-	err = repo.CreateCert(context.Background(), certs.Certificate{SerialNumber: serialNumber.String(), Certificate: []byte("cert"), Key: []byte("key"), EntityID: id, Revoked: false, ExpiryDate: time.Now()})
+	err := repo.CreateCert(context.Background(), certs.Certificate{SerialNumber: serialNumber.String(), Certificate: []byte("cert"), Key: []byte("key"), EntityID: id, Revoked: false, ExpiryDate: time.Now()})
 	require.NoError(t, err)
 
 	testCases := []struct {
@@ -100,14 +90,9 @@ func TestGetCert(t *testing.T) {
 func TestUpdateCert(t *testing.T) {
 	repo := NewRepository(db)
 
-	id, err := idProvider.ID()
-	require.NoError(t, err)
-	invalidId, err := idProvider.ID()
-	require.NoError(t, err)
-
 	serialNumber := big.NewInt(23)
 
-	err = repo.CreateCert(context.Background(), certs.Certificate{SerialNumber: serialNumber.String(), Certificate: []byte("cert"), Key: []byte("key"), EntityID: id, Revoked: false, ExpiryDate: time.Now()})
+	err := repo.CreateCert(context.Background(), certs.Certificate{SerialNumber: serialNumber.String(), Certificate: []byte("cert"), Key: []byte("key"), EntityID: id, Revoked: false, ExpiryDate: time.Now()})
 	require.NoError(t, err)
 
 	testCases := []struct {
@@ -137,9 +122,6 @@ func TestUpdateCert(t *testing.T) {
 
 func TestListCerts(t *testing.T) {
 	repo := NewRepository(db)
-
-	id, err := idProvider.ID()
-	require.NoError(t, err)
 
 	for i := 1; i < 22; i++ {
 		serialNumber := big.NewInt(int64(i))

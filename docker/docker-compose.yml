@@ -1,25 +1,24 @@
+# Copyright (c) Abstract Machines
+# SPDX-License-Identifier: Apache-2.0
+
+name: certs
 
 networks:
   certs-base-net:
+    driver: bridge
 
 volumes:
   certs-db-volume:
 
 services:
   certs:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile
-      args:
-        SVC: certs
-        GOARCH: ${GOARCH}
-        GOARM: ${GOARM}
-        VERSION: ${VERSION}
-        COMMIT: ${COMMIT}
-        TIME: ${TIME}
+    image: absmach/certs:latest
+    container_name: certs
     depends_on:
       - certs-db
     restart: on-failure
+    networks:
+      - certs-base-net
     environment:
       - AM_CERTS_LOG_LEVEL=${AM_CERTS_LOG_LEVEL}
       - AM_CERTS_DB_HOST=${AM_CERTS_DB_HOST}
@@ -42,6 +41,9 @@ services:
     image: postgres:16.2-alpine
     container_name: certs-db
     restart: on-failure
+    networks:
+      - certs-base-net
+    command: postgres -c "max_connections=${AM_CERTS_DB_MAX_CONNECTIONS}"
     environment:
       - POSTGRES_USER=${AM_CERTS_DB_USER}
       - POSTGRES_PASSWORD=${AM_CERTS_DB_PASS}

@@ -47,7 +47,7 @@ func (repo certsRepo) CreateCert(ctx context.Context, cert certs.Certificate) er
 	VALUES (:serial_number, :certificate, :key, :entity_id, :entity_type, :revoked, :expiry_date, :created_by, :created_at)`
 	_, err := repo.db.NamedExecContext(ctx, q, cert)
 	if err != nil {
-		return HandleError(err, service.ErrCreateEntity)
+		return handleError(service.ErrCreateEntity, err)
 	}
 	return nil
 }
@@ -70,7 +70,7 @@ func (repo certsRepo) UpdateCert(ctx context.Context, cert certs.Certificate) er
 	q := `UPDATE certs SET certificate = :certificate, key = :key, revoked = :revoked, expiry_date = :expiry_date, updated_by = :updated_by, updated_at = :updated_at WHERE serial_number = :serial_number`
 	res, err := repo.db.NamedExecContext(ctx, q, cert)
 	if err != nil {
-		return HandleError(err, service.ErrUpdateEntity)
+		return handleError(service.ErrUpdateEntity, err)
 	}
 	count, err := res.RowsAffected()
 	if err != nil {
@@ -100,7 +100,7 @@ func (repo certsRepo) ListCerts(ctx context.Context, userId string, pm certs.Pag
     }
 	rows, err := repo.db.NamedQueryContext(ctx, q, params)
 	if err != nil {
-		return certs.CertificatePage{}, HandleError(err, service.ErrViewEntity)
+		return certs.CertificatePage{}, handleError(service.ErrViewEntity, err)
 	}
 	defer rows.Close()
 
@@ -139,7 +139,7 @@ func (repo certsRepo) total(ctx context.Context, query string, params interface{
 	return total, nil
 }
 
-func HandleError(wrapper, err error) error {
+func handleError(wrapper, err error) error {
 	pqErr, ok := err.(*pgconn.PgError)
 	if ok {
 		switch pqErr.Code {

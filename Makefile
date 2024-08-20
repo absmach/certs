@@ -1,4 +1,4 @@
-AM_DOCKER_IMAGE_NAME_PREFIX ?= absamach
+AM_DOCKER_IMAGE_NAME_PREFIX ?= absmach
 BUILD_DIR = build
 SERVICES = certs
 DOCKERS = $(addprefix docker_,$(SERVICES))

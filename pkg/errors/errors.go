@@ -1,33 +1,20 @@
 package errors
 
-import (
-	"encoding/json"
-)
-
-// Error specifies an API that must be fullfiled by error type.
 type Error interface {
-	// Error implements the error interface.
 	Error() string
 
-	// Msg returns error message.
 	Msg() string
 
-	// Err returns wrapped error.
 	Err() Error
-
-	// MarshalJSON returns a marshaled error.
-	MarshalJSON() ([]byte, error)
 }
 
 var _ Error = (*customError)(nil)
 
-// customError represents a Magistrala error.
 type customError struct {
 	msg string
 	err Error
 }
 
-// New returns an Error that formats as the given text.
 func New(text string) Error {
 	return &customError{
 		msg: text,
@@ -53,21 +40,6 @@ func (ce *customError) Err() Error {
 	return ce.err
 }
 
-func (ce *customError) MarshalJSON() ([]byte, error) {
-	var val string
-	if e := ce.Err(); e != nil {
-		val = e.Msg()
-	}
-	return json.Marshal(&struct {
-		Err string `json:"error"`
-		Msg string `json:"message"`
-	}{
-		Err: val,
-		Msg: ce.Msg(),
-	})
-}
-
-// Contains inspects if e2 error is contained in any layer of e1 error.
 func Contains(e1, e2 error) bool {
 	if e1 == nil || e2 == nil {
 		return e2 == e1
@@ -82,7 +54,6 @@ func Contains(e1, e2 error) bool {
 	return e1.Error() == e2.Error()
 }
 
-// Wrap returns an Error that wrap err with wrapper.
 func Wrap(wrapper, err error) error {
 	if wrapper == nil || err == nil {
 		return wrapper
@@ -99,7 +70,6 @@ func Wrap(wrapper, err error) error {
 	}
 }
 
-// Unwrap returns the wrapper and the error by separating the Wrapper from the error.
 func Unwrap(err error) (error, error) {
 	if ce, ok := err.(Error); ok {
 		if ce.Err() == nil {

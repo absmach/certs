@@ -35,7 +35,7 @@ import (
 
 const (
 	svcName        = "certs"
-	envPrefix      = "AM_CERTS_"
+	envPrefix      = "AM_CERTS_DB_"
 	envPrefixHTTP  = "AM_CERTS_HTTP_"
 	envPrefixGRPC  = "AM_CERTS_GRPC_"
 	envPrefixAuth  = "AM_AUTH_GRPC_"
