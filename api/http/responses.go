@@ -148,3 +148,11 @@ func (res ocspRes) Headers() map[string]string {
 func (res ocspRes) Empty() bool {
 	return false
 }
+
+type fileDownloadRes struct {
+	Certificate []byte `json:"certificate"`
+	PrivateKey  []byte `json:"private_key"`
+	CA          []byte `json:"ca"`
+	Filename    string
+	ContentType string
+}

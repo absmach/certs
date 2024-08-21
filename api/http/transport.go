@@ -4,8 +4,11 @@
 package http
 
 import (
+	"archive/zip"
+	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -75,7 +78,7 @@ func MakeHandler(r *chi.Mux, svc certs.Service, logger *slog.Logger, instanceID 
 		r.Get("/{id}/download", otelhttp.NewHandler(kithttp.NewServer(
 			downloadCertEndpoint(svc),
 			decodeDownloadCerts,
-			api.EncodeResponse,
+			encodeFileDownloadResponse,
 			opts...,
 		), "download_cert").ServeHTTP)
 		r.Post("/ocsp", otelhttp.NewHandler(kithttp.NewServer(
@@ -110,20 +113,6 @@ func decodeDownloadCerts(_ context.Context, r *http.Request) (interface{}, error
 	}
 
 	return req, nil
-}
-
-func encodeOSCPResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
-	res := response.(ocspRes)
-
-	ocspRes, err := ocsp.CreateResponse(res.issuerCert, res.template.Certificate, res.template, res.signer)
-	if err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/ocsp-response")
-	if _, err := w.Write(ocspRes); err != nil {
-		return err
-	}
-	return err
 }
 
 func decodeOCSPRequest(_ context.Context, r *http.Request) (interface{}, error) {
@@ -182,4 +171,62 @@ func decodeListCerts(_ context.Context, r *http.Request) (interface{}, error) {
 		},
 	}
 	return req, nil
+}
+
+func encodeOSCPResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
+	res := response.(ocspRes)
+
+	ocspRes, err := ocsp.CreateResponse(res.issuerCert, res.template.Certificate, res.template, res.signer)
+	if err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/ocsp-response")
+	if _, err := w.Write(ocspRes); err != nil {
+		return err
+	}
+	return err
+}
+
+func encodeFileDownloadResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
+	resp := response.(fileDownloadRes)
+	var buffer bytes.Buffer
+	zw := zip.NewWriter(&buffer)
+
+	f, err := zw.Create("ca.pem")
+	if err != nil {
+		return err
+	}
+
+	if _, err = f.Write(resp.CA); err != nil {
+		return err
+	}
+
+	f, err = zw.Create("cert.pem")
+	if err != nil {
+		return err
+	}
+
+	if _, err = f.Write(resp.Certificate); err != nil {
+		return err
+	}
+
+	f, err = zw.Create("key.pem")
+	if err != nil {
+		return err
+	}
+
+	if _, err = f.Write(resp.PrivateKey); err != nil {
+		return err
+	}
+
+	if err := zw.Close(); err != nil {
+		return err
+	}
+
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", resp.Filename))
+	w.Header().Set("Content-Type", resp.ContentType)
+
+	_, err = w.Write(buffer.Bytes())
+
+	return err
 }

@@ -72,10 +72,16 @@ func downloadCertEndpoint(svc certs.Service) endpoint.Endpoint {
 
 		cert, ca, err := svc.RetrieveCert(ctx, req.token, req.id)
 		if err != nil {
-			return downloadCertRes{}, err
+			return fileDownloadRes{}, err
 		}
 
-		return downloadCertRes{Certificate: cert.Certificate, PrivateKey: cert.Key, CA: ca}, nil
+		return fileDownloadRes{
+			Certificate: cert.Certificate,
+			PrivateKey:  cert.Key,
+			CA:          ca,
+			Filename:    "certificates.zip",
+			ContentType: "application/zip",
+		}, nil
 	}
 }
 
