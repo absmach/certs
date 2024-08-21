@@ -36,11 +36,6 @@ func TestCreateCert(t *testing.T) {
 			cert: certs.Certificate{SerialNumber: serialNumber.String(), Certificate: []byte("cert"), Key: []byte("key"), EntityID: id, Revoked: false, ExpiryDate: time.Now()},
 			err:  nil,
 		},
-		// {
-		// 	desc: "save with violating foreign key",
-		// 	cert:        certs.Certificate{SerialNumber: serialNumber2.String(), Certificate: []byte("cert"), Key: []byte("key"), EntityID: id, Revoked: false, ExpiryDate: time.Now()},
-		// 	err:         service.ErrConflict,
-		// },
 		{
 			desc: "save with invalid backend id",
 			cert: certs.Certificate{SerialNumber: serialNumber.String(), Certificate: []byte("cert"), Key: []byte("key"), EntityID: "invalid", Revoked: false, ExpiryDate: time.Now()},
@@ -134,7 +129,6 @@ func TestListCerts(t *testing.T) {
 
 	testCases := []struct {
 		desc   string
-		userId string
 		limit  uint64
 		offset uint64
 		total  int
@@ -158,7 +152,7 @@ func TestListCerts(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			_, err := repo.ListCerts(context.Background(), tc.userId, certs.PageMetadata{Limit: tc.limit, Offset: tc.offset})
+			_, err := repo.ListCerts(context.Background(), certs.PageMetadata{Limit: tc.limit, Offset: tc.offset})
 			assert.True(t, errors.Contains(err, tc.err), "expected %v, got %v", tc.err, err)
 		})
 	}

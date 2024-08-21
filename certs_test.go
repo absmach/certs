@@ -27,7 +27,6 @@ import (
 const serialNumber = "serial number"
 
 var (
-	user         = "userid"
 	invalidToken = "123"
 )
 
@@ -81,13 +80,11 @@ func TestIssueCert(t *testing.T) {
 
 	testCases := []struct {
 		desc      string
-		userId    string
 		backendId string
 		err       error
 	}{
 		{
 			desc:      "successful issue",
-			userId:    user,
 			backendId: "backendId",
 			err:       nil,
 		},
@@ -113,9 +110,9 @@ func TestIssueCert(t *testing.T) {
 				defer repoCall1.Unset()
 			}
 
-			_, err = svc.IssueCert(context.Background(), tc.userId, tc.backendId, certs.EntityTypeBackend, []string{})
+			_, err = svc.IssueCert(context.Background(), tc.backendId, certs.EntityTypeBackend, []string{})
 			if tc.desc == "missing root CA" {
-				_, err = svcNoCert.IssueCert(context.Background(), tc.userId, tc.backendId, certs.EntityTypeBackend, []string{})
+				_, err = svcNoCert.IssueCert(context.Background(), tc.backendId, certs.EntityTypeBackend, []string{})
 			}
 
 			require.True(t, errors.Contains(err, tc.err), "expected error %v, got %v", tc.err, err)
@@ -138,28 +135,24 @@ func TestRevokeCert(t *testing.T) {
 
 	testCases := []struct {
 		desc         string
-		userId       string
 		serial       string
 		err          error
 		shouldRevoke bool
 	}{
 		{
 			desc:         "successful revoke",
-			userId:       user,
 			serial:       serialNumber,
 			err:          nil,
 			shouldRevoke: true,
 		},
 		{
 			desc:         "failed repo get cert",
-			userId:       user,
 			serial:       invalidSerialNumber,
 			err:          service.ErrViewEntity,
 			shouldRevoke: false,
 		},
 		{
 			desc:         "failed repo update cert",
-			userId:       user,
 			serial:       serialNumber,
 			err:          service.ErrUpdateEntity,
 			shouldRevoke: false,
@@ -185,7 +178,7 @@ func TestRevokeCert(t *testing.T) {
 				defer repoCall2.Unset()
 			}
 
-			err = svc.RevokeCert(context.Background(), tc.userId, tc.serial)
+			err = svc.RevokeCert(context.Background(), tc.serial)
 			require.True(t, errors.Contains(err, tc.err), "expected error %v, got %v", tc.err, err)
 		})
 	}
@@ -274,28 +267,24 @@ func TestGetCert(t *testing.T) {
 	testCases := []struct {
 		desc   string
 		token  string
-		userId string
 		serial string
 		err    error
 	}{
 		{
 			desc:   "successful get cert",
 			token: validToken,
-			userId: user,
 			serial: serialNumber,
 			err:    nil,
 		},
 		{
 			desc: "failed token validation",
 			token: invalidToken,
-			userId: user,
 			serial: serialNumber,
 			err:    service.ErrMalformedEntity,
 		},
 		{
 			desc:   "failed repo get cert",
 			token: validToken,
-			userId: user,
 			serial: serialNumber,
 			err:    service.ErrViewEntity,
 		},
@@ -412,37 +401,31 @@ func TestRenewCert(t *testing.T) {
 
 	testCases := []struct {
 		desc   string
-		userId string
 		serial string
 		err    error
 	}{
 		{
 			desc:   "successful renew cert",
-			userId: user,
 			serial: serialNumber.String(),
 			err:    nil,
 		},
 		{
 			desc:   "failed repo get cert",
-			userId: user,
 			serial: serialNumber.String(),
 			err:    service.ErrViewEntity,
 		},
 		{
 			desc:   "renew expired cert",
-			userId: user,
 			serial: expiredSerialNumber.String(),
 			err:    service.ErrCertExpired,
 		},
 		{
 			desc:   "renew revoked cert",
-			userId: user,
 			serial: revokedSerialNumber.String(),
 			err:    service.ErrCertRevoked,
 		},
 		{
 			desc:   "failed repo update cert",
-			userId: user,
 			serial: serialNumber.String(),
 			err:    service.ErrUpdateEntity,
 		},
@@ -496,7 +479,7 @@ func TestRenewCert(t *testing.T) {
 				defer repoCall2.Unset()
 			}
 
-			err = svc.RenewCert(context.Background(), tc.userId, tc.serial)
+			err = svc.RenewCert(context.Background(), tc.serial)
 			require.True(t, errors.Contains(err, tc.err), "expected error %v, got %v", tc.err, err)
 		})
 	}

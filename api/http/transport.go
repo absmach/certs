@@ -37,46 +37,41 @@ func MakeHandler(r *chi.Mux, svc certs.Service, logger *slog.Logger, instanceID 
 		kithttp.ServerErrorEncoder(apiutil.LoggingErrorEncoder(logger, api.EncodeError)),
 	}
 
-	r.Route("/users/{userId}", func(r chi.Router) {
-		r.Route("/certs", func(r chi.Router) {
-			r.Post("/issue/{entityType}/{entityID}", otelhttp.NewHandler(kithttp.NewServer(
-				issueCertEndpoint(svc),
-				decodeIssueCert,
-				api.EncodeResponse,
-				opts...,
-			), "issue_cert").ServeHTTP)
-
-			r.Patch("/{id}/renew", otelhttp.NewHandler(kithttp.NewServer(
-				renewCertEndpoint(svc),
-				decodeView,
-				api.EncodeResponse,
-				opts...,
-			), "renew_cert").ServeHTTP)
-
-			r.Patch("/{id}/revoke", otelhttp.NewHandler(kithttp.NewServer(
-				revokeCertEndpoint(svc),
-				decodeView,
-				api.EncodeResponse,
-				opts...,
-			), "revoke_cert").ServeHTTP)
-
-			r.Get("/{id}/download/token", otelhttp.NewHandler(kithttp.NewServer(
-				requestCertDownloadTokenEndpoint(svc),
-				decodeView,
-				api.EncodeResponse,
-				opts...,
-			), "get_download_token").ServeHTTP)
-
-			r.Get("/", otelhttp.NewHandler(kithttp.NewServer(
-				listCertsEndpoint(svc),
-				decodeListCerts,
-				api.EncodeResponse,
-				opts...,
-			), "list_certs").ServeHTTP)
-		})
-	})
-
 	r.Route("/certs", func(r chi.Router) {
+		r.Post("/issue/{entityType}/{entityID}", otelhttp.NewHandler(kithttp.NewServer(
+			issueCertEndpoint(svc),
+			decodeIssueCert,
+			api.EncodeResponse,
+			opts...,
+		), "issue_cert").ServeHTTP)
+
+		r.Patch("/{id}/renew", otelhttp.NewHandler(kithttp.NewServer(
+			renewCertEndpoint(svc),
+			decodeView,
+			api.EncodeResponse,
+			opts...,
+		), "renew_cert").ServeHTTP)
+
+		r.Patch("/{id}/revoke", otelhttp.NewHandler(kithttp.NewServer(
+			revokeCertEndpoint(svc),
+			decodeView,
+			api.EncodeResponse,
+			opts...,
+		), "revoke_cert").ServeHTTP)
+
+		r.Get("/{id}/download/token", otelhttp.NewHandler(kithttp.NewServer(
+			requestCertDownloadTokenEndpoint(svc),
+			decodeView,
+			api.EncodeResponse,
+			opts...,
+		), "get_download_token").ServeHTTP)
+
+		r.Get("/", otelhttp.NewHandler(kithttp.NewServer(
+			listCertsEndpoint(svc),
+			decodeListCerts,
+			api.EncodeResponse,
+			opts...,
+		), "list_certs").ServeHTTP)
 		r.Get("/{id}/download", otelhttp.NewHandler(kithttp.NewServer(
 			downloadCertEndpoint(svc),
 			decodeDownloadCerts,
@@ -99,8 +94,7 @@ func MakeHandler(r *chi.Mux, svc certs.Service, logger *slog.Logger, instanceID 
 
 func decodeView(_ context.Context, r *http.Request) (interface{}, error) {
 	req := viewReq{
-		userId: chi.URLParam(r, "userId"),
-		id:     chi.URLParam(r, "id"),
+		id: chi.URLParam(r, "id"),
 	}
 	return req, nil
 }
@@ -154,7 +148,6 @@ func decodeIssueCert(_ context.Context, r *http.Request) (interface{}, error) {
 		return nil, err
 	}
 	req := issueCertReq{
-		userId:     chi.URLParam(r, "userId"),
 		entityID:   chi.URLParam(r, "entityID"),
 		entityType: chi.URLParam(r, "entityType"),
 	}
@@ -182,7 +175,6 @@ func decodeListCerts(_ context.Context, r *http.Request) (interface{}, error) {
 	}
 
 	req := listCertsReq{
-		userId: chi.URLParam(r, "userId"),
 		pm: certs.PageMetadata{
 			Offset:   o,
 			Limit:    l,

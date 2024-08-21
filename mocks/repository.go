@@ -35,9 +35,9 @@ func (_m *Repository) CreateCert(ctx context.Context, cert certs.Certificate) er
 	return r0
 }
 
-// ListCerts provides a mock function with given fields: ctx, userId, pm
-func (_m *Repository) ListCerts(ctx context.Context, userId string, pm certs.PageMetadata) (certs.CertificatePage, error) {
-	ret := _m.Called(ctx, userId, pm)
+// ListCerts provides a mock function with given fields: ctx, pm
+func (_m *Repository) ListCerts(ctx context.Context, pm certs.PageMetadata) (certs.CertificatePage, error) {
+	ret := _m.Called(ctx, pm)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListCerts")
@@ -45,17 +45,17 @@ func (_m *Repository) ListCerts(ctx context.Context, userId string, pm certs.Pag
 
 	var r0 certs.CertificatePage
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, certs.PageMetadata) (certs.CertificatePage, error)); ok {
-		return rf(ctx, userId, pm)
+	if rf, ok := ret.Get(0).(func(context.Context, certs.PageMetadata) (certs.CertificatePage, error)); ok {
+		return rf(ctx, pm)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, certs.PageMetadata) certs.CertificatePage); ok {
-		r0 = rf(ctx, userId, pm)
+	if rf, ok := ret.Get(0).(func(context.Context, certs.PageMetadata) certs.CertificatePage); ok {
+		r0 = rf(ctx, pm)
 	} else {
 		r0 = ret.Get(0).(certs.CertificatePage)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string, certs.PageMetadata) error); ok {
-		r1 = rf(ctx, userId, pm)
+	if rf, ok := ret.Get(1).(func(context.Context, certs.PageMetadata) error); ok {
+		r1 = rf(ctx, pm)
 	} else {
 		r1 = ret.Error(1)
 	}

@@ -45,8 +45,8 @@ func NewRepository(db postgres.Database) certs.Repository {
 // CreateLog creates computation log in the database.
 func (repo certsRepo) CreateCert(ctx context.Context, cert certs.Certificate) error {
 	q := `
-	INSERT INTO certs (serial_number, certificate, key, entity_id, entity_type, revoked, expiry_date, created_by, created_at)
-	VALUES (:serial_number, :certificate, :key, :entity_id, :entity_type, :revoked, :expiry_date, :created_by, :created_at)`
+	INSERT INTO certs (serial_number, certificate, key, entity_id, entity_type, revoked, expiry_date)
+	VALUES (:serial_number, :certificate, :key, :entity_id, :entity_type, :revoked, :expiry_date)`
 	_, err := repo.db.NamedExecContext(ctx, q, cert)
 	if err != nil {
 		return handleError(service.ErrCreateEntity, err)
@@ -69,7 +69,7 @@ func (repo certsRepo) RetrieveCert(ctx context.Context, serialNumber string) (ce
 
 // UpdateLog updates computation log in the database.
 func (repo certsRepo) UpdateCert(ctx context.Context, cert certs.Certificate) error {
-	q := `UPDATE certs SET certificate = :certificate, key = :key, revoked = :revoked, expiry_date = :expiry_date, updated_by = :updated_by, updated_at = :updated_at WHERE serial_number = :serial_number`
+	q := `UPDATE certs SET certificate = :certificate, key = :key, revoked = :revoked, expiry_date = :expiry_date WHERE serial_number = :serial_number`
 	res, err := repo.db.NamedExecContext(ctx, q, cert)
 	if err != nil {
 		return handleError(service.ErrUpdateEntity, err)
@@ -84,11 +84,11 @@ func (repo certsRepo) UpdateCert(ctx context.Context, cert certs.Certificate) er
 	return nil
 }
 
-func (repo certsRepo) ListCerts(ctx context.Context, userId string, pm certs.PageMetadata) (certs.CertificatePage, error) {
+func (repo certsRepo) ListCerts(ctx context.Context, pm certs.PageMetadata) (certs.CertificatePage, error) {
 	q := `SELECT serial_number, revoked, expiry_date, entity_id FROM certs %s LIMIT :limit OFFSET :offset`
 	condition := ``
 	if pm.EntityID != "" {
-		condition = `WHERE entity_id = :entity_id AND created_by = :created_by`
+		condition = `WHERE entity_id = :entity_id`
 		q = fmt.Sprintf(q, condition)
 	} else {
 		q = fmt.Sprintf(q, condition)
@@ -96,10 +96,9 @@ func (repo certsRepo) ListCerts(ctx context.Context, userId string, pm certs.Pag
 	var certificates []certs.Certificate
 
 	params := map[string]interface{}{
-		"limit":      pm.Limit,
-		"offset":     pm.Offset,
-		"entity_id":  pm.EntityID,
-		"created_by": userId,
+		"limit":     pm.Limit,
+		"offset":    pm.Offset,
+		"entity_id": pm.EntityID,
 	}
 	rows, err := repo.db.NamedQueryContext(ctx, q, params)
 	if err != nil {

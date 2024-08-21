@@ -11,9 +11,9 @@ import (
 )
 
 var (
-	ErrMissingUserId     = errors.New("missing user ID")
 	ErrMissingEntityID   = errors.New("missing entity ID")
 	ErrMissingEntityType = errors.New("missing entity type")
+	ErrMissingID		 = errors.New("missing ID")
 )
 
 type downloadReq struct {
@@ -29,28 +29,23 @@ func (req downloadReq) validate() error {
 }
 
 type viewReq struct {
-	userId string
 	id     string
 }
 
 func (req viewReq) validate() error {
-	if req.userId == "" {
-		return ErrMissingUserId
+	if req.id == "" {
+		return ErrMissingID
 	}
 	return nil
 }
 
 type issueCertReq struct {
-	userId     string   `json:"-"`
 	entityID   string   `json:"-"`
 	entityType string   `json:"-"`
 	IpAddrs    []string `json:"ip_addresses"`
 }
 
 func (req issueCertReq) validate() error {
-	if req.userId == "" {
-		return errors.Wrap(service.ErrMalformedEntity, ErrMissingUserId)
-	}
 	if req.entityID == "" {
 		return errors.Wrap(service.ErrMalformedEntity, ErrMissingEntityID)
 	}
@@ -61,13 +56,12 @@ func (req issueCertReq) validate() error {
 }
 
 type listCertsReq struct {
-	userId string
 	pm     certs.PageMetadata
 }
 
 func (req listCertsReq) validate() error {
-	if req.userId == "" {
-		return errors.Wrap(service.ErrMalformedEntity, ErrMissingUserId)
+	if req.pm.EntityID == "" {
+		return errors.Wrap(service.ErrMalformedEntity, ErrMissingEntityID)
 	}
 	return nil
 }

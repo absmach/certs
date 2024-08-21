@@ -24,10 +24,6 @@ type Certificate struct {
 	EntityType   EntityType `db:"entity_type"`
 	EntityID     string     `db:"entity_id"`
 	DownloadUrl  string     `db:"-"`
-	CreatedBy    string     `db:"created_by"`
-	CreatedAt    time.Time  `db:"created_at"`
-	UpdatedBy    *string    `db:"updated_by"`
-	UpdatedAt    *time.Time `db:"updated_at"`
 }
 
 type CertificatePage struct {
@@ -45,22 +41,22 @@ type PageMetadata struct {
 //go:generate mockery --name Service --output=./mocks --filename service.go --quiet --note "Copyright (c) Abstract Machines"
 type Service interface {
 	// RenewCert renews a certificate from the database.
-	RenewCert(ctx context.Context, userId, serialNumber string) error
+	RenewCert(ctx context.Context, serialNumber string) error
 
 	// RevokeCert revokes a certificate from the database.
-	RevokeCert(ctx context.Context, userId, serialNumber string) error
+	RevokeCert(ctx context.Context, serialNumber string) error
 
 	// RetrieveCert retrieves a certificate record from the database.
 	RetrieveCert(ctx context.Context, token string, serialNumber string) (Certificate, []byte, error)
 
 	// ListCerts retrieves the certificates from the database while applying filters.
-	ListCerts(ctx context.Context, userId string, pm PageMetadata) (CertificatePage, error)
+	ListCerts(ctx context.Context, pm PageMetadata) (CertificatePage, error)
 
 	// RetrieveCertDownloadToken retrieves a certificate download token.
 	RetrieveCertDownloadToken(ctx context.Context, serialNumber string) (string, error)
 
 	// IssueCert issues a certificate from the database.
-	IssueCert(ctx context.Context, userId, entityID string, entityType EntityType, ipAddrs []string) (string, error)
+	IssueCert(ctx context.Context, entityID string, entityType EntityType, ipAddrs []string) (string, error)
 
 	// OCSP retrieves the OCSP response for a certificate.
 	OCSP(ctx context.Context, serialNumber string) (*Certificate, int, *x509.Certificate, error)
@@ -81,5 +77,5 @@ type Repository interface {
 	UpdateCert(ctx context.Context, cert Certificate) error
 
 	// ListCerts retrieves the certificates from the database while applying filters.
-	ListCerts(ctx context.Context, userId string, pm PageMetadata) (CertificatePage, error)
+	ListCerts(ctx context.Context, pm PageMetadata) (CertificatePage, error)
 }

@@ -23,16 +23,16 @@ func New(svc certs.Service, tracer trace.Tracer) certs.Service {
 	return &tracingMiddleware{tracer, svc}
 }
 
-func (tm *tracingMiddleware) RenewCert(ctx context.Context, token, serialNumber string) error {
+func (tm *tracingMiddleware) RenewCert(ctx context.Context, serialNumber string) error {
 	ctx, span := tm.tracer.Start(ctx, "renew_cert")
 	defer span.End()
-	return tm.svc.RenewCert(ctx, token, serialNumber)
+	return tm.svc.RenewCert(ctx, serialNumber)
 }
 
-func (tm *tracingMiddleware) RevokeCert(ctx context.Context, token, serialNumber string) error {
+func (tm *tracingMiddleware) RevokeCert(ctx context.Context, serialNumber string) error {
 	ctx, span := tm.tracer.Start(ctx, "revoke_cert")
 	defer span.End()
-	return tm.svc.RevokeCert(ctx, token, serialNumber)
+	return tm.svc.RevokeCert(ctx, serialNumber)
 }
 
 func (tm *tracingMiddleware) RetrieveCert(ctx context.Context, token, serialNumber string) (certs.Certificate, []byte, error) {
@@ -47,16 +47,16 @@ func (tm *tracingMiddleware) RetrieveCertDownloadToken(ctx context.Context, seri
 	return tm.svc.RetrieveCertDownloadToken(ctx, serialNumber)
 }
 
-func (tm *tracingMiddleware) IssueCert(ctx context.Context, userId, entityID string, entityType certs.EntityType, ipAddrs []string) (string, error) {
+func (tm *tracingMiddleware) IssueCert(ctx context.Context, entityID string, entityType certs.EntityType, ipAddrs []string) (string, error) {
 	ctx, span := tm.tracer.Start(ctx, "issue_cert")
 	defer span.End()
-	return tm.svc.IssueCert(ctx, userId, entityID, entityType, ipAddrs)
+	return tm.svc.IssueCert(ctx, entityID, entityType, ipAddrs)
 }
 
-func (tm *tracingMiddleware) ListCerts(ctx context.Context, userId string, pm certs.PageMetadata) (certs.CertificatePage, error) {
+func (tm *tracingMiddleware) ListCerts(ctx context.Context, pm certs.PageMetadata) (certs.CertificatePage, error) {
 	ctx, span := tm.tracer.Start(ctx, "list_certs")
 	defer span.End()
-	return tm.svc.ListCerts(ctx, userId, pm)
+	return tm.svc.ListCerts(ctx, pm)
 }
 
 func (tm *tracingMiddleware) OCSP(ctx context.Context, serialNumber string) (*certs.Certificate, int, *x509.Certificate, error) {

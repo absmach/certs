@@ -84,7 +84,7 @@ func NewService(ctx context.Context, repo Repository, rootCACert, rootCAkey stri
 // using the provided template and the generated private key.
 // The certificate is then stored in the repository using the CreateCert method.
 // If the root CA is not found, it returns an error.
-func (s *service) IssueCert(ctx context.Context, userId, entityID string, entityType EntityType, ipAddrs []string) (string, error) {
+func (s *service) IssueCert(ctx context.Context, entityID string, entityType EntityType, ipAddrs []string) (string, error) {
 	privKey, err := rsa.GenerateKey(rand.Reader, PrivateKeyBytes)
 	if err != nil {
 		return "", err
@@ -124,8 +124,6 @@ func (s *service) IssueCert(ctx context.Context, userId, entityID string, entity
 		EntityID:     entityID,
 		EntityType:   entityType,
 		ExpiryDate:   template.NotAfter,
-		CreatedBy:    userId,
-		CreatedAt:    time.Now(),
 	}
 	if err = s.repo.CreateCert(ctx, dbCert); err != nil {
 		return "", err
@@ -138,16 +136,13 @@ func (s *service) IssueCert(ctx context.Context, userId, entityID string, entity
 // It requires a valid authentication token to authorize the revocation.
 // If the authentication fails or the certificate cannot be found, an error is returned.
 // Otherwise, the certificate is marked as revoked and updated in the repository.
-func (s *service) RevokeCert(ctx context.Context, userId, serialNumber string) error {
+func (s *service) RevokeCert(ctx context.Context, serialNumber string) error {
 	cert, err := s.repo.RetrieveCert(ctx, serialNumber)
 	if err != nil {
 		return err
 	}
 	cert.Revoked = true
 	cert.ExpiryDate = time.Now()
-	cert.UpdatedBy = &userId
-	now := time.Now()
-	cert.UpdatedAt = &now
 	return s.repo.UpdateCert(ctx, cert)
 }
 
@@ -168,8 +163,8 @@ func (s *service) RetrieveCert(ctx context.Context, token string, serialNumber s
 	return cert, pem.EncodeToMemory(&pem.Block{Bytes: s.rootCACert.Raw, Type: "CERTIFICATE"}), nil
 }
 
-func (s *service) ListCerts(ctx context.Context, userId string, pm PageMetadata) (CertificatePage, error) {
-	certPg, err := s.repo.ListCerts(ctx, userId, pm)
+func (s *service) ListCerts(ctx context.Context, pm PageMetadata) (CertificatePage, error) {
+	certPg, err := s.repo.ListCerts(ctx, pm)
 	if err != nil {
 		return CertificatePage{}, err
 	}
@@ -196,7 +191,7 @@ func (s *service) RetrieveCertDownloadToken(ctx context.Context, serialNumber st
 // It takes a context, token, and serialNumber as input parameters.
 // It returns an error if there is any issue with retrieving the certificate, parsing the certificate,
 // parsing the private key, creating a new certificate, or updating the certificate in the repository.
-func (s *service) RenewCert(ctx context.Context, userId, serialNumber string) error {
+func (s *service) RenewCert(ctx context.Context, serialNumber string) error {
 	cert, err := s.repo.RetrieveCert(ctx, serialNumber)
 	if err != nil {
 		return err
@@ -228,9 +223,6 @@ func (s *service) RenewCert(ctx context.Context, userId, serialNumber string) er
 	}
 	cert.Certificate = pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: newCertBytes})
 	cert.ExpiryDate = oldCert.NotAfter
-	cert.UpdatedBy = &userId
-	now := time.Now()
-	cert.UpdatedAt = &now
 	return s.repo.UpdateCert(ctx, cert)
 }
 
