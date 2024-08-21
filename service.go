@@ -22,6 +22,12 @@ import (
 
 const (
 	Organization       = "AbstractMacines"
+	OrganizationalUnit = "AbstractMachines"
+	Country            = "Sirbea"
+	Province           = "Sirbea"
+	Locality           = "Sirbea"
+	StreetAddress      = "Sirbea"
+	PostalCode         = "Sirbea"
 	PrivateKeyBytes    = 2048
 	certValidityPeriod = time.Hour * 24 * 90 // 90 days
 )
@@ -102,8 +108,17 @@ func (s *service) IssueCert(ctx context.Context, entityID string, entityType Ent
 	template := x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
-			Organization: []string{Organization},
-			CommonName:   s.rootCACert.Subject.CommonName,
+			Organization:       []string{Organization},
+			OrganizationalUnit: []string{OrganizationalUnit},
+			Country:            []string{Country},
+			Province:           []string{Province},
+			Locality:           []string{Locality},
+			StreetAddress:      []string{StreetAddress},
+			PostalCode:         []string{PostalCode},
+			CommonName:         s.rootCACert.Subject.CommonName,
+			Names:              s.rootCACert.Subject.Names,
+			ExtraNames:         s.rootCACert.Subject.ExtraNames,
+			SerialNumber:       serialNumber.String(),
 		},
 		NotBefore:             time.Now(),
 		NotAfter:              time.Now().Add(certValidityPeriod),

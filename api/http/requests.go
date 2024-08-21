@@ -60,9 +60,6 @@ type listCertsReq struct {
 }
 
 func (req listCertsReq) validate() error {
-	if req.pm.EntityID == "" {
-		return errors.Wrap(service.ErrMalformedEntity, ErrMissingEntityID)
-	}
 	return nil
 }
 
