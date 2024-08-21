@@ -18,23 +18,24 @@ services:
     networks:
       - certs-base-net
     environment:
-      - AM_CERTS_LOG_LEVEL=${AM_CERTS_LOG_LEVEL}
-      - AM_CERTS_DB_HOST=${AM_CERTS_DB_HOST}
-      - AM_CERTS_DB_PORT=${AM_CERTS_DB_PORT}
-      - AM_CERTS_DB_USER=${AM_CERTS_DB_USER}
-      - AM_CERTS_DB_PASS=${AM_CERTS_DB_PASS}
-      - AM_CERTS_DB=${AM_CERTS_DB}
-      - AM_CERTS_DB_SSL_MODE=${AM_CERTS_DB_SSL_MODE}
-      - AM_CERTS_HTTP_HOST=${AM_CERTS_HTTP_HOST}
-      - AM_CERTS_HTTP_PORT=${AM_CERTS_HTTP_PORT}
-      - AM_CERTS_GRPC_HOST=${AM_CERTS_GRPC_HOST}
-      - AM_CERTS_GRPC_PORT=${AM_CERTS_GRPC_PORT}
-      - AM_CERTS_CA_KEY=${AM_CERTS_CA_KEY}
-      - AM_CERTS_CA_CERT=${AM_CERTS_CA_CERT}
-      - AM_JAEGER_URL=${AM_JAEGER_URL}
+      AM_CERTS_LOG_LEVEL: ${AM_CERTS_LOG_LEVEL}
+      AM_CERTS_DB_HOST: ${AM_CERTS_DB_HOST}
+      AM_CERTS_DB_PORT: ${AM_CERTS_DB_PORT}
+      AM_CERTS_DB_USER: ${AM_CERTS_DB_USER}
+      AM_CERTS_DB_PASS: ${AM_CERTS_DB_PASS}
+      AM_CERTS_DB: ${AM_CERTS_DB}
+      AM_CERTS_DB_SSL_MODE: ${AM_CERTS_DB_SSL_MODE}
+      AM_CERTS_HTTP_HOST: ${AM_CERTS_HTTP_HOST}
+      AM_CERTS_HTTP_PORT: ${AM_CERTS_HTTP_PORT}
+      AM_CERTS_GRPC_HOST: ${AM_CERTS_GRPC_HOST}
+      AM_CERTS_GRPC_PORT: ${AM_CERTS_GRPC_PORT}
+      AM_CERTS_CA_KEY: ${AM_CERTS_CA_KEY}
+      AM_CERTS_CA_CERT: ${AM_CERTS_CA_CERT}
+      AM_JAEGER_URL: ${AM_JAEGER_URL}
+      AM_JAEGER_TRACE_RATIO: ${AM_JAEGER_TRACE_RATIO}
     ports:
-      - "${AM_CERTS_HTTP_PORT}:${AM_CERTS_HTTP_PORT}"
-      - "${AM_CERTS_GRPC_PORT}:${AM_CERTS_GRPC_PORT}"
+      - ${AM_CERTS_HTTP_PORT}:${AM_CERTS_HTTP_PORT}
+      - ${AM_CERTS_GRPC_PORT}:${AM_CERTS_GRPC_PORT}
     volumes:
     - ./ssl/:/ssl/
 
@@ -46,11 +47,11 @@ services:
       - certs-base-net
     command: postgres -c "max_connections=${AM_CERTS_DB_MAX_CONNECTIONS}"
     environment:
-      - POSTGRES_USER=${AM_CERTS_DB_USER}
-      - POSTGRES_PASSWORD=${AM_CERTS_DB_PASS}
-      - POSTGRES_DB=${AM_CERTS_DB}
+      POSTGRES_USER: ${AM_CERTS_DB_USER}
+      POSTGRES_PASSWORD: ${AM_CERTS_DB_PASS}
+      POSTGRES_DB: ${AM_CERTS_DB}
     ports:
-      - "5454:5432"
+      - 5454:5432
     volumes:
       - certs-db-volume:/var/lib/postgresql/data
 
@@ -59,6 +60,7 @@ services:
     container_name: certs-jaeger
     environment:
       COLLECTOR_OTLP_ENABLED: ${AM_JAEGER_COLLECTOR_OTLP_ENABLED}
+    command: --memory.max-traces ${AM_JAEGER_MEMORY_MAX_TRACES}
     restart: on-failure
     networks:
       - certs-base-net

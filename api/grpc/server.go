@@ -11,7 +11,6 @@ import (
 	"github.com/absmach/certs/pkg/errors"
 	"github.com/absmach/certs/pkg/errors/service"
 	kitgrpc "github.com/go-kit/kit/transport/grpc"
-	"go.opentelemetry.io/contrib/instrumentation/github.com/go-kit/kit/otelkit"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -26,7 +25,7 @@ type grpcServer struct {
 func NewServer(svc certs.Service) certs.CertsServiceServer {
 	return &grpcServer{
 		getEntity: kitgrpc.NewServer(
-			otelkit.EndpointMiddleware(otelkit.WithOperation("get_entity"))(getEntityEndpoint(svc)),
+			(getEntityEndpoint(svc)),
 			decodeGetEntityReq,
 			encodeGetEntityRes,
 		),
