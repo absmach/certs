@@ -68,10 +68,9 @@ install:
 
 mocks:
 	@which mockery > /dev/null || go install github.com/vektra/mockery/v2@$(MOCKERY_VERSION)
-	@unset MOCKERY_VERSION && go generate ./...
 	mockery --config ./mockery.yaml
 
-test:mocks
+test: mocks
 	go test -v -race -count 1 -tags test $(shell go list ./... | grep -v 'vendor\|cmd')
 
 proto:

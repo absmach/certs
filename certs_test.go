@@ -31,7 +31,7 @@ var (
 )
 
 func TestIssueCert(t *testing.T) {
-	cRepo := new(mocks.Repository)
+	cRepo := new(mocks.MockRepository)
 
 	rootCAKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	require.NoError(t, err)
@@ -121,7 +121,7 @@ func TestIssueCert(t *testing.T) {
 }
 
 func TestRevokeCert(t *testing.T) {
-	cRepo := new(mocks.Repository)
+	cRepo := new(mocks.MockRepository)
 
 	invalidSerialNumber := "invalid serial number"
 
@@ -185,7 +185,7 @@ func TestRevokeCert(t *testing.T) {
 }
 
 func TestGetCertDownloadToken(t *testing.T) {
-	cRepo := new(mocks.Repository)
+	cRepo := new(mocks.MockRepository)
 
 	listCall := cRepo.On("ListCerts", mock.Anything, mock.Anything).Return(certs.CertificatePage{}, nil)
 	t.Cleanup(func() {
@@ -216,7 +216,7 @@ func TestGetCertDownloadToken(t *testing.T) {
 }
 
 func TestGetCert(t *testing.T) {
-	cRepo := new(mocks.Repository)
+	cRepo := new(mocks.MockRepository)
 
 	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{ExpiresAt: time.Now().Add(time.Minute * 5).Unix(), Issuer: certs.Organization, Subject: "certs"})
 	validToken, err := jwtToken.SignedString([]byte(serialNumber))
@@ -307,7 +307,7 @@ func TestGetCert(t *testing.T) {
 }
 
 func TestRenewCert(t *testing.T) {
-	cRepo := new(mocks.Repository)
+	cRepo := new(mocks.MockRepository)
 
 	serialNumber := big.NewInt(1)
 	expiredSerialNumber := big.NewInt(2)
