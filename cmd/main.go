@@ -50,8 +50,6 @@ type config struct {
 	LogLevel   string  `env:"AM_COMPUTATIONS_LOG_LEVEL"     envDefault:"info"`
 	JaegerURL  url.URL `env:"AM_JAEGER_URL"                 envDefault:"http://jaeger:4318"`
 	InstanceID string  `env:"AM_COMPUTATIONS_INSTANCE_ID"   envDefault:""`
-	CAKey      string  `env:"AM_CERTS_CA_KEY" envDefault:""`
-	CACert     string  `env:"AM_CERTS_CA_CERT" envDefault:""`
 	TraceRatio float64 `env:"AM_JAEGER_TRACE_RATIO"         envDefault:"1.0"`
 }
 
@@ -102,7 +100,7 @@ func main() {
 		logger.Error(fmt.Sprintf("failed to load %s gRPC server configuration : %s", svcName, err))
 	}
 
-	svc, err := newService(ctx, db, tracer, logger, dbConfig, cfg.CACert, cfg.CAKey)
+	svc, err := newService(ctx, db, tracer, logger, dbConfig)
 	if err != nil {
 		logger.Error(fmt.Sprintf("failed to create %s service: %s", svcName, err))
 		return
@@ -139,10 +137,10 @@ func main() {
 	}
 }
 
-func newService(ctx context.Context, db *sqlx.DB, tracer trace.Tracer, logger *slog.Logger, dbConfig pgClient.Config, rootCA, rootCAKey string) (certs.Service, error) {
+func newService(ctx context.Context, db *sqlx.DB, tracer trace.Tracer, logger *slog.Logger, dbConfig pgClient.Config) (certs.Service, error) {
 	database := postgres.NewDatabase(db, dbConfig, tracer)
 	repo := cpostgres.NewRepository(database)
-	svc, err := certs.NewService(ctx, repo, rootCA, rootCAKey)
+	svc, err := certs.NewService(ctx, repo)
 	if err != nil {
 		return nil, err
 	}

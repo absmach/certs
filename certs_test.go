@@ -11,7 +11,6 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"math/big"
-	"os"
 	"testing"
 	"time"
 
@@ -20,6 +19,7 @@ import (
 	"github.com/absmach/certs/pkg/errors"
 	"github.com/absmach/certs/pkg/errors/service"
 	"github.com/golang-jwt/jwt"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
@@ -33,49 +33,7 @@ var (
 func TestIssueCert(t *testing.T) {
 	cRepo := new(mocks.MockRepository)
 
-	rootCAKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	require.NoError(t, err)
-	rootCACert, err := x509.CreateCertificate(rand.Reader, &x509.Certificate{
-		SerialNumber: big.NewInt(time.Now().Unix()),
-		Subject: pkix.Name{
-			Organization: []string{certs.Organization},
-			CommonName:   "Root CA",
-		},
-		NotBefore:             time.Now(),
-		NotAfter:              time.Now().Add(time.Hour * 24),
-		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
-		BasicConstraintsValid: true,
-		IsCA:                  true,
-	}, &x509.Certificate{}, &rootCAKey.PublicKey, rootCAKey)
-	require.NoError(t, err)
-
-	caCertFile, err := os.CreateTemp("", "rootCA.crt")
-	require.NoError(t, err)
-
-	err = pem.Encode(caCertFile, &pem.Block{Type: "CERTIFICATE", Bytes: rootCACert})
-	require.NoError(t, err)
-
-	caKeyFile, err := os.CreateTemp("", "rootCA.key")
-	require.NoError(t, err)
-	marsheledKey, err := x509.MarshalPKCS8PrivateKey(rootCAKey)
-	require.NoError(t, err)
-	err = pem.Encode(caKeyFile, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: marsheledKey})
-	require.NoError(t, err)
-
-	t.Cleanup(func() {
-		os.Remove(caCertFile.Name())
-		os.Remove(caKeyFile.Name())
-	})
-
-	listCall := cRepo.On("ListCerts", mock.Anything, mock.Anything).Return(certs.CertificatePage{}, nil)
-	t.Cleanup(func() {
-		listCall.Unset()
-	})
-
-	svcNoCert, err := certs.NewService(context.Background(), cRepo, "", "")
-	require.NoError(t, err)
-
-	svc, err := certs.NewService(context.Background(), cRepo, caCertFile.Name(), caKeyFile.Name())
+	svc, err := certs.NewService(context.Background(), cRepo)
 	require.NoError(t, err)
 
 	testCases := []struct {
@@ -89,11 +47,6 @@ func TestIssueCert(t *testing.T) {
 			err:       nil,
 		},
 		{
-			desc:      "missing root CA",
-			backendId: "backendId",
-			err:       service.ErrRootCANotFound,
-		},
-		{
 			desc:      "failed repo create cert",
 			backendId: "backendId",
 			err:       service.ErrCreateEntity,
@@ -102,19 +55,10 @@ func TestIssueCert(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			if tc.err == service.ErrCreateEntity {
-				repoCall1 := cRepo.On("CreateCert", mock.Anything, mock.Anything).Return(tc.err)
-				defer repoCall1.Unset()
-			} else {
-				repoCall1 := cRepo.On("CreateCert", mock.Anything, mock.Anything).Return(nil)
-				defer repoCall1.Unset()
-			}
+			repoCall1 := cRepo.On("CreateCert", mock.Anything, mock.Anything).Return(tc.err)
+			defer repoCall1.Unset()
 
 			_, err = svc.IssueCert(context.Background(), tc.backendId, certs.EntityTypeBackend, []string{})
-			if tc.desc == "missing root CA" {
-				_, err = svcNoCert.IssueCert(context.Background(), tc.backendId, certs.EntityTypeBackend, []string{})
-			}
-
 			require.True(t, errors.Contains(err, tc.err), "expected error %v, got %v", tc.err, err)
 		})
 	}
@@ -130,12 +74,13 @@ func TestRevokeCert(t *testing.T) {
 		listCall.Unset()
 	})
 
-	svc, err := certs.NewService(context.Background(), cRepo, "", "")
+	svc, err := certs.NewService(context.Background(), cRepo)
 	require.NoError(t, err)
 
 	testCases := []struct {
 		desc         string
 		serial       string
+		retrieveErr  error
 		err          error
 		shouldRevoke bool
 	}{
@@ -148,6 +93,7 @@ func TestRevokeCert(t *testing.T) {
 		{
 			desc:         "failed repo get cert",
 			serial:       invalidSerialNumber,
+			retrieveErr:  service.ErrViewEntity,
 			err:          service.ErrViewEntity,
 			shouldRevoke: false,
 		},
@@ -161,22 +107,11 @@ func TestRevokeCert(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			if tc.shouldRevoke {
-				repoCall1 := cRepo.On("UpdateCert", mock.Anything, mock.Anything).Return(nil)
-				defer repoCall1.Unset()
-			} else {
-				repoCall1 := cRepo.On("UpdateCert", mock.Anything, mock.Anything).Return(service.ErrUpdateEntity)
-				defer repoCall1.Unset()
-			}
+			repoCall1 := cRepo.On("UpdateCert", mock.Anything, mock.Anything).Return(tc.err)
+			defer repoCall1.Unset()
 
-			switch tc.serial {
-			case serialNumber:
-				repoCall2 := cRepo.On("RetrieveCert", mock.Anything, mock.Anything).Return(certs.Certificate{}, nil)
-				defer repoCall2.Unset()
-			case invalidSerialNumber:
-				repoCall2 := cRepo.On("RetrieveCert", mock.Anything, mock.Anything).Return(certs.Certificate{}, service.ErrViewEntity)
-				defer repoCall2.Unset()
-			}
+			repoCall2 := cRepo.On("RetrieveCert", mock.Anything, mock.Anything).Return(certs.Certificate{}, tc.retrieveErr)
+			defer repoCall2.Unset()
 
 			err = svc.RevokeCert(context.Background(), tc.serial)
 			require.True(t, errors.Contains(err, tc.err), "expected error %v, got %v", tc.err, err)
@@ -187,12 +122,7 @@ func TestRevokeCert(t *testing.T) {
 func TestGetCertDownloadToken(t *testing.T) {
 	cRepo := new(mocks.MockRepository)
 
-	listCall := cRepo.On("ListCerts", mock.Anything, mock.Anything).Return(certs.CertificatePage{}, nil)
-	t.Cleanup(func() {
-		listCall.Unset()
-	})
-
-	svc, err := certs.NewService(context.Background(), cRepo, "", "")
+	svc, err := certs.NewService(context.Background(), cRepo)
 	require.NoError(t, err)
 
 	testCases := []struct {
@@ -222,46 +152,7 @@ func TestGetCert(t *testing.T) {
 	validToken, err := jwtToken.SignedString([]byte(serialNumber))
 	require.NoError(t, err)
 
-	rootCAKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	require.NoError(t, err)
-	rootCACert, err := x509.CreateCertificate(rand.Reader, &x509.Certificate{
-		SerialNumber: big.NewInt(time.Now().Unix()),
-		Subject: pkix.Name{
-			Organization: []string{certs.Organization},
-			CommonName:   "Root CA",
-		},
-		NotBefore:             time.Now(),
-		NotAfter:              time.Now().Add(time.Hour * 24),
-		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
-		BasicConstraintsValid: true,
-		IsCA:                  true,
-	}, &x509.Certificate{}, &rootCAKey.PublicKey, rootCAKey)
-	require.NoError(t, err)
-
-	caCertFile, err := os.CreateTemp("", "rootCA.crt")
-	require.NoError(t, err)
-
-	err = pem.Encode(caCertFile, &pem.Block{Type: "CERTIFICATE", Bytes: rootCACert})
-	require.NoError(t, err)
-
-	caKeyFile, err := os.CreateTemp("", "rootCA.key")
-	require.NoError(t, err)
-	marsheledKey, err := x509.MarshalPKCS8PrivateKey(rootCAKey)
-	require.NoError(t, err)
-	err = pem.Encode(caKeyFile, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: marsheledKey})
-	require.NoError(t, err)
-
-	t.Cleanup(func() {
-		os.Remove(caCertFile.Name())
-		os.Remove(caKeyFile.Name())
-	})
-
-	listCall := cRepo.On("ListCerts", mock.Anything, mock.Anything).Return(certs.CertificatePage{}, nil)
-	t.Cleanup(func() {
-		listCall.Unset()
-	})
-
-	svc, err := certs.NewService(context.Background(), cRepo, caCertFile.Name(), caKeyFile.Name())
+	svc, err := certs.NewService(context.Background(), cRepo)
 	require.NoError(t, err)
 
 	testCases := []struct {
@@ -272,19 +163,19 @@ func TestGetCert(t *testing.T) {
 	}{
 		{
 			desc:   "successful get cert",
-			token: validToken,
+			token:  validToken,
 			serial: serialNumber,
 			err:    nil,
 		},
 		{
-			desc: "failed token validation",
-			token: invalidToken,
+			desc:   "failed token validation",
+			token:  invalidToken,
 			serial: serialNumber,
 			err:    service.ErrMalformedEntity,
 		},
 		{
 			desc:   "failed repo get cert",
-			token: validToken,
+			token:  validToken,
 			serial: serialNumber,
 			err:    service.ErrViewEntity,
 		},
@@ -292,13 +183,8 @@ func TestGetCert(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			if tc.err == service.ErrViewEntity {
-				repoCall1 := cRepo.On("RetrieveCert", mock.Anything, mock.Anything).Return(certs.Certificate{}, tc.err)
-				defer repoCall1.Unset()
-			} else {
-				repoCall1 := cRepo.On("RetrieveCert", mock.Anything, mock.Anything).Return(certs.Certificate{}, nil)
-				defer repoCall1.Unset()
-			}
+			repoCall1 := cRepo.On("RetrieveCert", mock.Anything, mock.Anything).Return(certs.Certificate{}, tc.err)
+			defer repoCall1.Unset()
 
 			_, _, err = svc.RetrieveCert(context.Background(), tc.token, tc.serial)
 			require.True(t, errors.Contains(err, tc.err), "expected error %v, got %v", tc.err, err)
@@ -357,130 +243,145 @@ func TestRenewCert(t *testing.T) {
 	}, &x509.Certificate{}, &testKey.PublicKey, testKey)
 	require.NoError(t, err)
 
-	rootCAKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	require.NoError(t, err)
-	rootCACert, err := x509.CreateCertificate(rand.Reader, &x509.Certificate{
-		SerialNumber: big.NewInt(time.Now().Unix()),
-		Subject: pkix.Name{
-			Organization: []string{certs.Organization},
-			CommonName:   "Root CA",
-		},
-		NotBefore:             time.Now(),
-		NotAfter:              time.Now().Add(time.Hour * 24),
-		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
-		BasicConstraintsValid: true,
-		IsCA:                  true,
-	}, &x509.Certificate{}, &rootCAKey.PublicKey, rootCAKey)
-	require.NoError(t, err)
-
-	caCertFile, err := os.CreateTemp("", "rootCA.crt")
-	require.NoError(t, err)
-
-	err = pem.Encode(caCertFile, &pem.Block{Type: "CERTIFICATE", Bytes: rootCACert})
-	require.NoError(t, err)
-
-	caKeyFile, err := os.CreateTemp("", "rootCA.key")
-	require.NoError(t, err)
-	marsheledKey, err := x509.MarshalPKCS8PrivateKey(rootCAKey)
-	require.NoError(t, err)
-	err = pem.Encode(caKeyFile, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: marsheledKey})
-	require.NoError(t, err)
-
-	t.Cleanup(func() {
-		os.Remove(caCertFile.Name())
-		os.Remove(caKeyFile.Name())
-	})
-
-	listCall := cRepo.On("ListCerts", mock.Anything, mock.Anything).Return(certs.CertificatePage{}, nil)
-	t.Cleanup(func() {
-		listCall.Unset()
-	})
-
-	svc, err := certs.NewService(context.Background(), cRepo, caCertFile.Name(), caKeyFile.Name())
+	svc, err := certs.NewService(context.Background(), cRepo)
 	require.NoError(t, err)
 
 	testCases := []struct {
-		desc   string
-		serial string
-		err    error
+		desc        string
+		serial      string
+		cert        certs.Certificate
+		retrieveErr error
+		err         error
 	}{
 		{
 			desc:   "successful renew cert",
 			serial: serialNumber.String(),
-			err:    nil,
+			cert: certs.Certificate{
+				SerialNumber: serialNumber.String(),
+				Certificate:  pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: validCert}),
+				Key:          pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(testKey)}),
+				EntityID:     "backendId",
+				ExpiryDate:   time.Now().Add(time.Hour),
+				Revoked:      false,
+			},
+			err: nil,
 		},
 		{
-			desc:   "failed repo get cert",
-			serial: serialNumber.String(),
-			err:    service.ErrViewEntity,
+			desc:        "failed repo get cert",
+			serial:      serialNumber.String(),
+			cert:        certs.Certificate{},
+			retrieveErr: service.ErrViewEntity,
+			err:         service.ErrViewEntity,
 		},
 		{
 			desc:   "renew expired cert",
 			serial: expiredSerialNumber.String(),
-			err:    service.ErrCertExpired,
+			cert: certs.Certificate{
+				SerialNumber: expiredSerialNumber.String(),
+				Certificate:  pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: expiredCert}),
+				Key:          pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(testKey)}),
+				EntityID:     "backendId",
+				ExpiryDate:   time.Now().Add(-time.Hour),
+				Revoked:      false,
+			},
+			err: service.ErrCertExpired,
 		},
 		{
 			desc:   "renew revoked cert",
 			serial: revokedSerialNumber.String(),
-			err:    service.ErrCertRevoked,
+			cert: certs.Certificate{
+				SerialNumber: revokedSerialNumber.String(),
+				Certificate:  pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: revokedCert}),
+				Key:          pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(testKey)}),
+				EntityID:     "backendId",
+				ExpiryDate:   time.Now().Add(time.Hour),
+				Revoked:      true,
+			},
+			err: service.ErrCertRevoked,
 		},
 		{
 			desc:   "failed repo update cert",
 			serial: serialNumber.String(),
-			err:    service.ErrUpdateEntity,
+			cert: certs.Certificate{
+				SerialNumber: serialNumber.String(),
+				Certificate:  pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: validCert}),
+				Key:          pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(testKey)}),
+				EntityID:     "backendId",
+				ExpiryDate:   time.Now().Add(time.Hour),
+				Revoked:      false,
+			},
+			err: service.ErrUpdateEntity,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			if tc.err == service.ErrViewEntity {
-				repoCall1 := cRepo.On("RetrieveCert", mock.Anything, mock.Anything).Return(certs.Certificate{}, tc.err)
-				defer repoCall1.Unset()
-			} else {
-				switch tc.serial {
-				case serialNumber.String():
-					repoCall1 := cRepo.On("RetrieveCert", mock.Anything, mock.Anything).Return(certs.Certificate{
-						SerialNumber: serialNumber.String(),
-						Certificate:  pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: validCert}),
-						Key:          pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(testKey)}),
-						EntityID:     "backendId",
-						ExpiryDate:   time.Now().Add(time.Hour),
-						Revoked:      false,
-					}, nil)
-					defer repoCall1.Unset()
-				case expiredSerialNumber.String():
-					repoCall1 := cRepo.On("RetrieveCert", mock.Anything, mock.Anything).Return(certs.Certificate{
-						SerialNumber: expiredSerialNumber.String(),
-						Certificate:  pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: expiredCert}),
-						Key:          pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(testKey)}),
-						EntityID:     "backendId",
-						ExpiryDate:   time.Now().Add(-time.Hour),
-						Revoked:      false,
-					}, nil)
-					defer repoCall1.Unset()
-				case revokedSerialNumber.String():
-					repoCall1 := cRepo.On("RetrieveCert", mock.Anything, mock.Anything).Return(certs.Certificate{
-						SerialNumber: revokedSerialNumber.String(),
-						Certificate:  pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: revokedCert}),
-						Key:          pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(testKey)}),
-						EntityID:     "backendId",
-						ExpiryDate:   time.Now().Add(time.Hour),
-						Revoked:      true,
-					}, nil)
-					defer repoCall1.Unset()
-				}
-			}
+			repoCall1 := cRepo.On("RetrieveCert", mock.Anything, mock.Anything).Return(tc.cert, tc.retrieveErr)
+			defer repoCall1.Unset()
 
-			if tc.err == service.ErrUpdateEntity {
-				repoCall2 := cRepo.On("UpdateCert", mock.Anything, mock.Anything).Return(service.ErrUpdateEntity)
-				defer repoCall2.Unset()
-			} else {
-				repoCall2 := cRepo.On("UpdateCert", mock.Anything, mock.Anything).Return(nil)
-				defer repoCall2.Unset()
-			}
+			repoCall2 := cRepo.On("UpdateCert", mock.Anything, mock.Anything).Return(tc.err)
+			defer repoCall2.Unset()
 
 			err = svc.RenewCert(context.Background(), tc.serial)
 			require.True(t, errors.Contains(err, tc.err), "expected error %v, got %v", tc.err, err)
 		})
 	}
+}
+
+func TestService_GetEntityID(t *testing.T) {
+	cRepo := new(mocks.MockRepository)
+	svc, err := certs.NewService(context.Background(), cRepo)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	serialNumber := "1234567890"
+	expectedEntityID := "entity-123"
+
+	t.Run("success", func(t *testing.T) {
+		repoCall := cRepo.On("RetrieveCert", ctx, serialNumber).Return(certs.Certificate{EntityID: expectedEntityID}, nil)
+		defer repoCall.Unset()
+		entityID, err := svc.GetEntityID(ctx, serialNumber)
+		assert.NoError(t, err)
+		assert.Equal(t, expectedEntityID, entityID)
+	})
+
+	t.Run("error retrieving cert", func(t *testing.T) {
+		repoCall1 := cRepo.On("RetrieveCert", ctx, serialNumber).Return(certs.Certificate{}, errors.New("not found"))
+		defer repoCall1.Unset()
+		entityID, err := svc.GetEntityID(ctx, serialNumber)
+		assert.Error(t, err)
+		assert.Empty(t, entityID)
+	})
+}
+
+func TestService_ListCerts(t *testing.T) {
+	cRepo := new(mocks.MockRepository)
+	svc, err := certs.NewService(context.Background(), cRepo)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	pageMetadata := certs.PageMetadata{Limit: 10, Offset: 0, EntityID: "entity-123"}
+	expectedCertPage := certs.CertificatePage{
+		Certificates: []certs.Certificate{
+			{SerialNumber: "123", EntityID: "entity-123"},
+			{SerialNumber: "456", EntityID: "entity-123"},
+		},
+		PageMetadata: pageMetadata,
+	}
+
+	t.Run("success", func(t *testing.T) {
+		repoCall := cRepo.On("ListCerts", ctx, pageMetadata).Return(expectedCertPage, nil)
+		defer repoCall.Unset()
+		certPage, err := svc.ListCerts(ctx, pageMetadata)
+		assert.NoError(t, err)
+		assert.Equal(t, expectedCertPage, certPage)
+	})
+
+	t.Run("error listing certs", func(t *testing.T) {
+		repoCall1 := cRepo.On("ListCerts", ctx, pageMetadata).Return(certs.CertificatePage{}, errors.New("database error"))
+		defer repoCall1.Unset()
+		certPage, err := svc.ListCerts(ctx, pageMetadata)
+		assert.Error(t, err)
+		assert.Empty(t, certPage)
+	})
 }

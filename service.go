@@ -9,9 +9,9 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/asn1"
 	"encoding/pem"
 	"math/big"
-	"os"
 	"time"
 
 	"github.com/absmach/certs/pkg/errors"
@@ -21,13 +21,15 @@ import (
 )
 
 const (
+	CommonName         = "AbstractMachines_Selfsigned_ca"
 	Organization       = "AbstractMacines"
-	OrganizationalUnit = "AbstractMachines"
+	OrganizationalUnit = "AbstractMachines_ca"
 	Country            = "Sirbea"
 	Province           = "Sirbea"
 	Locality           = "Sirbea"
 	StreetAddress      = "Sirbea"
 	PostalCode         = "Sirbea"
+	emailAddress       = "info@abstractmachines.rs"
 	PrivateKeyBytes    = 2048
 	certValidityPeriod = time.Hour * 24 * 90 // 90 days
 )
@@ -46,35 +48,10 @@ type service struct {
 
 var _ Service = (*service)(nil)
 
-func NewService(ctx context.Context, repo Repository, rootCACert, rootCAkey string) (Service, error) {
-	var cert *x509.Certificate
-	var key *rsa.PrivateKey
-	if rootCAkey != "" && rootCACert != "" {
-		file, err := os.ReadFile(rootCACert)
-		if err != nil {
-			return &service{}, err
-		}
-		rootPem, _ := pem.Decode(file)
-		cert, err = x509.ParseCertificate(rootPem.Bytes)
-		if err != nil {
-			return &service{}, err
-		}
-		file, err = os.ReadFile(rootCAkey)
-		if err != nil {
-			return &service{}, err
-		}
-		rootPem, _ = pem.Decode(file)
-
-		privateKey, err := x509.ParsePKCS8PrivateKey(rootPem.Bytes)
-		if err != nil {
-			return &service{}, err
-		}
-
-		rsaPrivateKey, ok := privateKey.(*rsa.PrivateKey)
-		if !ok {
-			return &service{}, errFailedReadingPrivateKey
-		}
-		key = rsaPrivateKey
+func NewService(ctx context.Context, repo Repository) (Service, error) {
+	cert, key, err := generateRootCA()
+	if err != nil {
+		return &service{}, err
 	}
 
 	svc := &service{
@@ -268,4 +245,54 @@ func (s *service) GetEntityID(ctx context.Context, serialNumber string) (string,
 		return "", err
 	}
 	return cert.EntityID, nil
+}
+
+func generateRootCA() (*x509.Certificate, *rsa.PrivateKey, error) {
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	serialNumber, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	certTemplate := &x509.Certificate{
+		SerialNumber: serialNumber,
+		Subject: pkix.Name{
+			Organization:       []string{Organization},
+			OrganizationalUnit: []string{OrganizationalUnit},
+			Country:            []string{Country},
+			Province:           []string{Province},
+			Locality:           []string{Locality},
+			StreetAddress:      []string{StreetAddress},
+			PostalCode:         []string{PostalCode},
+			CommonName:         CommonName,
+			SerialNumber:       serialNumber.String(),
+			ExtraNames: []pkix.AttributeTypeAndValue{
+				{
+					Type:  asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 1},
+					Value: emailAddress,
+				},
+			},
+		},
+		NotBefore:             time.Now(),
+		NotAfter:              time.Now().Add(time.Hour * 24),
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+	}
+
+	certDER, err := x509.CreateCertificate(rand.Reader, certTemplate, certTemplate, &privateKey.PublicKey, privateKey)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	cert, err := x509.ParseCertificate(certDER)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return cert, privateKey, nil
 }
