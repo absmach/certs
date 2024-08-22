@@ -34,8 +34,6 @@ services:
     ports:
       - ${AM_CERTS_HTTP_PORT}:${AM_CERTS_HTTP_PORT}
       - ${AM_CERTS_GRPC_PORT}:${AM_CERTS_GRPC_PORT}
-    volumes:
-    - ./ssl/:/ssl/
 
   certs-db:
     image: postgres:16.2-alpine
@@ -65,4 +63,3 @@ services:
     ports:
       - ${AM_JAEGER_FRONTEND}:${AM_JAEGER_FRONTEND}
       - ${AM_JAEGER_OLTP_HTTP_PORT}:${AM_JAEGER_OLTP_HTTP_PORT}
-  
