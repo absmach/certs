@@ -15,9 +15,8 @@ import (
 	"time"
 
 	"github.com/absmach/certs"
+	errors "github.com/absmach/certs"
 	"github.com/absmach/certs/mocks"
-	"github.com/absmach/certs/pkg/errors"
-	"github.com/absmach/certs/pkg/errors/service"
 	"github.com/golang-jwt/jwt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -49,7 +48,7 @@ func TestIssueCert(t *testing.T) {
 		{
 			desc:      "failed repo create cert",
 			backendId: "backendId",
-			err:       service.ErrCreateEntity,
+			err:       errors.ErrCreateEntity,
 		},
 	}
 
@@ -93,14 +92,14 @@ func TestRevokeCert(t *testing.T) {
 		{
 			desc:         "failed repo get cert",
 			serial:       invalidSerialNumber,
-			retrieveErr:  service.ErrViewEntity,
-			err:          service.ErrViewEntity,
+			retrieveErr:  errors.ErrViewEntity,
+			err:          errors.ErrViewEntity,
 			shouldRevoke: false,
 		},
 		{
 			desc:         "failed repo update cert",
 			serial:       serialNumber,
-			err:          service.ErrUpdateEntity,
+			err:          errors.ErrUpdateEntity,
 			shouldRevoke: false,
 		},
 	}
@@ -171,13 +170,13 @@ func TestGetCert(t *testing.T) {
 			desc:   "failed token validation",
 			token:  invalidToken,
 			serial: serialNumber,
-			err:    service.ErrMalformedEntity,
+			err:    errors.ErrMalformedEntity,
 		},
 		{
 			desc:   "failed repo get cert",
 			token:  validToken,
 			serial: serialNumber,
-			err:    service.ErrViewEntity,
+			err:    errors.ErrViewEntity,
 		},
 	}
 
@@ -270,8 +269,8 @@ func TestRenewCert(t *testing.T) {
 			desc:        "failed repo get cert",
 			serial:      serialNumber.String(),
 			cert:        certs.Certificate{},
-			retrieveErr: service.ErrViewEntity,
-			err:         service.ErrViewEntity,
+			retrieveErr: errors.ErrViewEntity,
+			err:         errors.ErrViewEntity,
 		},
 		{
 			desc:   "renew expired cert",
@@ -284,7 +283,7 @@ func TestRenewCert(t *testing.T) {
 				ExpiryDate:   time.Now().Add(-time.Hour),
 				Revoked:      false,
 			},
-			err: service.ErrCertExpired,
+			err: errors.ErrCertExpired,
 		},
 		{
 			desc:   "renew revoked cert",
@@ -297,7 +296,7 @@ func TestRenewCert(t *testing.T) {
 				ExpiryDate:   time.Now().Add(time.Hour),
 				Revoked:      true,
 			},
-			err: service.ErrCertRevoked,
+			err: errors.ErrCertRevoked,
 		},
 		{
 			desc:   "failed repo update cert",
@@ -310,7 +309,7 @@ func TestRenewCert(t *testing.T) {
 				ExpiryDate:   time.Now().Add(time.Hour),
 				Revoked:      false,
 			},
-			err: service.ErrUpdateEntity,
+			err: certs.ErrUpdateEntity,
 		},
 	}
 

@@ -12,12 +12,11 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/absmach/certs"
-	"github.com/absmach/certs/internal/api"
-	"github.com/absmach/certs/pkg/apiutil"
-	"github.com/absmach/certs/pkg/errors"
+	errors "github.com/absmach/certs"
 	"github.com/go-chi/chi"
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -37,42 +36,42 @@ const (
 // MakeHandler returns a HTTP handler for API endpoints.
 func MakeHandler(r *chi.Mux, svc certs.Service, logger *slog.Logger, instanceID string) http.Handler {
 	opts := []kithttp.ServerOption{
-		kithttp.ServerErrorEncoder(apiutil.LoggingErrorEncoder(logger, api.EncodeError)),
+		kithttp.ServerErrorEncoder(loggingErrorEncoder(logger, EncodeError)),
 	}
 
 	r.Route("/certs", func(r chi.Router) {
 		r.Post("/issue/{entityType}/{entityID}", otelhttp.NewHandler(kithttp.NewServer(
 			issueCertEndpoint(svc),
 			decodeIssueCert,
-			api.EncodeResponse,
+			EncodeResponse,
 			opts...,
 		), "issue_cert").ServeHTTP)
 
 		r.Patch("/{id}/renew", otelhttp.NewHandler(kithttp.NewServer(
 			renewCertEndpoint(svc),
 			decodeView,
-			api.EncodeResponse,
+			EncodeResponse,
 			opts...,
 		), "renew_cert").ServeHTTP)
 
 		r.Patch("/{id}/revoke", otelhttp.NewHandler(kithttp.NewServer(
 			revokeCertEndpoint(svc),
 			decodeView,
-			api.EncodeResponse,
+			EncodeResponse,
 			opts...,
 		), "revoke_cert").ServeHTTP)
 
 		r.Get("/{id}/download/token", otelhttp.NewHandler(kithttp.NewServer(
 			requestCertDownloadTokenEndpoint(svc),
 			decodeView,
-			api.EncodeResponse,
+			EncodeResponse,
 			opts...,
 		), "get_download_token").ServeHTTP)
 
 		r.Get("/", otelhttp.NewHandler(kithttp.NewServer(
 			listCertsEndpoint(svc),
 			decodeListCerts,
-			api.EncodeResponse,
+			EncodeResponse,
 			opts...,
 		), "list_certs").ServeHTTP)
 		r.Get("/{id}/download", otelhttp.NewHandler(kithttp.NewServer(
@@ -103,7 +102,7 @@ func decodeView(_ context.Context, r *http.Request) (interface{}, error) {
 }
 
 func decodeDownloadCerts(_ context.Context, r *http.Request) (interface{}, error) {
-	token, err := apiutil.ReadStringQuery(r, "token", "")
+	token, err := readStringQuery(r, "token", "")
 	if err != nil {
 		return nil, err
 	}
@@ -141,24 +140,24 @@ func decodeIssueCert(_ context.Context, r *http.Request) (interface{}, error) {
 		entityType: chi.URLParam(r, "entityType"),
 	}
 	if err := json.Unmarshal(body, &req); err != nil {
-		return nil, errors.Wrap(apiutil.ErrInvalidRequest, err)
+		return nil, errors.Wrap(ErrInvalidRequest, err)
 	}
 
 	return req, nil
 }
 
 func decodeListCerts(_ context.Context, r *http.Request) (interface{}, error) {
-	o, err := apiutil.ReadNumQuery[uint64](r, offsetKey, defOffset)
+	o, err := readNumQuery(r, offsetKey, defOffset)
 	if err != nil {
 		return nil, err
 	}
 
-	l, err := apiutil.ReadNumQuery[uint64](r, limitKey, defLimit)
+	l, err := readNumQuery(r, limitKey, defLimit)
 	if err != nil {
 		return nil, err
 	}
 
-	entity, err := apiutil.ReadStringQuery(r, entityKey, "")
+	entity, err := readStringQuery(r, entityKey, "")
 	if err != nil {
 		return nil, err
 	}
@@ -171,6 +170,23 @@ func decodeListCerts(_ context.Context, r *http.Request) (interface{}, error) {
 		},
 	}
 	return req, nil
+}
+
+// EncodeResponse encodes successful response.
+func EncodeResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
+	if ar, ok := response.(Response); ok {
+		for k, v := range ar.Headers() {
+			w.Header().Set(k, v)
+		}
+		w.Header().Set("Content-Type", ContentType)
+		w.WriteHeader(ar.Code())
+
+		if ar.Empty() {
+			return nil
+		}
+	}
+
+	return json.NewEncoder(w).Encode(response)
 }
 
 func encodeOSCPResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
@@ -229,4 +245,46 @@ func encodeFileDownloadResponse(_ context.Context, w http.ResponseWriter, respon
 	_, err = w.Write(buffer.Bytes())
 
 	return err
+}
+
+// loggingErrorEncoder is a go-kit error encoder logging decorator.
+func loggingErrorEncoder(logger *slog.Logger, enc kithttp.ErrorEncoder) kithttp.ErrorEncoder {
+	return func(ctx context.Context, err error, w http.ResponseWriter) {
+		if errors.Contains(err, ErrValidation) {
+			logger.Error(err.Error())
+		}
+		enc(ctx, err, w)
+	}
+}
+
+// readStringQuery reads the value of string http query parameters for a given key.
+func readStringQuery(r *http.Request, key, def string) (string, error) {
+	vals := r.URL.Query()[key]
+	if len(vals) > 1 {
+		return "", ErrInvalidQueryParams
+	}
+
+	if len(vals) == 0 {
+		return def, nil
+	}
+
+	return vals[0], nil
+}
+
+// readNumQuery returns a numeric value.
+func readNumQuery(r *http.Request, key string, def uint64) (uint64, error) {
+	vals := r.URL.Query()[key]
+	if len(vals) > 1 {
+		return 0, ErrInvalidQueryParams
+	}
+	if len(vals) == 0 {
+		return def, nil
+	}
+	val := vals[0]
+
+	v, err := strconv.ParseUint(val, 10, 64)
+	if err != nil {
+		return 0, errors.Wrap(ErrInvalidQueryParams, err)
+	}
+	return v, nil
 }

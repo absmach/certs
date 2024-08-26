@@ -21,7 +21,7 @@ var (
 	Version = "0.0.0"
 	// Commit represents the service git commit hash.
 	// It's meant to be set using go build ldflags:
-	
+
 	Commit = "ffffffff"
 	// BuildTime represetns the service build time.
 	// It's meant to be set using go build ldflags:

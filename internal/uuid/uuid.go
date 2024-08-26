@@ -4,8 +4,8 @@
 package uuid
 
 import (
+	errors "github.com/absmach/certs"
 	"github.com/gofrs/uuid"
-	"github.com/absmach/certs/pkg/errors"
 )
 
 // ErrGeneratingID indicates error in generating UUID.

@@ -9,9 +9,8 @@ import (
 	"fmt"
 
 	"github.com/absmach/certs"
+	errors "github.com/absmach/certs"
 	"github.com/absmach/certs/internal/postgres"
-	"github.com/absmach/certs/pkg/errors"
-	"github.com/absmach/certs/pkg/errors/service"
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
@@ -49,7 +48,7 @@ func (repo certsRepo) CreateCert(ctx context.Context, cert certs.Certificate) er
 	VALUES (:serial_number, :certificate, :key, :entity_id, :entity_type, :revoked, :expiry_date)`
 	_, err := repo.db.NamedExecContext(ctx, q, cert)
 	if err != nil {
-		return handleError(service.ErrCreateEntity, err)
+		return handleError(certs.ErrCreateEntity, err)
 	}
 	return nil
 }
@@ -60,9 +59,9 @@ func (repo certsRepo) RetrieveCert(ctx context.Context, serialNumber string) (ce
 	var cert certs.Certificate
 	if err := repo.db.QueryRowxContext(ctx, q, serialNumber).StructScan(&cert); err != nil {
 		if err == sql.ErrNoRows {
-			return certs.Certificate{}, errors.Wrap(service.ErrNotFound, err)
+			return certs.Certificate{}, errors.Wrap(certs.ErrNotFound, err)
 		}
-		return certs.Certificate{}, errors.Wrap(service.ErrViewEntity, err)
+		return certs.Certificate{}, errors.Wrap(certs.ErrViewEntity, err)
 	}
 	return cert, nil
 }
@@ -72,14 +71,14 @@ func (repo certsRepo) UpdateCert(ctx context.Context, cert certs.Certificate) er
 	q := `UPDATE certs SET certificate = :certificate, key = :key, revoked = :revoked, expiry_date = :expiry_date WHERE serial_number = :serial_number`
 	res, err := repo.db.NamedExecContext(ctx, q, cert)
 	if err != nil {
-		return handleError(service.ErrUpdateEntity, err)
+		return handleError(certs.ErrUpdateEntity, err)
 	}
 	count, err := res.RowsAffected()
 	if err != nil {
-		return errors.Wrap(service.ErrUpdateEntity, err)
+		return errors.Wrap(certs.ErrUpdateEntity, err)
 	}
 	if count == 0 {
-		return service.ErrNotFound
+		return certs.ErrNotFound
 	}
 	return nil
 }
@@ -102,14 +101,14 @@ func (repo certsRepo) ListCerts(ctx context.Context, pm certs.PageMetadata) (cer
 	}
 	rows, err := repo.db.NamedQueryContext(ctx, q, params)
 	if err != nil {
-		return certs.CertificatePage{}, handleError(service.ErrViewEntity, err)
+		return certs.CertificatePage{}, handleError(certs.ErrViewEntity, err)
 	}
 	defer rows.Close()
 
 	for rows.Next() {
 		cert := &certs.Certificate{}
 		if err := rows.StructScan(cert); err != nil {
-			return certs.CertificatePage{}, errors.Wrap(service.ErrViewEntity, err)
+			return certs.CertificatePage{}, errors.Wrap(certs.ErrViewEntity, err)
 		}
 
 		certificates = append(certificates, *cert)
@@ -118,7 +117,7 @@ func (repo certsRepo) ListCerts(ctx context.Context, pm certs.PageMetadata) (cer
 	q = fmt.Sprintf(`SELECT COUNT(*) FROM certs %s LIMIT :limit OFFSET :offset`, condition)
 	pm.Total, err = repo.total(ctx, q, params)
 	if err != nil {
-		return certs.CertificatePage{}, errors.Wrap(service.ErrViewEntity, err)
+		return certs.CertificatePage{}, errors.Wrap(certs.ErrViewEntity, err)
 	}
 	return certs.CertificatePage{
 		PageMetadata: pm,

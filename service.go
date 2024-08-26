@@ -14,8 +14,6 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/absmach/certs/pkg/errors"
-	svcerr "github.com/absmach/certs/pkg/errors/service"
 	"github.com/golang-jwt/jwt"
 	"golang.org/x/crypto/ocsp"
 )
@@ -36,8 +34,16 @@ const (
 
 var (
 	serialNumberLimit          = new(big.Int).Lsh(big.NewInt(1), 128)
-	errFailedReadingPrivateKey = errors.New("failed to read private key")
-	ErrNotFound                = errors.New("entity not found")
+	errFailedReadingPrivateKey = New("failed to read private key")
+	ErrNotFound                = New("entity not found")
+	ErrConflict                = New("entity already exists")
+	ErrCreateEntity            = New("failed to create entity")
+	ErrViewEntity              = New("view entity failed")
+	ErrUpdateEntity            = New("update entity failed")
+	ErrMalformedEntity         = New("malformed entity specification")
+	ErrRootCANotFound          = New("root CA not found")
+	ErrCertExpired             = New("certificate expired before renewal")
+	ErrCertRevoked             = New("certificate has been revoked and cannot be renewed")
 )
 
 type service struct {
@@ -79,7 +85,7 @@ func (s *service) IssueCert(ctx context.Context, entityID string, entityType Ent
 	}
 
 	if s.rootCACert == nil || s.rootCAKey == nil {
-		return "", svcerr.ErrRootCANotFound
+		return "", ErrRootCANotFound
 	}
 
 	template := x509.Certificate{
@@ -118,7 +124,7 @@ func (s *service) IssueCert(ctx context.Context, entityID string, entityType Ent
 		ExpiryDate:   template.NotAfter,
 	}
 	if err = s.repo.CreateCert(ctx, dbCert); err != nil {
-		return "", err
+		return "", Wrap(ErrCreateEntity, err)
 	}
 
 	return dbCert.SerialNumber, nil
@@ -131,11 +137,14 @@ func (s *service) IssueCert(ctx context.Context, entityID string, entityType Ent
 func (s *service) RevokeCert(ctx context.Context, serialNumber string) error {
 	cert, err := s.repo.RetrieveCert(ctx, serialNumber)
 	if err != nil {
-		return err
+		return Wrap(ErrViewEntity, err)
 	}
 	cert.Revoked = true
 	cert.ExpiryDate = time.Now()
-	return s.repo.UpdateCert(ctx, cert)
+	if err != s.repo.UpdateCert(ctx, cert) {
+		return Wrap(ErrUpdateEntity, err)
+	}
+	return nil
 }
 
 // RetrieveCert retrieves a certificate with the specified serial number.
@@ -146,11 +155,11 @@ func (s *service) RetrieveCert(ctx context.Context, token string, serialNumber s
 	if _, err := jwt.ParseWithClaims(token, &jwt.StandardClaims{Issuer: Organization, Subject: "certs"}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(serialNumber), nil
 	}); err != nil {
-		return Certificate{}, []byte{}, errors.Wrap(err, svcerr.ErrMalformedEntity)
+		return Certificate{}, []byte{}, Wrap(err, ErrMalformedEntity)
 	}
 	cert, err := s.repo.RetrieveCert(ctx, serialNumber)
 	if err != nil {
-		return Certificate{}, []byte{}, err
+		return Certificate{}, []byte{}, Wrap(ErrViewEntity, err)
 	}
 	return cert, pem.EncodeToMemory(&pem.Block{Bytes: s.rootCACert.Raw, Type: "CERTIFICATE"}), nil
 }
@@ -158,7 +167,7 @@ func (s *service) RetrieveCert(ctx context.Context, token string, serialNumber s
 func (s *service) ListCerts(ctx context.Context, pm PageMetadata) (CertificatePage, error) {
 	certPg, err := s.repo.ListCerts(ctx, pm)
 	if err != nil {
-		return CertificatePage{}, err
+		return CertificatePage{}, Wrap(ErrViewEntity, err)
 	}
 
 	return certPg, nil
@@ -186,10 +195,10 @@ func (s *service) RetrieveCertDownloadToken(ctx context.Context, serialNumber st
 func (s *service) RenewCert(ctx context.Context, serialNumber string) error {
 	cert, err := s.repo.RetrieveCert(ctx, serialNumber)
 	if err != nil {
-		return err
+		return Wrap(ErrViewEntity, err)
 	}
 	if cert.Revoked {
-		return svcerr.ErrCertRevoked
+		return ErrCertRevoked
 	}
 	pemBlock, _ := pem.Decode(cert.Certificate)
 	oldCert, err := x509.ParseCertificate(pemBlock.Bytes)
@@ -197,7 +206,7 @@ func (s *service) RenewCert(ctx context.Context, serialNumber string) error {
 		return err
 	}
 	if !oldCert.NotAfter.After(time.Now()) {
-		return svcerr.ErrCertExpired
+		return ErrCertExpired
 	}
 	oldCert.NotBefore = time.Now()
 	oldCert.NotAfter = time.Now().Add(certValidityPeriod)
@@ -207,7 +216,7 @@ func (s *service) RenewCert(ctx context.Context, serialNumber string) error {
 		return err
 	}
 	if s.rootCACert == nil || s.rootCAKey == nil {
-		return svcerr.ErrRootCANotFound
+		return ErrRootCANotFound
 	}
 	newCertBytes, err := x509.CreateCertificate(rand.Reader, oldCert, s.rootCACert, &privKey.PublicKey, s.rootCAKey)
 	if err != nil {
@@ -215,7 +224,10 @@ func (s *service) RenewCert(ctx context.Context, serialNumber string) error {
 	}
 	cert.Certificate = pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: newCertBytes})
 	cert.ExpiryDate = oldCert.NotAfter
-	return s.repo.UpdateCert(ctx, cert)
+	if err != s.repo.UpdateCert(ctx, cert) {
+		return Wrap(ErrUpdateEntity, err)
+	}
+	return nil
 }
 
 // OCSP retrieves the OCSP response for a certificate.
@@ -228,7 +240,7 @@ func (s *service) RenewCert(ctx context.Context, serialNumber string) error {
 func (s *service) OCSP(ctx context.Context, serialNumber string) (*Certificate, int, *x509.Certificate, error) {
 	cert, err := s.repo.RetrieveCert(ctx, serialNumber)
 	if err != nil {
-		if errors.Contains(err, ErrNotFound) {
+		if Contains(err, ErrNotFound) {
 			return nil, ocsp.Unknown, s.rootCACert, nil
 		}
 		return nil, ocsp.ServerFailed, s.rootCACert, err
@@ -242,7 +254,7 @@ func (s *service) OCSP(ctx context.Context, serialNumber string) (*Certificate, 
 func (s *service) GetEntityID(ctx context.Context, serialNumber string) (string, error) {
 	cert, err := s.repo.RetrieveCert(ctx, serialNumber)
 	if err != nil {
-		return "", err
+		return "", Wrap(ErrViewEntity, err)
 	}
 	return cert.EntityID, nil
 }

@@ -10,8 +10,7 @@ import (
 	"time"
 
 	"github.com/absmach/certs"
-	"github.com/absmach/certs/pkg/errors"
-	"github.com/absmach/certs/pkg/errors/service"
+	errors "github.com/absmach/certs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -39,7 +38,7 @@ func TestCreateCert(t *testing.T) {
 		{
 			desc: "save with invalid backend id",
 			cert: certs.Certificate{SerialNumber: serialNumber.String(), Certificate: []byte("cert"), Key: []byte("key"), EntityID: "invalid", Revoked: false, ExpiryDate: time.Now()},
-			err:  service.ErrConflict,
+			err:  certs.ErrConflict,
 		},
 	}
 
@@ -72,7 +71,7 @@ func TestGetCert(t *testing.T) {
 		{
 			desc: "view with invalid id",
 			id:   invalidId,
-			err:  service.ErrNotFound,
+			err:  certs.ErrNotFound,
 		},
 	}
 
@@ -105,7 +104,7 @@ func TestUpdateCert(t *testing.T) {
 		{
 			description: "update with invalid id",
 			cert:        certs.Certificate{SerialNumber: invalidId, Certificate: []byte("cert"), Key: []byte("key"), EntityID: id, Revoked: true, ExpiryDate: time.Now()},
-			err:         service.ErrNotFound,
+			err:         certs.ErrNotFound,
 		},
 	}
 

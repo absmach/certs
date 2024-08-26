@@ -5,15 +5,8 @@ package http
 
 import (
 	"github.com/absmach/certs"
-	"github.com/absmach/certs/pkg/errors"
-	"github.com/absmach/certs/pkg/errors/service"
+	errors "github.com/absmach/certs"
 	"golang.org/x/crypto/ocsp"
-)
-
-var (
-	ErrMissingEntityID   = errors.New("missing entity ID")
-	ErrMissingEntityType = errors.New("missing entity type")
-	ErrMissingID		 = errors.New("missing ID")
 )
 
 type downloadReq struct {
@@ -29,7 +22,7 @@ func (req downloadReq) validate() error {
 }
 
 type viewReq struct {
-	id     string
+	id string
 }
 
 func (req viewReq) validate() error {
@@ -47,16 +40,16 @@ type issueCertReq struct {
 
 func (req issueCertReq) validate() error {
 	if req.entityID == "" {
-		return errors.Wrap(service.ErrMalformedEntity, ErrMissingEntityID)
+		return errors.Wrap(certs.ErrMalformedEntity, ErrMissingEntityID)
 	}
 	if req.entityType == "" {
-		return errors.Wrap(service.ErrMalformedEntity, ErrMissingEntityType)
+		return errors.Wrap(certs.ErrMalformedEntity, ErrMissingEntityType)
 	}
 	return nil
 }
 
 type listCertsReq struct {
-	pm     certs.PageMetadata
+	pm certs.PageMetadata
 }
 
 func (req listCertsReq) validate() error {
@@ -70,7 +63,7 @@ type ocspReq struct {
 
 func (req ocspReq) validate() error {
 	if req.req == nil {
-		return service.ErrMalformedEntity
+		return certs.ErrMalformedEntity
 	}
 	return nil
 }

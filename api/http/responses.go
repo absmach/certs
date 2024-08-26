@@ -9,15 +9,14 @@ import (
 	"net/http"
 
 	"github.com/absmach/certs"
-	"github.com/absmach/certs/internal/api"
 	"golang.org/x/crypto/ocsp"
 )
 
 var (
-	_ api.Response = (*revokeCertRes)(nil)
-	_ api.Response = (*issueCertRes)(nil)
-	_ api.Response = (*renewCertRes)(nil)
-	_ api.Response = (*ocspRes)(nil)
+	_ Response = (*revokeCertRes)(nil)
+	_ Response = (*issueCertRes)(nil)
+	_ Response = (*renewCertRes)(nil)
+	_ Response = (*ocspRes)(nil)
 )
 
 type renewCertRes struct {
