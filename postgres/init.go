@@ -1,7 +1,12 @@
-// Copyright (c) Ultraviolet
+// Copyright (c) Abstract Machines
+// SPDX-License-Identifier: Apache-2.0
+
 package postgres
 
-import migrate "github.com/rubenv/sql-migrate"
+import (
+	_ "github.com/jackc/pgx/v5/stdlib"
+	migrate "github.com/rubenv/sql-migrate"
+)
 
 func Migration() *migrate.MemoryMigrationSource {
 	return &migrate.MemoryMigrationSource{

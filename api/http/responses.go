@@ -1,4 +1,6 @@
-// Copyright (c) Ultraviolet
+// Copyright (c) Abstract Machines
+// SPDX-License-Identifier: Apache-2.0
+
 package http
 
 import (
@@ -7,15 +9,14 @@ import (
 	"net/http"
 
 	"github.com/absmach/certs"
-	"github.com/absmach/magistrala"
 	"golang.org/x/crypto/ocsp"
 )
 
 var (
-	_ magistrala.Response = (*revokeCertRes)(nil)
-	_ magistrala.Response = (*issueCertRes)(nil)
-	_ magistrala.Response = (*renewCertRes)(nil)
-	_ magistrala.Response = (*ocspRes)(nil)
+	_ Response = (*revokeCertRes)(nil)
+	_ Response = (*issueCertRes)(nil)
+	_ Response = (*renewCertRes)(nil)
+	_ Response = (*ocspRes)(nil)
 )
 
 type renewCertRes struct {
@@ -145,4 +146,12 @@ func (res ocspRes) Headers() map[string]string {
 
 func (res ocspRes) Empty() bool {
 	return false
+}
+
+type fileDownloadRes struct {
+	Certificate []byte `json:"certificate"`
+	PrivateKey  []byte `json:"private_key"`
+	CA          []byte `json:"ca"`
+	Filename    string
+	ContentType string
 }

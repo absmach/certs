@@ -1,4 +1,6 @@
-// Copyright (c) Ultraviolet
+// Copyright (c) Abstract Machines
+// SPDX-License-Identifier: Apache-2.0
+
 package http
 
 import (
@@ -22,7 +24,7 @@ func renewCertEndpoint(svc certs.Service) endpoint.Endpoint {
 			return renewCertRes{}, err
 		}
 
-		if err = svc.RenewCert(ctx, req.token, req.id); err != nil {
+		if err = svc.RenewCert(ctx, req.id); err != nil {
 			return renewCertRes{}, err
 		}
 
@@ -37,7 +39,7 @@ func revokeCertEndpoint(svc certs.Service) endpoint.Endpoint {
 			return revokeCertRes{}, err
 		}
 
-		if err = svc.RevokeCert(ctx, req.token, req.id); err != nil {
+		if err = svc.RevokeCert(ctx, req.id); err != nil {
 			return revokeCertRes{}, err
 		}
 
@@ -52,7 +54,7 @@ func requestCertDownloadTokenEndpoint(svc certs.Service) endpoint.Endpoint {
 			return requestCertDownloadTokenRes{}, err
 		}
 
-		token, err := svc.RetrieveCertDownloadToken(ctx, req.token, req.id)
+		token, err := svc.RetrieveCertDownloadToken(ctx, req.id)
 		if err != nil {
 			return requestCertDownloadTokenRes{}, err
 		}
@@ -63,17 +65,23 @@ func requestCertDownloadTokenEndpoint(svc certs.Service) endpoint.Endpoint {
 
 func downloadCertEndpoint(svc certs.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
-		req := request.(viewReq)
+		req := request.(downloadReq)
 		if err := req.validate(); err != nil {
 			return downloadCertRes{}, err
 		}
 
 		cert, ca, err := svc.RetrieveCert(ctx, req.token, req.id)
 		if err != nil {
-			return downloadCertRes{}, err
+			return fileDownloadRes{}, err
 		}
 
-		return downloadCertRes{Certificate: cert.Certificate, PrivateKey: cert.Key, CA: ca}, nil
+		return fileDownloadRes{
+			Certificate: cert.Certificate,
+			PrivateKey:  cert.Key,
+			CA:          ca,
+			Filename:    "certificates.zip",
+			ContentType: "application/zip",
+		}, nil
 	}
 }
 
@@ -84,7 +92,7 @@ func issueCertEndpoint(svc certs.Service) endpoint.Endpoint {
 			return issueCertRes{}, err
 		}
 
-		serialNumber, err := svc.IssueCert(ctx, req.token, req.entityID, certs.EntityType(req.entityType), req.IpAddrs)
+		serialNumber, err := svc.IssueCert(ctx, req.entityID, certs.EntityType(req.entityType), req.IpAddrs)
 		if err != nil {
 			return issueCertRes{}, err
 		}
@@ -100,7 +108,7 @@ func listCertsEndpoint(svc certs.Service) endpoint.Endpoint {
 			return listCertsRes{}, err
 		}
 
-		certPage, err := svc.ListCerts(ctx, req.token, req.pm)
+		certPage, err := svc.ListCerts(ctx, req.pm)
 		if err != nil {
 			return listCertsRes{}, err
 		}

@@ -1,14 +1,14 @@
-// Copyright (c) Ultraviolet
+// Copyright (c) Abstract Machines
+// SPDX-License-Identifier: Apache-2.0
+
 package grpc
 
 import (
 	"context"
 
 	"github.com/absmach/certs"
-	"github.com/absmach/magistrala/pkg/apiutil"
-	"github.com/absmach/magistrala/pkg/errors"
-	"github.com/absmach/magistrala/pkg/errors/service"
-	"github.com/go-kit/kit/otelkit"
+	errors "github.com/absmach/certs"
+	"github.com/absmach/certs/api/http"
 	kitgrpc "github.com/go-kit/kit/transport/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -24,7 +24,7 @@ type grpcServer struct {
 func NewServer(svc certs.Service) certs.CertsServiceServer {
 	return &grpcServer{
 		getEntity: kitgrpc.NewServer(
-			otelkit.EndpointMiddleware(otelkit.WithOperation("get_entity"))(getEntityEndpoint(svc)),
+			(getEntityEndpoint(svc)),
 			decodeGetEntityReq,
 			encodeGetEntityRes,
 		),
@@ -52,29 +52,16 @@ func encodeError(err error) error {
 	switch {
 	case errors.Contains(err, nil):
 		return nil
-	case errors.Contains(err, errors.ErrMalformedEntity),
-		errors.Contains(err, apiutil.ErrMissingID),
-		errors.Contains(err, apiutil.ErrEmptyList),
-		errors.Contains(err, apiutil.ErrNameSize),
-		errors.Contains(err, apiutil.ErrMalformedPolicy),
-		errors.Contains(err, apiutil.ErrMissingUser),
-		errors.Contains(err, apiutil.ErrMissingComputation),
-		errors.Contains(err, apiutil.ErrInvalidRole):
+	case errors.Contains(err, certs.ErrMalformedEntity),
+		errors.Contains(err, http.ErrMissingID):
 		return status.Error(codes.InvalidArgument, err.Error())
-	case errors.Contains(err, service.ErrAuthentication):
-		return status.Error(codes.Unauthenticated, err.Error())
-	case errors.Contains(err, service.ErrAuthorization):
-		return status.Error(codes.PermissionDenied, err.Error())
-	case errors.Contains(err, service.ErrNotFound):
+	case errors.Contains(err, certs.ErrNotFound):
 		return status.Error(codes.NotFound, err.Error())
-	case errors.Contains(err, service.ErrConflict):
+	case errors.Contains(err, certs.ErrConflict):
 		return status.Error(codes.AlreadyExists, err.Error())
-	case errors.Contains(err, errors.ErrUnsupportedContentType):
-		return status.Error(codes.Unimplemented, err.Error())
-	case errors.Contains(err, service.ErrCreateEntity),
-		errors.Contains(err, service.ErrUpdateEntity),
-		errors.Contains(err, service.ErrViewEntity),
-		errors.Contains(err, service.ErrRemoveEntity):
+	case errors.Contains(err, certs.ErrCreateEntity),
+		errors.Contains(err, certs.ErrUpdateEntity),
+		errors.Contains(err, certs.ErrViewEntity):
 		return status.Error(codes.Internal, err.Error())
 	default:
 		return status.Error(codes.Internal, "internal server error")

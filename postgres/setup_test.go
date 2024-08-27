@@ -1,4 +1,5 @@
-// Copyright (c) Ultraviolet
+// Copyright (c) Abstract Machines
+// SPDX-License-Identifier: Apache-2.0
 
 package postgres
 
@@ -8,9 +9,9 @@ import (
 	"os"
 	"testing"
 
-	pgclient "github.com/absmach/magistrala/pkg/clients/postgres"
-	"github.com/absmach/magistrala/pkg/dockertest/v3"
+	pgclient "github.com/absmach/certs/internal/postgres"
 	"github.com/jmoiron/sqlx"
+	"github.com/ory/dockertest/v3"
 )
 
 var db *sqlx.DB

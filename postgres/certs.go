@@ -1,4 +1,6 @@
-// Copyright (c) Ultraviolet
+// Copyright (c) Abstract Machines
+// SPDX-License-Identifier: Apache-2.0
+
 package postgres
 
 import (
@@ -7,9 +9,26 @@ import (
 	"fmt"
 
 	"github.com/absmach/certs"
-	"github.com/absmach/magistrala/pkg/errors"
-	"github.com/absmach/magistrala/pkg/errors/service"
-	"github.com/absmach/magistrala/pkg/postgres"
+	errors "github.com/absmach/certs"
+	"github.com/absmach/certs/internal/postgres"
+	"github.com/jackc/pgx/v5/pgconn"
+)
+
+// Postgres error codes:
+// https://www.postgresql.org/docs/current/errcodes-appendix.html
+const (
+	errDuplicate      = "23505" // unique_violation
+	errTruncation     = "22001" // string_data_right_truncation
+	errFK             = "23503" // foreign_key_violation
+	errInvalid        = "22P02" // invalid_text_representation
+	errUntranslatable = "22P05" // untranslatable_character
+	errInvalidChar    = "22021" // character_not_in_repertoire
+)
+
+var (
+	ErrConflict        = errors.New("entity already exists")
+	ErrMalformedEntity = errors.New("malformed entity")
+	ErrCreateEntity    = errors.New("failed to create entity")
 )
 
 type certsRepo struct {
@@ -29,7 +48,7 @@ func (repo certsRepo) CreateCert(ctx context.Context, cert certs.Certificate) er
 	VALUES (:serial_number, :certificate, :key, :entity_id, :entity_type, :revoked, :expiry_date)`
 	_, err := repo.db.NamedExecContext(ctx, q, cert)
 	if err != nil {
-		return postgres.HandleError(err, service.ErrCreateEntity)
+		return handleError(certs.ErrCreateEntity, err)
 	}
 	return nil
 }
@@ -40,9 +59,9 @@ func (repo certsRepo) RetrieveCert(ctx context.Context, serialNumber string) (ce
 	var cert certs.Certificate
 	if err := repo.db.QueryRowxContext(ctx, q, serialNumber).StructScan(&cert); err != nil {
 		if err == sql.ErrNoRows {
-			return certs.Certificate{}, errors.Wrap(service.ErrNotFound, err)
+			return certs.Certificate{}, errors.Wrap(certs.ErrNotFound, err)
 		}
-		return certs.Certificate{}, errors.Wrap(service.ErrViewEntity, err)
+		return certs.Certificate{}, errors.Wrap(certs.ErrViewEntity, err)
 	}
 	return cert, nil
 }
@@ -52,51 +71,57 @@ func (repo certsRepo) UpdateCert(ctx context.Context, cert certs.Certificate) er
 	q := `UPDATE certs SET certificate = :certificate, key = :key, revoked = :revoked, expiry_date = :expiry_date WHERE serial_number = :serial_number`
 	res, err := repo.db.NamedExecContext(ctx, q, cert)
 	if err != nil {
-		return postgres.HandleError(err, service.ErrUpdateEntity)
+		return handleError(certs.ErrUpdateEntity, err)
 	}
 	count, err := res.RowsAffected()
 	if err != nil {
-		return errors.Wrap(service.ErrUpdateEntity, err)
+		return errors.Wrap(certs.ErrUpdateEntity, err)
 	}
 	if count == 0 {
-		return service.ErrNotFound
+		return certs.ErrNotFound
 	}
 	return nil
 }
 
 func (repo certsRepo) ListCerts(ctx context.Context, pm certs.PageMetadata) (certs.CertificatePage, error) {
 	q := `SELECT serial_number, revoked, expiry_date, entity_id FROM certs %s LIMIT :limit OFFSET :offset`
-
+	condition := ``
 	if pm.EntityID != "" {
-		q = fmt.Sprintf(q, "WHERE entity_id = :entity_id")
+		condition = `WHERE entity_id = :entity_id`
+		q = fmt.Sprintf(q, condition)
 	} else {
-		q = fmt.Sprintf(q, "")
+		q = fmt.Sprintf(q, condition)
 	}
 	var certificates []certs.Certificate
 
-	rows, err := repo.db.NamedQueryContext(ctx, q, pm)
+	params := map[string]interface{}{
+		"limit":     pm.Limit,
+		"offset":    pm.Offset,
+		"entity_id": pm.EntityID,
+	}
+	rows, err := repo.db.NamedQueryContext(ctx, q, params)
 	if err != nil {
-		return certs.CertificatePage{}, postgres.HandleError(err, service.ErrViewEntity)
+		return certs.CertificatePage{}, handleError(certs.ErrViewEntity, err)
 	}
 	defer rows.Close()
 
 	for rows.Next() {
 		cert := &certs.Certificate{}
 		if err := rows.StructScan(cert); err != nil {
-			return certs.CertificatePage{}, errors.Wrap(service.ErrViewEntity, err)
+			return certs.CertificatePage{}, errors.Wrap(certs.ErrViewEntity, err)
 		}
 
 		certificates = append(certificates, *cert)
 	}
 
-	q = `SELECT COUNT(*) FROM certs LIMIT :limit OFFSET :offset`
-	pm.Total, err = repo.total(ctx, q, pm)
+	q = fmt.Sprintf(`SELECT COUNT(*) FROM certs %s LIMIT :limit OFFSET :offset`, condition)
+	pm.Total, err = repo.total(ctx, q, params)
 	if err != nil {
-		return certs.CertificatePage{}, errors.Wrap(service.ErrViewEntity, err)
+		return certs.CertificatePage{}, errors.Wrap(certs.ErrViewEntity, err)
 	}
 	return certs.CertificatePage{
-		Certificates: certificates,
 		PageMetadata: pm,
+		Certificates: certificates,
 	}, nil
 }
 
@@ -113,4 +138,20 @@ func (repo certsRepo) total(ctx context.Context, query string, params interface{
 		}
 	}
 	return total, nil
+}
+
+func handleError(wrapper, err error) error {
+	pqErr, ok := err.(*pgconn.PgError)
+	if ok {
+		switch pqErr.Code {
+		case errDuplicate:
+			return errors.Wrap(ErrConflict, err)
+		case errInvalid, errInvalidChar, errTruncation, errUntranslatable:
+			return errors.Wrap(ErrMalformedEntity, err)
+		case errFK:
+			return errors.Wrap(ErrCreateEntity, err)
+		}
+	}
+
+	return errors.Wrap(wrapper, err)
 }

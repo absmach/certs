@@ -1,4 +1,6 @@
-// Copyright (c) Ultraviolet
+// Copyright (c) Abstract Machines
+// SPDX-License-Identifier: Apache-2.0
+
 package certs
 
 import (
@@ -25,8 +27,8 @@ type Certificate struct {
 }
 
 type CertificatePage struct {
-	Certificates []Certificate `json:"certificates"`
 	PageMetadata
+	Certificates []Certificate `json:"certificates"`
 }
 
 type PageMetadata struct {
@@ -36,24 +38,25 @@ type PageMetadata struct {
 	EntityID string `json:"entity_id,omitempty" db:"entity_id"`
 }
 
+//go:generate mockery --name Service --output=./mocks --filename service.go --quiet --note "Copyright (c) Abstract Machines"
 type Service interface {
 	// RenewCert renews a certificate from the database.
-	RenewCert(ctx context.Context, token, serialNumber string) error
+	RenewCert(ctx context.Context, serialNumber string) error
 
 	// RevokeCert revokes a certificate from the database.
-	RevokeCert(ctx context.Context, token, serialNumber string) error
+	RevokeCert(ctx context.Context, serialNumber string) error
 
 	// RetrieveCert retrieves a certificate record from the database.
-	RetrieveCert(ctx context.Context, token, serialNumber string) (Certificate, []byte, error)
+	RetrieveCert(ctx context.Context, token string, serialNumber string) (Certificate, []byte, error)
 
 	// ListCerts retrieves the certificates from the database while applying filters.
-	ListCerts(ctx context.Context, token string, pm PageMetadata) (CertificatePage, error)
+	ListCerts(ctx context.Context, pm PageMetadata) (CertificatePage, error)
 
 	// RetrieveCertDownloadToken retrieves a certificate download token.
-	RetrieveCertDownloadToken(ctx context.Context, token, serialNumber string) (string, error)
+	RetrieveCertDownloadToken(ctx context.Context, serialNumber string) (string, error)
 
 	// IssueCert issues a certificate from the database.
-	IssueCert(ctx context.Context, token, entityID string, entityType EntityType, ipAddrs []string) (string, error)
+	IssueCert(ctx context.Context, entityID string, entityType EntityType, ipAddrs []string) (string, error)
 
 	// OCSP retrieves the OCSP response for a certificate.
 	OCSP(ctx context.Context, serialNumber string) (*Certificate, int, *x509.Certificate, error)
@@ -62,6 +65,7 @@ type Service interface {
 	GetEntityID(ctx context.Context, serialNumber string) (string, error)
 }
 
+//go:generate mockery --name Repository --output=./mocks --filename repository.go --quiet --note "Copyright (c) Abstract Machines"
 type Repository interface {
 	// CreateCert adds a certificate record to the database.
 	CreateCert(ctx context.Context, cert Certificate) error

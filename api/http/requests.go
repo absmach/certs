@@ -1,59 +1,58 @@
-// Copyright (c) Ultraviolet
+// Copyright (c) Abstract Machines
+// SPDX-License-Identifier: Apache-2.0
+
 package http
 
 import (
 	"github.com/absmach/certs"
-	"github.com/absmach/magistrala/pkg/errors"
+	errors "github.com/absmach/certs"
 	"golang.org/x/crypto/ocsp"
 )
 
-var (
-	ErrMissingToken      = errors.New("missing token")
-	ErrMissingEntityID   = errors.New("missing entity ID")
-	ErrMissingEntityType = errors.New("missing entity type")
-)
+type downloadReq struct {
+	id    string
+	token string
+}
+
+func (req downloadReq) validate() error {
+	if req.id == "" {
+		return ErrMissingEntityID
+	}
+	return nil
+}
 
 type viewReq struct {
-	token string
-	id    string
+	id string
 }
 
 func (req viewReq) validate() error {
-	if req.token == "" {
-		return ErrMissingToken
+	if req.id == "" {
+		return ErrMissingID
 	}
 	return nil
 }
 
 type issueCertReq struct {
-	token      string   `json:"-"`
 	entityID   string   `json:"-"`
 	entityType string   `json:"-"`
 	IpAddrs    []string `json:"ip_addresses"`
 }
 
 func (req issueCertReq) validate() error {
-	if req.token == "" {
-		return errors.Wrap(errors.ErrMalformedEntity, ErrMissingToken)
-	}
 	if req.entityID == "" {
-		return errors.Wrap(errors.ErrMalformedEntity, ErrMissingEntityID)
+		return errors.Wrap(certs.ErrMalformedEntity, ErrMissingEntityID)
 	}
 	if req.entityType == "" {
-		return errors.Wrap(errors.ErrMalformedEntity, ErrMissingEntityType)
+		return errors.Wrap(certs.ErrMalformedEntity, ErrMissingEntityType)
 	}
 	return nil
 }
 
 type listCertsReq struct {
-	token string
-	pm    certs.PageMetadata
+	pm certs.PageMetadata
 }
 
 func (req listCertsReq) validate() error {
-	if req.token == "" {
-		return errors.Wrap(errors.ErrMalformedEntity, ErrMissingToken)
-	}
 	return nil
 }
 
@@ -64,7 +63,7 @@ type ocspReq struct {
 
 func (req ocspReq) validate() error {
 	if req.req == nil {
-		return errors.ErrMalformedEntity
+		return certs.ErrMalformedEntity
 	}
 	return nil
 }

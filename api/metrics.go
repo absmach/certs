@@ -1,4 +1,6 @@
-// Copyright (c) Ultraviolet
+// Copyright (c) Abstract Machines
+// SPDX-License-Identifier: Apache-2.0
+
 package api
 
 import (
@@ -27,52 +29,52 @@ func MetricsMiddleware(svc certs.Service, counter metrics.Counter, latency metri
 	}
 }
 
-func (mm *metricsMiddleware) RenewCert(ctx context.Context, token, cmpId string) error {
+func (mm *metricsMiddleware) RenewCert(ctx context.Context, cmpId string) error {
 	defer func(begin time.Time) {
 		mm.counter.With("method", "renew_certificate").Add(1)
 		mm.latency.With("method", "renew_certificate").Observe(time.Since(begin).Seconds())
 	}(time.Now())
-	return mm.svc.RenewCert(ctx, token, cmpId)
+	return mm.svc.RenewCert(ctx, cmpId)
 }
 
-func (mm *metricsMiddleware) RetrieveCert(ctx context.Context, token, id string) (certs.Certificate, []byte, error) {
+func (mm *metricsMiddleware) RetrieveCert(ctx context.Context, token, serialNumber string) (certs.Certificate, []byte, error) {
 	defer func(begin time.Time) {
 		mm.counter.With("method", "get_certificate").Add(1)
 		mm.latency.With("method", "get_certificate").Observe(time.Since(begin).Seconds())
 	}(time.Now())
-	return mm.svc.RetrieveCert(ctx, token, id)
+	return mm.svc.RetrieveCert(ctx, token, serialNumber)
 }
 
-func (mm *metricsMiddleware) RevokeCert(ctx context.Context, token, id string) error {
+func (mm *metricsMiddleware) RevokeCert(ctx context.Context, serialNumber string) error {
 	defer func(begin time.Time) {
 		mm.counter.With("method", "revoke_certificate").Add(1)
 		mm.latency.With("method", "revoke_certificate").Observe(time.Since(begin).Seconds())
 	}(time.Now())
-	return mm.svc.RevokeCert(ctx, token, id)
+	return mm.svc.RevokeCert(ctx, serialNumber)
 }
 
-func (mm *metricsMiddleware) RetrieveCertDownloadToken(ctx context.Context, token, id string) (string, error) {
+func (mm *metricsMiddleware) RetrieveCertDownloadToken(ctx context.Context, serialNumber string) (string, error) {
 	defer func(begin time.Time) {
 		mm.counter.With("method", "get_certificate_download_token").Add(1)
 		mm.latency.With("method", "get_certificate_download_token").Observe(time.Since(begin).Seconds())
 	}(time.Now())
-	return mm.svc.RetrieveCertDownloadToken(ctx, token, id)
+	return mm.svc.RetrieveCertDownloadToken(ctx, serialNumber)
 }
 
-func (mm *metricsMiddleware) IssueCert(ctx context.Context, token, entityID string, entityType certs.EntityType, ipAddrs []string) (string, error) {
+func (mm *metricsMiddleware) IssueCert(ctx context.Context, entityID string, entityType certs.EntityType, ipAddrs []string) (string, error) {
 	defer func(begin time.Time) {
 		mm.counter.With("method", "issue_certificate").Add(1)
 		mm.latency.With("method", "issue_certificate").Observe(time.Since(begin).Seconds())
 	}(time.Now())
-	return mm.svc.IssueCert(ctx, token, entityID, entityType, ipAddrs)
+	return mm.svc.IssueCert(ctx, entityID, entityType, ipAddrs)
 }
 
-func (mm *metricsMiddleware) ListCerts(ctx context.Context, token string, pm certs.PageMetadata) (certs.CertificatePage, error) {
+func (mm *metricsMiddleware) ListCerts(ctx context.Context, pm certs.PageMetadata) (certs.CertificatePage, error) {
 	defer func(begin time.Time) {
 		mm.counter.With("method", "list_certificates").Add(1)
 		mm.latency.With("method", "list_certificates").Observe(time.Since(begin).Seconds())
 	}(time.Now())
-	return mm.svc.ListCerts(ctx, token, pm)
+	return mm.svc.ListCerts(ctx, pm)
 }
 
 func (mm *metricsMiddleware) OCSP(ctx context.Context, serialNumber string) (*certs.Certificate, int, *x509.Certificate, error) {
