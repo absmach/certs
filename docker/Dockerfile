@@ -11,8 +11,6 @@ WORKDIR /app
 
 COPY . .
 
-RUN if [ "$SVC" = "ui" ]; then cp -r ui/web web; else mkdir web; fi
-
 RUN apk update \
     && apk add make \
     && make $SVC \
@@ -20,9 +18,7 @@ RUN apk update \
 
 FROM scratch
 
-# Rrequired for billing service
+# Required for billing service
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=builder /exe /
-COPY --from=builder /app/web /ui/web
-
 ENTRYPOINT ["/exe"]
