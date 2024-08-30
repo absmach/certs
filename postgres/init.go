@@ -20,7 +20,6 @@ func Migration() *migrate.MemoryMigrationSource {
                     	key            TEXT,
                     	revoked        BOOLEAN,
                         expiry_date    TIMESTAMP,
-						entity_type    VARCHAR(20),
 						entity_id      VARCHAR(36),
                         PRIMARY KEY (serial_number)
                     )`,

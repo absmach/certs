@@ -40,7 +40,7 @@ func MakeHandler(r *chi.Mux, svc certs.Service, logger *slog.Logger, instanceID 
 	}
 
 	r.Route("/certs", func(r chi.Router) {
-		r.Post("/issue/{entityType}/{entityID}", otelhttp.NewHandler(kithttp.NewServer(
+		r.Post("/issue/{entityID}", otelhttp.NewHandler(kithttp.NewServer(
 			issueCertEndpoint(svc),
 			decodeIssueCert,
 			EncodeResponse,
@@ -137,7 +137,6 @@ func decodeIssueCert(_ context.Context, r *http.Request) (interface{}, error) {
 	}
 	req := issueCertReq{
 		entityID:   chi.URLParam(r, "entityID"),
-		entityType: chi.URLParam(r, "entityType"),
 	}
 	if err := json.Unmarshal(body, &req); err != nil {
 		return nil, errors.Wrap(ErrInvalidRequest, err)
