@@ -73,7 +73,7 @@ func NewService(ctx context.Context, repo Repository) (Service, error) {
 // using the provided template and the generated private key.
 // The certificate is then stored in the repository using the CreateCert method.
 // If the root CA is not found, it returns an error.
-func (s *service) IssueCert(ctx context.Context, entityID string, entityType EntityType, ipAddrs []string) (string, error) {
+func (s *service) IssueCert(ctx context.Context, entityID string, ipAddrs []string) (string, error) {
 	privKey, err := rsa.GenerateKey(rand.Reader, PrivateKeyBytes)
 	if err != nil {
 		return "", err
@@ -120,7 +120,6 @@ func (s *service) IssueCert(ctx context.Context, entityID string, entityType Ent
 		Certificate:  pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certBytes}),
 		SerialNumber: template.SerialNumber.String(),
 		EntityID:     entityID,
-		EntityType:   entityType,
 		ExpiryDate:   template.NotAfter,
 	}
 	if err = s.repo.CreateCert(ctx, dbCert); err != nil {

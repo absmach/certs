@@ -34,16 +34,12 @@ func (req viewReq) validate() error {
 
 type issueCertReq struct {
 	entityID   string   `json:"-"`
-	entityType string   `json:"-"`
 	IpAddrs    []string `json:"ip_addresses"`
 }
 
 func (req issueCertReq) validate() error {
 	if req.entityID == "" {
 		return errors.Wrap(certs.ErrMalformedEntity, ErrMissingEntityID)
-	}
-	if req.entityType == "" {
-		return errors.Wrap(certs.ErrMalformedEntity, ErrMissingEntityType)
 	}
 	return nil
 }

@@ -9,19 +9,12 @@ import (
 	"time"
 )
 
-type EntityType string
-
-const (
-	EntityTypeBackend EntityType = "backend"
-)
-
 type Certificate struct {
 	SerialNumber string     `db:"serial_number"`
 	Certificate  []byte     `db:"certificate"`
 	Key          []byte     `db:"key"`
 	Revoked      bool       `db:"revoked"`
 	ExpiryDate   time.Time  `db:"expiry_date"`
-	EntityType   EntityType `db:"entity_type"`
 	EntityID     string     `db:"entity_id"`
 	DownloadUrl  string     `db:"-"`
 }
@@ -38,7 +31,6 @@ type PageMetadata struct {
 	EntityID string `json:"entity_id,omitempty" db:"entity_id"`
 }
 
-//go:generate mockery --name Service --output=./mocks --filename service.go --quiet --note "Copyright (c) Abstract Machines"
 type Service interface {
 	// RenewCert renews a certificate from the database.
 	RenewCert(ctx context.Context, serialNumber string) error
@@ -56,7 +48,7 @@ type Service interface {
 	RetrieveCertDownloadToken(ctx context.Context, serialNumber string) (string, error)
 
 	// IssueCert issues a certificate from the database.
-	IssueCert(ctx context.Context, entityID string, entityType EntityType, ipAddrs []string) (string, error)
+	IssueCert(ctx context.Context, entityID string, ipAddrs []string) (string, error)
 
 	// OCSP retrieves the OCSP response for a certificate.
 	OCSP(ctx context.Context, serialNumber string) (*Certificate, int, *x509.Certificate, error)
@@ -65,7 +57,6 @@ type Service interface {
 	GetEntityID(ctx context.Context, serialNumber string) (string, error)
 }
 
-//go:generate mockery --name Repository --output=./mocks --filename repository.go --quiet --note "Copyright (c) Abstract Machines"
 type Repository interface {
 	// CreateCert adds a certificate record to the database.
 	CreateCert(ctx context.Context, cert Certificate) error

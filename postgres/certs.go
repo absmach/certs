@@ -44,8 +44,8 @@ func NewRepository(db postgres.Database) certs.Repository {
 // CreateLog creates computation log in the database.
 func (repo certsRepo) CreateCert(ctx context.Context, cert certs.Certificate) error {
 	q := `
-	INSERT INTO certs (serial_number, certificate, key, entity_id, entity_type, revoked, expiry_date)
-	VALUES (:serial_number, :certificate, :key, :entity_id, :entity_type, :revoked, :expiry_date)`
+	INSERT INTO certs (serial_number, certificate, key, entity_id, revoked, expiry_date)
+	VALUES (:serial_number, :certificate, :key, :entity_id, :revoked, :expiry_date)`
 	_, err := repo.db.NamedExecContext(ctx, q, cert)
 	if err != nil {
 		return handleError(certs.ErrCreateEntity, err)
