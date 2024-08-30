@@ -6,7 +6,7 @@ package postgres
 import (
 	"fmt"
 
-	errors "github.com/absmach/certs"
+	"github.com/absmach/certs/errors"
 	_ "github.com/jackc/pgx/v5/stdlib" // required for SQL access
 	"github.com/jmoiron/sqlx"
 	migrate "github.com/rubenv/sql-migrate"

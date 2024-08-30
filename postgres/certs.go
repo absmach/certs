@@ -9,7 +9,7 @@ import (
 	"fmt"
 
 	"github.com/absmach/certs"
-	errors "github.com/absmach/certs"
+	"github.com/absmach/certs/errors"
 	"github.com/absmach/certs/internal/postgres"
 	"github.com/jackc/pgx/v5/pgconn"
 )

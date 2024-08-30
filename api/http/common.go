@@ -9,7 +9,7 @@ import (
 	"net/http"
 
 	"github.com/absmach/certs"
-	errors "github.com/absmach/certs"
+	"github.com/absmach/certs/errors"
 )
 
 const (

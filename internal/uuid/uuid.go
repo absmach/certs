@@ -4,7 +4,7 @@
 package uuid
 
 import (
-	errors "github.com/absmach/certs"
+	"github.com/absmach/certs/errors"
 	"github.com/gofrs/uuid"
 )
 

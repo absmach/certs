@@ -3,7 +3,7 @@
 
 package http
 
-import errors "github.com/absmach/certs"
+import "github.com/absmach/certs/errors"
 
 var (
 	// ErrMissingID indicates missing entity ID.

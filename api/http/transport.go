@@ -16,7 +16,7 @@ import (
 	"strings"
 
 	"github.com/absmach/certs"
-	errors "github.com/absmach/certs"
+	"github.com/absmach/certs/errors"
 	"github.com/go-chi/chi"
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -136,7 +136,7 @@ func decodeIssueCert(_ context.Context, r *http.Request) (interface{}, error) {
 		return nil, err
 	}
 	req := issueCertReq{
-		entityID:   chi.URLParam(r, "entityID"),
+		entityID: chi.URLParam(r, "entityID"),
 	}
 	if err := json.Unmarshal(body, &req); err != nil {
 		return nil, errors.Wrap(ErrInvalidRequest, err)

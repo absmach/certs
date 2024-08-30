@@ -5,7 +5,7 @@ package http
 
 import (
 	"github.com/absmach/certs"
-	errors "github.com/absmach/certs"
+	"github.com/absmach/certs/errors"
 	"golang.org/x/crypto/ocsp"
 )
 
@@ -33,8 +33,8 @@ func (req viewReq) validate() error {
 }
 
 type issueCertReq struct {
-	entityID   string   `json:"-"`
-	IpAddrs    []string `json:"ip_addresses"`
+	entityID string   `json:"-"`
+	IpAddrs  []string `json:"ip_addresses"`
 }
 
 func (req issueCertReq) validate() error {
