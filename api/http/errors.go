@@ -15,9 +15,6 @@ var (
 	// ErrMissingEntityID indicates missing entity ID.
 	ErrMissingEntityID = errors.New("missing entity ID")
 
-	// ErrMissingEntityType indicates missing entity type.
-	ErrMissingEntityType = errors.New("missing entity type")
-
 	// ErrUnsupportedContentType indicates unacceptable or lack of Content-Type.
 	ErrUnsupportedContentType = errors.New("unsupported content type")
 
