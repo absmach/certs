@@ -34,10 +34,12 @@ const (
 )
 
 // MakeHandler returns a HTTP handler for API endpoints.
-func MakeHandler(r *chi.Mux, svc certs.Service, logger *slog.Logger, instanceID string) http.Handler {
+func MakeHandler(svc certs.Service, logger *slog.Logger, instanceID string) http.Handler {
 	opts := []kithttp.ServerOption{
 		kithttp.ServerErrorEncoder(loggingErrorEncoder(logger, EncodeError)),
 	}
+
+	r := chi.NewRouter()
 
 	r.Route("/certs", func(r chi.Router) {
 		r.Post("/issue/{entityID}", otelhttp.NewHandler(kithttp.NewServer(
