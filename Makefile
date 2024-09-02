@@ -3,7 +3,7 @@
 
 AM_DOCKER_IMAGE_NAME_PREFIX ?= absmach
 BUILD_DIR = build
-SERVICES = certs
+SERVICES = certs cli
 DOCKERS = $(addprefix docker_,$(SERVICES))
 DOCKERS_DEV = $(addprefix docker_dev_,$(SERVICES))
 CGO_ENABLED ?= 0
@@ -19,7 +19,7 @@ define compile_service
 	-X 'github.com/absmach/certs/http.BuildTime=$(TIME)' \
 	-X 'github.com/absmach/certs/internal/http.Version=$(VERSION)' \
 	-X 'github.com/absmach/certs/internal/http.Commit=$(COMMIT)'" \
-	-o ${BUILD_DIR}/$(1) cmd/main.go
+	-o ${BUILD_DIR}/$(1) cmd/$(1)/main.go
 endef
 
 define make_docker

@@ -47,147 +47,38 @@ type PageMetadata struct {
 	Token    string   `json:"token,omitempty"`
 }
 
-type CertsPage struct {
-	PageMetadata
-	Certificates []Cert `json:"certificates"`
+type SerialNumber struct {
+	SerialNumber string `json:"serial_number"`
 }
 
-type Cert struct {
-	SerialNumber string    `json:"serial_number,omitempty"`
-	Certificate  []byte    `json:"certificate,omitempty"`
-	Key          []byte    `json:"key,omitempty"`
-	Revoked      bool      `json:"revoked,omitempty"`
-	ExpiryDate   time.Time `json:"expiry_date,omitempty"`
-	EntityID     string    `json:"entity_id,omitempty"`
-	DownloadUrl  string    `json:"-,omitempty"`
+type Token struct {
+	Token string `json:"token"`
 }
 
-type SDK interface {
-	// IssueCert issues a certificate for a thing required for mTLS.
-	//
-	// example:
-	//  cert, _ := sdk.IssueCert("thingID", "24h", "token")
-	//  fmt.Println(cert)
-	IssueCert(entityID string, ipAddrs []string) (Cert, errors.SDKError)
-
-	// ViewCert returns a certificate given certificate ID
-	//
-	// example:
-	//  cert, _ := sdk.ViewCert("certID", "token")
-	//  fmt.Println(cert)
-	RetrieveCert(token, serialNumber string) (Cert, errors.SDKError)
-
-	// RevokeCert revokes certificate for thing with thingID
-	//
-	// example:
-	//  tm, _ := sdk.RevokeCert("thingID", "token")
-	//  fmt.Println(tm)
-	RevokeCert(serialNumber string) errors.SDKError
-
-	// RenewCert renews certificate for thing with thingID
-	//
-	// example:
-	//  tm, _ := sdk.RenewCert("serialNumber")
-	//  fmt.Println(tm)
-	RenewCert(serialNumber string) errors.SDKError
-
-	// ListCerts lists all certificates for a client
-	//
-	ListCerts(pm PageMetadata) (CertsPage, errors.SDKError)
-
-	RetrieveCertDownloadToken(serialNumber string) (string, errors.SDKError)
-
-	OCSP(serialNumber string) (Cert, int, errors.SDKError)
+type Certificate struct {
+	SerialNumber string    `db:"serial_number"`
+	Certificate  []byte    `db:"certificate"`
+	Key          []byte    `db:"key"`
+	Revoked      bool      `db:"revoked"`
+	ExpiryDate   time.Time `db:"expiry_date"`
+	EntityID     string    `db:"entity_id"`
+	DownloadUrl  string    `db:"-"`
 }
 
-func (sdk mgSDK) IssueCert(entityID string, ipAddrs []string) (Cert, errors.SDKError) {
-	r := PageMetadata{
-		IpAddrs: ipAddrs,
-	}
-	d, err := json.Marshal(r)
-	if err != nil {
-		return Cert{}, errors.NewSDKError(err)
-	}
-
-	url := fmt.Sprintf("%s/%s/%s", sdk.certsURL, issueCertEndpoint, entityID)
-
-	_, body, sdkerr := sdk.processRequest(http.MethodPost, url, d, nil, http.StatusCreated)
-	if sdkerr != nil {
-		return Cert{}, sdkerr
-	}
-
-	return Cert{
-		SerialNumber: string(body),
-	}, nil
+type CertificatePage struct {
+	Total        uint64        `json:"total,omitempty"`
+	Offset       uint64        `json:"offset,omitempty"`
+	Limit        uint64        `json:"limit,omitempty"`
+	Certificates []Certificate `json:"certificates"`
 }
 
-func (sdk mgSDK) RetrieveCert(token, serialNumber string) (Cert, errors.SDKError) {
-	pm := PageMetadata{
-		Token: token,
-	}
-	url, err := sdk.withQueryParams(sdk.certsURL, fmt.Sprintf("%s/%s/%s/download", sdk.certsURL, certsEndpoint, serialNumber), pm)
-	if err != nil {
-		return Cert{}, errors.NewSDKError(err)
-	}
-	_, body, sdkerr := sdk.processRequest(http.MethodGet, url, nil, nil, http.StatusOK)
-	if sdkerr != nil {
-		return Cert{}, sdkerr
-	}
-	var c Cert
-	if err := json.Unmarshal(body, &c); err != nil {
-		return Cert{}, errors.NewSDKError(err)
-	}
-	return c, nil
-}
+type Config struct {
+	CertsURL string
+	HostURL  string
 
-func (sdk mgSDK) RevokeCert(serialNumber string) errors.SDKError {
-	url := fmt.Sprintf("%s/%s/%s/revoke", sdk.certsURL, certsEndpoint, serialNumber)
-	_, _, sdkerr := sdk.processRequest(http.MethodPost, url, nil, nil, http.StatusOK)
-	return sdkerr
-}
-
-func (sdk mgSDK) RenewCert(serialNumber string) errors.SDKError {
-	url := fmt.Sprintf("%s/%s/%s/renew", sdk.certsURL, certsEndpoint, serialNumber)
-	_, _, sdkerr := sdk.processRequest(http.MethodPost, url, nil, nil, http.StatusOK)
-	return sdkerr
-}
-
-func (sdk mgSDK) ListCerts(pm PageMetadata) (CertsPage, errors.SDKError) {
-	url, err := sdk.withQueryParams(sdk.certsURL, certsEndpoint, pm)
-	if err != nil {
-		return CertsPage{}, errors.NewSDKError(err)
-	}
-	_, body, sdkerr := sdk.processRequest(http.MethodGet, url, nil, nil, http.StatusOK)
-	if sdkerr != nil {
-		return CertsPage{}, sdkerr
-	}
-	var cp CertsPage
-	if err := json.Unmarshal(body, &cp); err != nil {
-		return CertsPage{}, errors.NewSDKError(err)
-	}
-	return cp, nil
-}
-
-func (sdk mgSDK) RetrieveCertDownloadToken(serialNumber string) (string, errors.SDKError) {
-	url := fmt.Sprintf("%s/%s/%s/download/token", sdk.certsURL, certsEndpoint, serialNumber)
-	_, body, sdkerr := sdk.processRequest(http.MethodGet, url, nil, nil, http.StatusOK)
-	if sdkerr != nil {
-		return "", sdkerr
-	}
-	return string(body), nil
-}
-
-func (sdk mgSDK) OCSP(serialNumber string) (Cert, int, errors.SDKError) {
-	url := fmt.Sprintf("%s/%s/ocsp", sdk.certsURL, certsEndpoint)
-	_, body, sdkerr := sdk.processRequest(http.MethodGet, url, nil, nil, http.StatusOK)
-	if sdkerr != nil {
-		return Cert{}, 0, sdkerr
-	}
-	var c Cert
-	if err := json.Unmarshal(body, &c); err != nil {
-		return Cert{}, 0, errors.NewSDKError(err)
-	}
-	return c, 0, nil
+	MsgContentType  ContentType
+	TLSVerification bool
+	CurlFlag        bool
 }
 
 type mgSDK struct {
@@ -199,13 +90,153 @@ type mgSDK struct {
 	curlFlag       bool
 }
 
-type Config struct {
-	CertsURL string
-	HostURL  string
+type SDK interface {
+	// IssueCert issues a certificate for a thing required for mTLS.
+	//
+	// example:
+	// serial , _ := sdk.IssueCert("entityID", []string{"ipAddr1", "ipAddr2"})
+	//  fmt.Println(serial)
+	IssueCert(entityID string, ipAddrs []string) (SerialNumber, errors.SDKError)
 
-	MsgContentType  ContentType
-	TLSVerification bool
-	CurlFlag        bool
+	// ViewCert returns a certificate given certificate ID
+	//
+	// example:
+	//  cert, _ := sdk.ViewCert("certID", "download-token")
+	//  fmt.Println(cert)
+	RetrieveCert(token, serialNumber string) (Certificate, errors.SDKError)
+
+	// RevokeCert revokes certificate for thing with thingID
+	//
+	// example:
+	//  err := sdk.RevokeCert("serialNumber")
+	//  fmt.Println(err) // nil if successful
+	RevokeCert(serialNumber string) errors.SDKError
+
+	// RenewCert renews certificate for thing with thingID
+	//
+	// example:
+	//  err := sdk.RenewCert("serialNumber")
+	//  fmt.Println(err) // nil if successful
+	RenewCert(serialNumber string) errors.SDKError
+
+	// ListCerts lists all certificates for a client
+	//
+	// example:
+	//  page, _ := sdk.ListCerts(PageMetadata{Limit: 10, Offset: 0})
+	//  fmt.Println(page)
+	ListCerts(pm PageMetadata) (CertificatePage, errors.SDKError)
+
+	// RetrieveCertDownloadToken retrieves a download token for a certificate
+	//
+	// example:
+	//  token, _ := sdk.RetrieveCertDownloadToken("serialNumber")
+	//  fmt.Println(token)
+	RetrieveCertDownloadToken(serialNumber string) (Token, errors.SDKError)
+
+	// OCSP checks the revocation status of a certificate
+	//
+	// example:
+	//  cert, status, _ := sdk.OCSP("serialNumber")
+	//  fmt.Println(cert, status)
+	OCSP(serialNumber string) (Certificate, int, errors.SDKError)
+}
+
+func (sdk mgSDK) IssueCert(entityID string, ipAddrs []string) (SerialNumber, errors.SDKError) {
+	r := PageMetadata{
+		IpAddrs: ipAddrs,
+	}
+	d, err := json.Marshal(r)
+	if err != nil {
+		return SerialNumber{}, errors.NewSDKError(err)
+	}
+
+	url := fmt.Sprintf("%s/%s/%s", sdk.certsURL, issueCertEndpoint, entityID)
+
+	_, body, sdkerr := sdk.processRequest(http.MethodPost, url, d, nil, http.StatusCreated)
+	if sdkerr != nil {
+		return SerialNumber{}, sdkerr
+	}
+
+	var sn SerialNumber
+	if err := json.Unmarshal(body, &sn); err != nil {
+		return SerialNumber{}, errors.NewSDKError(err)
+	}
+
+	return sn, nil
+}
+
+func (sdk mgSDK) RetrieveCert(token, serialNumber string) (Certificate, errors.SDKError) {
+	pm := PageMetadata{
+		Token: token,
+	}
+	url, err := sdk.withQueryParams(sdk.certsURL, fmt.Sprintf("%s/%s/%s/download", sdk.certsURL, certsEndpoint, serialNumber), pm)
+	if err != nil {
+		return Certificate{}, errors.NewSDKError(err)
+	}
+	_, body, sdkerr := sdk.processRequest(http.MethodGet, url, nil, nil, http.StatusOK)
+	if sdkerr != nil {
+		return Certificate{}, sdkerr
+	}
+	var c Certificate
+	if err := json.Unmarshal(body, &c); err != nil {
+		return Certificate{}, errors.NewSDKError(err)
+	}
+	return c, nil
+}
+
+func (sdk mgSDK) RevokeCert(serialNumber string) errors.SDKError {
+	url := fmt.Sprintf("%s/%s/%s/revoke", sdk.certsURL, certsEndpoint, serialNumber)
+	_, _, sdkerr := sdk.processRequest(http.MethodPatch, url, nil, nil, http.StatusOK)
+	return sdkerr
+}
+
+func (sdk mgSDK) RenewCert(serialNumber string) errors.SDKError {
+	url := fmt.Sprintf("%s/%s/%s/renew", sdk.certsURL, certsEndpoint, serialNumber)
+	_, _, sdkerr := sdk.processRequest(http.MethodPatch, url, nil, nil, http.StatusOK)
+	return sdkerr
+}
+
+func (sdk mgSDK) ListCerts(pm PageMetadata) (CertificatePage, errors.SDKError) {
+	url, err := sdk.withQueryParams(sdk.certsURL, certsEndpoint, pm)
+	if err != nil {
+		return CertificatePage{}, errors.NewSDKError(err)
+	}
+	_, body, sdkerr := sdk.processRequest(http.MethodGet, url, nil, nil, http.StatusOK)
+	if sdkerr != nil {
+		return CertificatePage{}, sdkerr
+	}
+	var cp CertificatePage
+	if err := json.Unmarshal(body, &cp); err != nil {
+		return CertificatePage{}, errors.NewSDKError(err)
+	}
+	return cp, nil
+}
+
+func (sdk mgSDK) RetrieveCertDownloadToken(serialNumber string) (Token, errors.SDKError) {
+	url := fmt.Sprintf("%s/%s/%s/download/token", sdk.certsURL, certsEndpoint, serialNumber)
+	_, body, sdkerr := sdk.processRequest(http.MethodGet, url, nil, nil, http.StatusOK)
+	if sdkerr != nil {
+		return Token{}, sdkerr
+	}
+
+	var tk Token
+	if err := json.Unmarshal(body, &tk); err != nil {
+		return Token{}, errors.NewSDKError(err)
+	}
+	return tk, nil
+}
+
+func (sdk mgSDK) OCSP(serialNumber string) (Certificate, int, errors.SDKError) {
+	url := fmt.Sprintf("%s/%s/ocsp", sdk.certsURL, certsEndpoint)
+	_, body, sdkerr := sdk.processRequest(http.MethodGet, url, nil, nil, http.StatusOK)
+	if sdkerr != nil {
+		return Certificate{}, 0, sdkerr
+	}
+	var c Certificate
+	if err := json.Unmarshal(body, &c); err != nil {
+		return Certificate{}, 0, errors.NewSDKError(err)
+	}
+	return c, 0, nil
 }
 
 func NewSDK(conf Config) SDK {
@@ -254,17 +285,14 @@ func (sdk mgSDK) processRequest(method, reqUrl string, data []byte, headers map[
 		return make(http.Header), []byte{}, errors.NewSDKError(err)
 	}
 	defer resp.Body.Close()
-
 	sdkerr := errors.CheckError(resp, expectedRespCodes...)
 	if sdkerr != nil {
 		return make(http.Header), []byte{}, sdkerr
 	}
-
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return make(http.Header), []byte{}, errors.NewSDKError(err)
 	}
-
 	return resp.Header, body, nil
 }
 

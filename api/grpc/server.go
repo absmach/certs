@@ -61,7 +61,8 @@ func encodeError(err error) error {
 		return status.Error(codes.AlreadyExists, err.Error())
 	case errors.Contains(err, certs.ErrCreateEntity),
 		errors.Contains(err, certs.ErrUpdateEntity),
-		errors.Contains(err, certs.ErrViewEntity):
+		errors.Contains(err, certs.ErrViewEntity),
+		errors.Contains(err, certs.ErrGetToken):
 		return status.Error(codes.Internal, err.Error())
 	default:
 		return status.Error(codes.Internal, "internal server error")

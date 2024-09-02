@@ -40,6 +40,7 @@ var (
 	ErrConflict                = errors.New("entity already exists")
 	ErrCreateEntity            = errors.New("failed to create entity")
 	ErrViewEntity              = errors.New("view entity failed")
+	ErrGetToken                = errors.New("failed to get token")
 	ErrUpdateEntity            = errors.New("update entity failed")
 	ErrMalformedEntity         = errors.New("malformed entity specification")
 	ErrRootCANotFound          = errors.New("root CA not found")
@@ -185,7 +186,11 @@ func (s *service) ListCerts(ctx context.Context, pm PageMetadata) (CertificatePa
 //   - error: an error if the authentication fails or any other error occurs
 func (s *service) RetrieveCertDownloadToken(ctx context.Context, serialNumber string) (string, error) {
 	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{ExpiresAt: time.Now().Add(time.Minute * 5).Unix(), Issuer: Organization, Subject: "certs"})
-	return jwtToken.SignedString([]byte(serialNumber))
+	token, err := jwtToken.SignedString([]byte(serialNumber))
+	if err != nil {
+		return "", errors.Wrap(ErrGetToken, err)
+	}
+	return token, nil
 }
 
 // RenewCert renews a certificate by updating its validity period and generating a new certificate.
