@@ -46,7 +46,9 @@ func EncodeError(_ context.Context, err error, w http.ResponseWriter) {
 		err = unwrap(err)
 		w.WriteHeader(http.StatusUnauthorized)
 	case errors.Contains(err, certs.ErrMalformedEntity),
-		errors.Contains(err, ErrMissingID),
+		errors.Contains(err, ErrMissingEntityID),
+		errors.Contains(err, ErrEmptySerialNo),
+		errors.Contains(err, ErrEmptyToken),
 		errors.Contains(err, ErrInvalidQueryParams),
 		errors.Contains(err, ErrValidation),
 		errors.Contains(err, ErrInvalidRequest):

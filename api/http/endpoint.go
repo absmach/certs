@@ -69,7 +69,6 @@ func downloadCertEndpoint(svc certs.Service) endpoint.Endpoint {
 		if err := req.validate(); err != nil {
 			return downloadCertRes{}, err
 		}
-
 		cert, ca, err := svc.RetrieveCert(ctx, req.token, req.id)
 		if err != nil {
 			return fileDownloadRes{}, err

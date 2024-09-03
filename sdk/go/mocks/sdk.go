@@ -256,22 +256,24 @@ func (_c *MockSDK_RenewCert_Call) RunAndReturn(run func(string) errors.SDKError)
 }
 
 // RetrieveCert provides a mock function with given fields: token, serialNumber
-func (_m *MockSDK) RetrieveCert(token string, serialNumber string) (sdk.Certificate, errors.SDKError) {
+func (_m *MockSDK) RetrieveCert(token string, serialNumber string) ([]byte, errors.SDKError) {
 	ret := _m.Called(token, serialNumber)
 
 	if len(ret) == 0 {
 		panic("no return value specified for RetrieveCert")
 	}
 
-	var r0 sdk.Certificate
+	var r0 []byte
 	var r1 errors.SDKError
-	if rf, ok := ret.Get(0).(func(string, string) (sdk.Certificate, errors.SDKError)); ok {
+	if rf, ok := ret.Get(0).(func(string, string) ([]byte, errors.SDKError)); ok {
 		return rf(token, serialNumber)
 	}
-	if rf, ok := ret.Get(0).(func(string, string) sdk.Certificate); ok {
+	if rf, ok := ret.Get(0).(func(string, string) []byte); ok {
 		r0 = rf(token, serialNumber)
 	} else {
-		r0 = ret.Get(0).(sdk.Certificate)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]byte)
+		}
 	}
 
 	if rf, ok := ret.Get(1).(func(string, string) errors.SDKError); ok {
@@ -304,12 +306,12 @@ func (_c *MockSDK_RetrieveCert_Call) Run(run func(token string, serialNumber str
 	return _c
 }
 
-func (_c *MockSDK_RetrieveCert_Call) Return(_a0 sdk.Certificate, _a1 errors.SDKError) *MockSDK_RetrieveCert_Call {
+func (_c *MockSDK_RetrieveCert_Call) Return(_a0 []byte, _a1 errors.SDKError) *MockSDK_RetrieveCert_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockSDK_RetrieveCert_Call) RunAndReturn(run func(string, string) (sdk.Certificate, errors.SDKError)) *MockSDK_RetrieveCert_Call {
+func (_c *MockSDK_RetrieveCert_Call) RunAndReturn(run func(string, string) ([]byte, errors.SDKError)) *MockSDK_RetrieveCert_Call {
 	_c.Call.Return(run)
 	return _c
 }

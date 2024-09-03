@@ -53,7 +53,7 @@ func encodeError(err error) error {
 	case errors.Contains(err, nil):
 		return nil
 	case errors.Contains(err, certs.ErrMalformedEntity),
-		errors.Contains(err, http.ErrMissingID):
+		errors.Contains(err, http.ErrMissingEntityID):
 		return status.Error(codes.InvalidArgument, err.Error())
 	case errors.Contains(err, certs.ErrNotFound):
 		return status.Error(codes.NotFound, err.Error())

@@ -144,7 +144,7 @@ var cmdCerts = []cobra.Command{
 		},
 	},
 	{
-		Use:   "download <serial_number> <token> ",
+		Use:   "download <serial_number> <token>",
 		Short: "Download certificate",
 		Long:  `Downloads a certificate for a given serial number and token.`,
 		Run: func(cmd *cobra.Command, args []string) {

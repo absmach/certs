@@ -16,7 +16,10 @@ type downloadReq struct {
 
 func (req downloadReq) validate() error {
 	if req.id == "" {
-		return ErrMissingEntityID
+		return errors.Wrap(certs.ErrMalformedEntity, ErrEmptySerialNo)
+	}
+	if req.token == "" {
+		return errors.Wrap(certs.ErrMalformedEntity, ErrEmptyToken)
 	}
 	return nil
 }
@@ -27,7 +30,7 @@ type viewReq struct {
 
 func (req viewReq) validate() error {
 	if req.id == "" {
-		return ErrMissingID
+		return errors.Wrap(certs.ErrMalformedEntity, ErrEmptySerialNo)
 	}
 	return nil
 }
@@ -38,7 +41,7 @@ type issueCertReq struct {
 }
 
 func (req issueCertReq) validate() error {
-	if req.entityID == "" {
+	if req.entityID == `""` {
 		return errors.Wrap(certs.ErrMalformedEntity, ErrMissingEntityID)
 	}
 	return nil

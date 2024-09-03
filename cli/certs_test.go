@@ -20,12 +20,13 @@ import (
 )
 
 const (
-	revokeCmd = "revoke"
-	issueCmd  = "issue"
-	renewCmd  = "renew"
-	listCmd   = "get"
-	tokenCmd  = "token"
-	all       = "all"
+	revokeCmd   = "revoke"
+	issueCmd    = "issue"
+	renewCmd    = "renew"
+	listCmd     = "get"
+	tokenCmd    = "token"
+	downloadCmd = "download"
+	all         = "all"
 )
 
 var (
@@ -328,7 +329,7 @@ func TestGetTokenCmd(t *testing.T) {
 		{
 			desc: "get token successfully",
 			args: []string{
-				"test",
+				serialNumber,
 			},
 			logType: entityLog,
 			token:   sdk.Token{Token: tk},
@@ -336,7 +337,7 @@ func TestGetTokenCmd(t *testing.T) {
 		{
 			desc: "get token with invalid args",
 			args: []string{
-				"test",
+				serialNumber,
 				extraArg,
 			},
 			logType: usageLog,
@@ -344,7 +345,7 @@ func TestGetTokenCmd(t *testing.T) {
 		{
 			desc: "get token failed",
 			args: []string{
-				"test",
+				serialNumber,
 			},
 			sdkErr:        errors.NewSDKErrorWithStatus(certs.ErrGetToken, http.StatusUnprocessableEntity),
 			errLogMessage: fmt.Sprintf("\nerror: %s\n\n", errors.NewSDKErrorWithStatus(certs.ErrGetToken, http.StatusUnprocessableEntity)),
@@ -369,6 +370,64 @@ func TestGetTokenCmd(t *testing.T) {
 				}
 				assert.Equal(t, tc.token, token, fmt.Sprintf("%v unexpected response, expected: %v, got: %v", tc.desc, tc.token, token))
 
+			}
+			sdkCall.Unset()
+		})
+	}
+}
+
+func TestRetrieveCertCmd(t *testing.T) {
+	sdkMock := new(sdkmocks.MockSDK)
+	cli.SetSDK(sdkMock)
+	certCmd := cli.NewCertsCmd()
+	rootCmd := setFlags(certCmd)
+
+	token := "token"
+	cases := []struct {
+		desc          string
+		args          []string
+		sdkErr        errors.SDKError
+		errLogMessage string
+		logType       outputLog
+	}{
+		{
+			desc: "retrieve cert successfully",
+			args: []string{
+				serialNumber,
+				token,
+			},
+			logType: entityLog,
+		},
+		{
+			desc: "retrieve cert with invalid args",
+			args: []string{
+				serialNumber,
+				token,
+				extraArg,
+			},
+			logType: usageLog,
+		},
+		{
+			desc: "retrieve cert failed",
+			args: []string{
+				serialNumber,
+				token,
+			},
+			sdkErr:        errors.NewSDKErrorWithStatus(certs.ErrUpdateEntity, http.StatusUnprocessableEntity),
+			errLogMessage: fmt.Sprintf("\nerror: %s\n\n", errors.NewSDKErrorWithStatus(certs.ErrUpdateEntity, http.StatusUnprocessableEntity)),
+			logType:       errLog,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			sdkCall := sdkMock.On("RetrieveCert", mock.Anything, mock.Anything).Return([]byte{}, tc.sdkErr)
+			out := executeCommand(t, rootCmd, append([]string{downloadCmd}, tc.args...)...)
+			switch tc.logType {
+			case usageLog:
+				assert.False(t, strings.Contains(out, rootCmd.Use), fmt.Sprintf("%s invalid usage: %s", tc.desc, out))
+			case errLog:
+				assert.Equal(t, tc.errLogMessage, out, fmt.Sprintf("%s unexpected error response: expected %s got errLogMessage:%s", tc.desc, tc.errLogMessage, out))
 			}
 			sdkCall.Unset()
 		})

@@ -103,7 +103,7 @@ type SDK interface {
 	// example:
 	//  cert, _ := sdk.ViewCert("certID", "download-token")
 	//  fmt.Println(cert)
-	RetrieveCert(token, serialNumber string) (Certificate, errors.SDKError)
+	RetrieveCert(token, serialNumber string) ([]byte, errors.SDKError)
 
 	// RevokeCert revokes certificate for thing with thingID
 	//
@@ -165,23 +165,20 @@ func (sdk mgSDK) IssueCert(entityID string, ipAddrs []string) (SerialNumber, err
 	return sn, nil
 }
 
-func (sdk mgSDK) RetrieveCert(token, serialNumber string) (Certificate, errors.SDKError) {
+func (sdk mgSDK) RetrieveCert(token, serialNumber string) ([]byte, errors.SDKError) {
 	pm := PageMetadata{
 		Token: token,
 	}
-	url, err := sdk.withQueryParams(sdk.certsURL, fmt.Sprintf("%s/%s/%s/download", sdk.certsURL, certsEndpoint, serialNumber), pm)
+	url, err := sdk.withQueryParams(sdk.certsURL, fmt.Sprintf("%s/%s/download", certsEndpoint, serialNumber), pm)
 	if err != nil {
-		return Certificate{}, errors.NewSDKError(err)
+		return []byte{}, errors.NewSDKError(err)
 	}
 	_, body, sdkerr := sdk.processRequest(http.MethodGet, url, nil, nil, http.StatusOK)
 	if sdkerr != nil {
-		return Certificate{}, sdkerr
+		return []byte{}, sdkerr
 	}
-	var c Certificate
-	if err := json.Unmarshal(body, &c); err != nil {
-		return Certificate{}, errors.NewSDKError(err)
-	}
-	return c, nil
+
+	return body, nil
 }
 
 func (sdk mgSDK) RevokeCert(serialNumber string) errors.SDKError {
