@@ -29,6 +29,7 @@ const (
 	limitKey        = "limit"
 	entityKey       = "entity_id"
 	ocspStatusParam = "force_status"
+	entityIDParam   = "entityID"
 	defOffset       = 0
 	defLimit        = 10
 )
@@ -138,7 +139,7 @@ func decodeIssueCert(_ context.Context, r *http.Request) (interface{}, error) {
 		return nil, err
 	}
 	req := issueCertReq{
-		entityID: chi.URLParam(r, "entityID"),
+		entityID: chi.URLParam(r, entityIDParam),
 	}
 	if err := json.Unmarshal(body, &req); err != nil {
 		return nil, errors.Wrap(ErrInvalidRequest, err)

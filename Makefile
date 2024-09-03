@@ -3,7 +3,7 @@
 
 AM_DOCKER_IMAGE_NAME_PREFIX ?= absmach
 BUILD_DIR = build
-SERVICES = certs cli
+SERVICES = certs
 DOCKERS = $(addprefix docker_,$(SERVICES))
 DOCKERS_DEV = $(addprefix docker_dev_,$(SERVICES))
 CGO_ENABLED ?= 0
