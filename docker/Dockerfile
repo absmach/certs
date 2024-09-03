@@ -14,6 +14,5 @@ RUN apk update \
 
 FROM scratch
 
-# Required for billing service
 COPY --from=builder /exe /
 ENTRYPOINT ["/exe"]
