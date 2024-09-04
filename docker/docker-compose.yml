@@ -10,7 +10,7 @@ volumes:
 
 services:
   certs:
-    image: absmach/certs:${AM_CERTS_RELEASE_TAG}
+    image: ghcr.io/absmach/certs:${AM_CERTS_RELEASE_TAG}
     container_name: certs
     depends_on:
       - certs-db

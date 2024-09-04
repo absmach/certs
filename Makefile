@@ -1,7 +1,7 @@
 # Copyright (c) Abstract Machines
 # SPDX-License-Identifier: Apache-2.0
 
-AM_DOCKER_IMAGE_NAME_PREFIX ?= absmach
+AM_DOCKER_IMAGE_NAME_PREFIX ?= ghcr.io/absmach/certs
 BUILD_DIR = build
 DOCKER = $(addprefix docker_,certs)
 DOCKER_DEV = $(addprefix docker_dev_,certs)
