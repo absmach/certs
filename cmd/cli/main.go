@@ -8,7 +8,7 @@ import (
 	"log"
 
 	"github.com/absmach/certs/cli"
-	"github.com/absmach/certs/sdk/go"
+	"github.com/absmach/certs/sdk"
 	"github.com/spf13/cobra"
 )
 

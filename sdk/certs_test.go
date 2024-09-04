@@ -12,8 +12,8 @@ import (
 	httpapi "github.com/absmach/certs/api/http"
 	"github.com/absmach/certs/errors"
 	"github.com/absmach/certs/mocks"
-	sdk "github.com/absmach/certs/sdk/go"
-	logger "github.com/absmach/certs/sdk/go/mocks"
+	"github.com/absmach/certs/sdk"
+	logger "github.com/absmach/certs/sdk/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )

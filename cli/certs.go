@@ -6,14 +6,14 @@ package cli
 import (
 	"encoding/json"
 
-	mgxsdk "github.com/absmach/certs/sdk/go"
+	ctxsdk "github.com/absmach/certs/sdk"
 	"github.com/spf13/cobra"
 )
 
 // Keep SDK handle in global var.
-var sdk mgxsdk.SDK
+var sdk ctxsdk.SDK
 
-func SetSDK(s mgxsdk.SDK) {
+func SetSDK(s ctxsdk.SDK) {
 	sdk = s
 }
 
@@ -28,7 +28,7 @@ var cmdCerts = []cobra.Command{
 				return
 			}
 			if args[0] == "all" {
-				pm := mgxsdk.PageMetadata{
+				pm := ctxsdk.PageMetadata{
 					Limit:  Limit,
 					Offset: Offset,
 				}
@@ -40,7 +40,7 @@ var cmdCerts = []cobra.Command{
 				logJSONCmd(*cmd, page)
 				return
 			}
-			pm := mgxsdk.PageMetadata{
+			pm := ctxsdk.PageMetadata{
 				EntityID: args[0],
 				Limit:    Limit,
 				Offset:   Offset,

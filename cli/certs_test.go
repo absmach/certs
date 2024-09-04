@@ -13,8 +13,8 @@ import (
 	"github.com/absmach/certs"
 	"github.com/absmach/certs/cli"
 	"github.com/absmach/certs/errors"
-	sdk "github.com/absmach/certs/sdk/go"
-	sdkmocks "github.com/absmach/certs/sdk/go/mocks"
+	"github.com/absmach/certs/sdk"
+	sdkmocks "github.com/absmach/certs/sdk/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )

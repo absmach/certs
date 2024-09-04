@@ -9,7 +9,7 @@ import (
 	"strconv"
 
 	"github.com/absmach/certs/errors"
-	mgxsdk "github.com/absmach/certs/sdk/go"
+	ctxsdk "github.com/absmach/certs/sdk"
 	"github.com/pelletier/go-toml"
 )
 
@@ -75,7 +75,7 @@ func read(file string) (config, error) {
 }
 
 // ParseConfig - parses the config file.
-func ParseConfig(sdkConf mgxsdk.Config) (mgxsdk.Config, error) {
+func ParseConfig(sdkConf ctxsdk.Config) (ctxsdk.Config, error) {
 	if ConfigPath == "" {
 		ConfigPath = defaultConfigPath
 	}

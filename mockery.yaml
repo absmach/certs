@@ -16,7 +16,7 @@ packages:
         config:
           dir: "{{.InterfaceDir}}/mocks"
           filename: "repository.go"
-  github.com/absmach/certs/sdk/go:
+  github.com/absmach/certs/sdk:
     interfaces:
       SDK:
         config:
