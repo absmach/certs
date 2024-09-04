@@ -1,6 +1,11 @@
 FROM golang:1.23-alpine AS builder
 
 ARG SVC
+ARG GOARCH
+ARG GOARM
+ARG VERSION
+ARG COMMIT
+ARG TIME
 
 WORKDIR /go/src/github.com/absmach/certs
 
@@ -14,5 +19,7 @@ RUN apk update \
 
 FROM scratch
 
+# Required for billing service
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=builder /exe /
 ENTRYPOINT ["/exe"]

@@ -3,9 +3,8 @@
 
 AM_DOCKER_IMAGE_NAME_PREFIX ?= absmach
 BUILD_DIR = build
-SERVICE = certs
-DOCKER = $(addprefix docker_,$(SERVICE))
-DOCKER_DEV = $(addprefix docker_dev_,$(SERVICE))
+DOCKER = $(addprefix docker_,certs)
+DOCKER_DEV = $(addprefix docker_dev_,certs)
 CGO_ENABLED ?= 0
 GOARCH ?= amd64
 VERSION ?= $(shell git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
@@ -20,28 +19,37 @@ MOCKERY_VERSION=v2.43.2
 
 define compile_service
 	CGO_ENABLED=$(CGO_ENABLED) GOOS=$(GOOS) GOARCH=$(GOARCH) GOARM=$(GOARM) \
-	go build -ldflags "-s -w" -o ${BUILD_DIR}/$(1) cmd/$(1)/main.go
+	go build -ldflags "-s -w \
+	-X 'github.com/absmach/certs/http.BuildTime=$(TIME)' \
+	-X 'github.com/absmach/certs/internal/http.Version=$(VERSION)' \
+	-X 'github.com/absmach/certs/internal/http.Commit=$(COMMIT)'" \
+	-o ${BUILD_DIR}/$(1) cmd/$(1)/main.go
 endef
 
 define make_docker
 	docker build \
 		--no-cache \
-		--build-arg SVC=$(SERVICE) \
-		--tag=$(AM_DOCKER_IMAGE_NAME_PREFIX)/$(SERVICE) \
+		--build-arg SVC=certs \
+		--tag=$(AM_DOCKER_IMAGE_NAME_PREFIX)/certs \
 		-f docker/Dockerfile .
 endef
 
 define make_docker_dev
 	docker build \
 		--no-cache \
-		--build-arg SVC=$(SERVICE) \
-		--tag=$(AM_DOCKER_IMAGE_NAME_PREFIX)/$(SERVICE) \
+		--build-arg SVC=certs \
+		--build-arg GOARCH=$(GOARCH) \
+		--build-arg GOARM=$(GOARM) \
+		--build-arg VERSION=$(VERSION) \
+		--build-arg COMMIT=$(COMMIT) \
+		--build-arg TIME=$(TIME) \
+		--tag=$(AM_DOCKER_IMAGE_NAME_PREFIX)/certs \
 		-f docker/Dockerfile.dev .
 endef
 
-all: $(SERVICE) cli
+all: certs cli
 
-.PHONY: all $(SERVICE) docker docker_dev latest release cli mocks 
+.PHONY: all certs docker docker_dev cli mocks 
 
 clean:
 	rm -rf ${BUILD_DIR}
@@ -52,7 +60,7 @@ cleandocker:
 
 ifdef pv
 	# Remove unused volumes
-	docker volume ls -f name=$(MF_DOCKER_IMAGE_NAME_PREFIX) -f dangling=true -q | xargs -r docker volume rm
+	docker volume ls -f name=$(AM_DOCKER_IMAGE_NAME_PREFIX) -f dangling=true -q | xargs -r docker volume rm
 endif
 
 install:
@@ -70,8 +78,8 @@ test: mocks
 proto:
 	protoc -I. --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative certs.proto
 
-$(SERVICE):
-	$(call compile_service,$(@))
+certs:
+	$(call compile_service,certs)
 
 cli:
 	$(call compile_service,cli)
