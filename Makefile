@@ -1,7 +1,7 @@
 # Copyright (c) Abstract Machines
 # SPDX-License-Identifier: Apache-2.0
 
-AM_DOCKER_IMAGE_NAME_PREFIX ?= ghcr.io/absmach/certs
+AM_DOCKER_IMAGE_NAME_PREFIX ?= ghcr.io/absmach
 BUILD_DIR = build
 DOCKER = $(addprefix docker_,certs)
 DOCKER_DEV = $(addprefix docker_dev_,certs)
@@ -57,11 +57,6 @@ clean:
 cleandocker:
 	# Stops containers and removes containers, networks, volumes, and images created by up
 	docker compose -f docker/docker-compose.yml -p $(DOCKER_PROJECT) down --rmi all -v --remove-orphans
-
-ifdef pv
-	# Remove unused volumes
-	docker volume ls -f name=$(AM_DOCKER_IMAGE_NAME_PREFIX) -f dangling=true -q | xargs -r docker volume rm
-endif
 
 install:
 	for file in $(BUILD_DIR)/*; do \
