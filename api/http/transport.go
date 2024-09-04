@@ -16,7 +16,7 @@ import (
 	"strings"
 
 	"github.com/absmach/certs"
-	errors "github.com/absmach/certs"
+	"github.com/absmach/certs/errors"
 	"github.com/go-chi/chi"
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -29,15 +29,18 @@ const (
 	limitKey        = "limit"
 	entityKey       = "entity_id"
 	ocspStatusParam = "force_status"
+	entityIDParam   = "entityID"
 	defOffset       = 0
 	defLimit        = 10
 )
 
 // MakeHandler returns a HTTP handler for API endpoints.
-func MakeHandler(r *chi.Mux, svc certs.Service, logger *slog.Logger, instanceID string) http.Handler {
+func MakeHandler(svc certs.Service, logger *slog.Logger, instanceID string) http.Handler {
 	opts := []kithttp.ServerOption{
 		kithttp.ServerErrorEncoder(loggingErrorEncoder(logger, EncodeError)),
 	}
+
+	r := chi.NewRouter()
 
 	r.Route("/certs", func(r chi.Router) {
 		r.Post("/issue/{entityID}", otelhttp.NewHandler(kithttp.NewServer(
@@ -136,7 +139,7 @@ func decodeIssueCert(_ context.Context, r *http.Request) (interface{}, error) {
 		return nil, err
 	}
 	req := issueCertReq{
-		entityID:   chi.URLParam(r, "entityID"),
+		entityID: chi.URLParam(r, entityIDParam),
 	}
 	if err := json.Unmarshal(body, &req); err != nil {
 		return nil, errors.Wrap(ErrInvalidRequest, err)

@@ -9,7 +9,7 @@ import (
 	"net/http"
 
 	"github.com/absmach/certs"
-	errors "github.com/absmach/certs"
+	"github.com/absmach/certs/errors"
 )
 
 const (
@@ -46,16 +46,19 @@ func EncodeError(_ context.Context, err error, w http.ResponseWriter) {
 		err = unwrap(err)
 		w.WriteHeader(http.StatusUnauthorized)
 	case errors.Contains(err, certs.ErrMalformedEntity),
-		errors.Contains(err, ErrMissingID),
+		errors.Contains(err, ErrMissingEntityID),
+		errors.Contains(err, ErrEmptySerialNo),
+		errors.Contains(err, ErrEmptyToken),
 		errors.Contains(err, ErrInvalidQueryParams),
 		errors.Contains(err, ErrValidation),
-		errors.Contains(err, ErrInvalidRequest),
-		errors.Contains(err, certs.ErrViewEntity):
+		errors.Contains(err, ErrInvalidRequest):
 		err = unwrap(err)
 		w.WriteHeader(http.StatusBadRequest)
 
 	case errors.Contains(err, certs.ErrCreateEntity),
-		errors.Contains(err, certs.ErrUpdateEntity):
+		errors.Contains(err, certs.ErrUpdateEntity),
+		errors.Contains(err, certs.ErrViewEntity),
+		errors.Contains(err, certs.ErrGetToken):
 		err = unwrap(err)
 		w.WriteHeader(http.StatusUnprocessableEntity)
 

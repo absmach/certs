@@ -27,7 +27,6 @@ import (
 	cpostgres "github.com/absmach/certs/postgres"
 	"github.com/absmach/certs/tracing"
 	"github.com/caarlos0/env/v10"
-	"github.com/go-chi/chi"
 	"github.com/jmoiron/sqlx"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/errgroup"
@@ -118,7 +117,7 @@ func main() {
 	}
 	gs := grpcserver.NewServer(ctx, cancel, svcName, grpcServerConfig, registerCertsServiceServer, logger, nil, nil)
 
-	hs := httpserver.NewServer(ctx, cancel, svcName, httpServerConfig, httpapi.MakeHandler(chi.NewMux(), svc, logger, cfg.InstanceID), logger)
+	hs := httpserver.NewServer(ctx, cancel, svcName, httpServerConfig, httpapi.MakeHandler(svc, logger, cfg.InstanceID), logger)
 
 	g.Go(func() error {
 		return hs.Start()

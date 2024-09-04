@@ -69,7 +69,6 @@ func downloadCertEndpoint(svc certs.Service) endpoint.Endpoint {
 		if err := req.validate(); err != nil {
 			return downloadCertRes{}, err
 		}
-
 		cert, ca, err := svc.RetrieveCert(ctx, req.token, req.id)
 		if err != nil {
 			return fileDownloadRes{}, err
@@ -113,7 +112,14 @@ func listCertsEndpoint(svc certs.Service) endpoint.Endpoint {
 			return listCertsRes{}, err
 		}
 
-		return listCertsRes{CertificatePage: certPage}, nil
+		return listCertsRes{
+			pageRes: pageRes{
+				Total:  certPage.Total,
+				Offset: certPage.Offset,
+				Limit:  certPage.Limit,
+			},
+			Certificates: certPage.Certificates,
+		}, nil
 	}
 }
 

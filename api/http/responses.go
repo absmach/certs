@@ -19,6 +19,11 @@ var (
 	_ Response = (*ocspRes)(nil)
 )
 
+type pageRes struct {
+	Limit  uint64 `json:"limit,omitempty"`
+	Offset uint64 `json:"offset"`
+	Total  uint64 `json:"total"`
+}
 type renewCertRes struct {
 	renewed bool
 }
@@ -115,7 +120,8 @@ func (res issueCertRes) Empty() bool {
 }
 
 type listCertsRes struct {
-	certs.CertificatePage
+	pageRes
+	Certificates []certs.Certificate `json:"certificates"`
 }
 
 func (res listCertsRes) Code() int {

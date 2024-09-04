@@ -3,11 +3,14 @@
 
 package http
 
-import errors "github.com/absmach/certs"
+import "github.com/absmach/certs/errors"
 
 var (
-	// ErrMissingID indicates missing entity ID.
-	ErrMissingID = errors.New("missing entity id")
+	// ErrEmptySerialNo indicates that the serial number is empty.
+	ErrEmptySerialNo = errors.New("empty serial number provided")
+
+	// ErrEmptyToken indicates that the token is empty.
+	ErrEmptyToken = errors.New("empty token provided")
 
 	// ErrEmptyList indicates that entity data is empty.
 	ErrEmptyList = errors.New("empty list provided")

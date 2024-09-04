@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/absmach/certs"
-	errors "github.com/absmach/certs"
+	"github.com/absmach/certs/errors"
 	"github.com/absmach/certs/mocks"
 	"github.com/golang-jwt/jwt"
 	"github.com/stretchr/testify/assert"
@@ -48,7 +48,7 @@ func TestIssueCert(t *testing.T) {
 		{
 			desc:      "failed repo create cert",
 			backendId: "backendId",
-			err:       errors.ErrCreateEntity,
+			err:       certs.ErrCreateEntity,
 		},
 	}
 
@@ -92,14 +92,14 @@ func TestRevokeCert(t *testing.T) {
 		{
 			desc:         "failed repo get cert",
 			serial:       invalidSerialNumber,
-			retrieveErr:  errors.ErrViewEntity,
-			err:          errors.ErrViewEntity,
+			retrieveErr:  certs.ErrViewEntity,
+			err:          certs.ErrViewEntity,
 			shouldRevoke: false,
 		},
 		{
 			desc:         "failed repo update cert",
 			serial:       serialNumber,
-			err:          errors.ErrUpdateEntity,
+			err:          certs.ErrUpdateEntity,
 			shouldRevoke: false,
 		},
 	}
@@ -170,13 +170,13 @@ func TestGetCert(t *testing.T) {
 			desc:   "failed token validation",
 			token:  invalidToken,
 			serial: serialNumber,
-			err:    errors.ErrMalformedEntity,
+			err:    certs.ErrMalformedEntity,
 		},
 		{
 			desc:   "failed repo get cert",
 			token:  validToken,
 			serial: serialNumber,
-			err:    errors.ErrViewEntity,
+			err:    certs.ErrViewEntity,
 		},
 	}
 
@@ -269,8 +269,8 @@ func TestRenewCert(t *testing.T) {
 			desc:        "failed repo get cert",
 			serial:      serialNumber.String(),
 			cert:        certs.Certificate{},
-			retrieveErr: errors.ErrViewEntity,
-			err:         errors.ErrViewEntity,
+			retrieveErr: certs.ErrViewEntity,
+			err:         certs.ErrViewEntity,
 		},
 		{
 			desc:   "renew expired cert",
@@ -283,7 +283,7 @@ func TestRenewCert(t *testing.T) {
 				ExpiryDate:   time.Now().Add(-time.Hour),
 				Revoked:      false,
 			},
-			err: errors.ErrCertExpired,
+			err: certs.ErrCertExpired,
 		},
 		{
 			desc:   "renew revoked cert",
@@ -296,7 +296,7 @@ func TestRenewCert(t *testing.T) {
 				ExpiryDate:   time.Now().Add(time.Hour),
 				Revoked:      true,
 			},
-			err: errors.ErrCertRevoked,
+			err: certs.ErrCertRevoked,
 		},
 		{
 			desc:   "failed repo update cert",

@@ -5,7 +5,7 @@ package http
 
 import (
 	"github.com/absmach/certs"
-	errors "github.com/absmach/certs"
+	"github.com/absmach/certs/errors"
 	"golang.org/x/crypto/ocsp"
 )
 
@@ -16,7 +16,10 @@ type downloadReq struct {
 
 func (req downloadReq) validate() error {
 	if req.id == "" {
-		return ErrMissingEntityID
+		return errors.Wrap(certs.ErrMalformedEntity, ErrEmptySerialNo)
+	}
+	if req.token == "" {
+		return errors.Wrap(certs.ErrMalformedEntity, ErrEmptyToken)
 	}
 	return nil
 }
@@ -27,18 +30,18 @@ type viewReq struct {
 
 func (req viewReq) validate() error {
 	if req.id == "" {
-		return ErrMissingID
+		return errors.Wrap(certs.ErrMalformedEntity, ErrEmptySerialNo)
 	}
 	return nil
 }
 
 type issueCertReq struct {
-	entityID   string   `json:"-"`
-	IpAddrs    []string `json:"ip_addresses"`
+	entityID string   `json:"-"`
+	IpAddrs  []string `json:"ip_addresses"`
 }
 
 func (req issueCertReq) validate() error {
-	if req.entityID == "" {
+	if req.entityID == `""` {
 		return errors.Wrap(certs.ErrMalformedEntity, ErrMissingEntityID)
 	}
 	return nil
