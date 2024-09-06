@@ -118,12 +118,12 @@ var cmdCerts = []cobra.Command{
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			cert, status, err := sdk.OCSP(args[0])
+			response, err := sdk.OCSP(args[0])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
-			logJSONCmd(*cmd, cert, status)
+			logJSONCmd(*cmd, response)
 		},
 	},
 	{

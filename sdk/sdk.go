@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/absmach/certs/errors"
+	"golang.org/x/crypto/ocsp"
 	"moul.io/http2curl"
 )
 
@@ -136,9 +137,9 @@ type SDK interface {
 	// OCSP checks the revocation status of a certificate
 	//
 	// example:
-	//  cert, status, _ := sdk.OCSP("serialNumber")
-	//  fmt.Println(cert, status)
-	OCSP(serialNumber string) (Certificate, int, errors.SDKError)
+	//  response, _ := sdk.OCSP("serialNumber")
+	//  fmt.Println(response)
+	OCSP(serialNumber string) (*ocsp.Response, errors.SDKError)
 }
 
 func (sdk mgSDK) IssueCert(entityID string, ipAddrs []string) (SerialNumber, errors.SDKError) {
@@ -223,17 +224,18 @@ func (sdk mgSDK) RetrieveCertDownloadToken(serialNumber string) (Token, errors.S
 	return tk, nil
 }
 
-func (sdk mgSDK) OCSP(serialNumber string) (Certificate, int, errors.SDKError) {
+func (sdk mgSDK) OCSP(serialNumber string) (*ocsp.Response, errors.SDKError) {
 	url := fmt.Sprintf("%s/%s/ocsp", sdk.certsURL, certsEndpoint)
-	_, body, sdkerr := sdk.processRequest(http.MethodGet, url, nil, nil, http.StatusOK)
+	requestBody := []byte(serialNumber)
+	_, body, sdkerr := sdk.processRequest(http.MethodPost, url, requestBody, nil, http.StatusOK)
 	if sdkerr != nil {
-		return Certificate{}, 0, sdkerr
+		return &ocsp.Response{}, sdkerr
 	}
-	var c Certificate
-	if err := json.Unmarshal(body, &c); err != nil {
-		return Certificate{}, 0, errors.NewSDKError(err)
-	}
-	return c, 0, nil
+	ocspResp, err := ocsp.ParseResponse(body, nil)
+    if err != nil {
+        return &ocsp.Response{}, errors.NewSDKError(err)
+    }
+    return ocspResp, nil
 }
 
 func NewSDK(conf Config) SDK {
