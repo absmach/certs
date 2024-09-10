@@ -135,7 +135,6 @@ func (res listCertsRes) Headers() map[string]string {
 }
 
 type viewCertRes struct {
-	// Certificate certs.Certificate `json:"certificate"`
 	SerialNumber string    `json:"serial_number"`
 	Certificate  *string   `json:"certificate"`
 	Key          *string   `json:"key"`
