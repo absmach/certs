@@ -57,13 +57,13 @@ type Token struct {
 }
 
 type Certificate struct {
-	SerialNumber string    `db:"serial_number"`
-	Certificate  []byte    `db:"certificate"`
-	Key          []byte    `db:"key"`
-	Revoked      bool      `db:"revoked"`
-	ExpiryDate   time.Time `db:"expiry_date"`
-	EntityID     string    `db:"entity_id"`
-	DownloadUrl  string    `db:"-"`
+	SerialNumber string    `json:"serial_number"`
+	Certificate  *string   `json:"certificate"`
+	Key          *string   `json:"key"`
+	Revoked      bool      `json:"revoked"`
+	ExpiryDate   time.Time `json:"expiry_date"`
+	EntityID     string    `json:"entity_id"`
+	DownloadUrl  string    `json:"-"`
 }
 
 type CertificatePage struct {
@@ -99,12 +99,12 @@ type SDK interface {
 	//  fmt.Println(serial)
 	IssueCert(entityID string, ipAddrs []string) (SerialNumber, errors.SDKError)
 
-	// ViewCert returns a certificate given certificate ID
+	// DownloadCert returns a certificate given certificate ID
 	//
 	// example:
-	//  cert, _ := sdk.ViewCert("certID", "download-token")
+	//  cert, _ := sdk.DownloadCert("serialNumber", "download-token")
 	//  fmt.Println(cert)
-	RetrieveCert(token, serialNumber string) ([]byte, errors.SDKError)
+	DownloadCert(token, serialNumber string) ([]byte, errors.SDKError)
 
 	// RevokeCert revokes certificate for thing with thingID
 	//
@@ -126,6 +126,13 @@ type SDK interface {
 	//  page, _ := sdk.ListCerts(PageMetadata{Limit: 10, Offset: 0})
 	//  fmt.Println(page)
 	ListCerts(pm PageMetadata) (CertificatePage, errors.SDKError)
+
+	// ViewCert retrieves a certificate record from the database.
+	//
+	// example:
+	//  cert, _ := sdk.ViewCert("serialNumber")
+	//  fmt.Println(cert)
+	ViewCert(serialNumber string) (Certificate, errors.SDKError)
 
 	// RetrieveCertDownloadToken retrieves a download token for a certificate
 	//
@@ -166,7 +173,7 @@ func (sdk mgSDK) IssueCert(entityID string, ipAddrs []string) (SerialNumber, err
 	return sn, nil
 }
 
-func (sdk mgSDK) RetrieveCert(token, serialNumber string) ([]byte, errors.SDKError) {
+func (sdk mgSDK) DownloadCert(token, serialNumber string) ([]byte, errors.SDKError) {
 	pm := PageMetadata{
 		Token: token,
 	}
@@ -180,6 +187,20 @@ func (sdk mgSDK) RetrieveCert(token, serialNumber string) ([]byte, errors.SDKErr
 	}
 
 	return body, nil
+}
+
+func (sdk mgSDK) ViewCert(serialNumber string) (Certificate, errors.SDKError) {
+	url := fmt.Sprintf("%s/%s/%s", sdk.certsURL, certsEndpoint, serialNumber)
+	_, body, sdkerr := sdk.processRequest(http.MethodGet, url, nil, nil, http.StatusOK)
+	if sdkerr != nil {
+		return Certificate{}, sdkerr
+	}
+
+	var cert Certificate
+	if err := json.Unmarshal(body, &cert); err != nil {
+		return Certificate{}, errors.NewSDKError(err)
+	}
+	return cert, nil
 }
 
 func (sdk mgSDK) RevokeCert(serialNumber string) errors.SDKError {
@@ -232,10 +253,10 @@ func (sdk mgSDK) OCSP(serialNumber string) (*ocsp.Response, errors.SDKError) {
 		return &ocsp.Response{}, sdkerr
 	}
 	ocspResp, err := ocsp.ParseResponse(body, nil)
-    if err != nil {
-        return &ocsp.Response{}, errors.NewSDKError(err)
-    }
-    return ocspResp, nil
+	if err != nil {
+		return &ocsp.Response{}, errors.NewSDKError(err)
+	}
+	return ocspResp, nil
 }
 
 func NewSDK(conf Config) SDK {

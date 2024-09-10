@@ -493,6 +493,63 @@ func (_c *MockService_RevokeCert_Call) RunAndReturn(run func(context.Context, st
 	return _c
 }
 
+// ViewCert provides a mock function with given fields: ctx, serialNumber
+func (_m *MockService) ViewCert(ctx context.Context, serialNumber string) (certs.Certificate, error) {
+	ret := _m.Called(ctx, serialNumber)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ViewCert")
+	}
+
+	var r0 certs.Certificate
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) (certs.Certificate, error)); ok {
+		return rf(ctx, serialNumber)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string) certs.Certificate); ok {
+		r0 = rf(ctx, serialNumber)
+	} else {
+		r0 = ret.Get(0).(certs.Certificate)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, serialNumber)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockService_ViewCert_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ViewCert'
+type MockService_ViewCert_Call struct {
+	*mock.Call
+}
+
+// ViewCert is a helper method to define mock.On call
+//   - ctx context.Context
+//   - serialNumber string
+func (_e *MockService_Expecter) ViewCert(ctx interface{}, serialNumber interface{}) *MockService_ViewCert_Call {
+	return &MockService_ViewCert_Call{Call: _e.mock.On("ViewCert", ctx, serialNumber)}
+}
+
+func (_c *MockService_ViewCert_Call) Run(run func(ctx context.Context, serialNumber string)) *MockService_ViewCert_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *MockService_ViewCert_Call) Return(_a0 certs.Certificate, _a1 error) *MockService_ViewCert_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockService_ViewCert_Call) RunAndReturn(run func(context.Context, string) (certs.Certificate, error)) *MockService_ViewCert_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // NewMockService creates a new instance of MockService. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewMockService(t interface {

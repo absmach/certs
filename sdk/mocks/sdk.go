@@ -27,6 +27,67 @@ func (_m *MockSDK) EXPECT() *MockSDK_Expecter {
 	return &MockSDK_Expecter{mock: &_m.Mock}
 }
 
+// DownloadCert provides a mock function with given fields: token, serialNumber
+func (_m *MockSDK) DownloadCert(token string, serialNumber string) ([]byte, errors.SDKError) {
+	ret := _m.Called(token, serialNumber)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DownloadCert")
+	}
+
+	var r0 []byte
+	var r1 errors.SDKError
+	if rf, ok := ret.Get(0).(func(string, string) ([]byte, errors.SDKError)); ok {
+		return rf(token, serialNumber)
+	}
+	if rf, ok := ret.Get(0).(func(string, string) []byte); ok {
+		r0 = rf(token, serialNumber)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]byte)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(string, string) errors.SDKError); ok {
+		r1 = rf(token, serialNumber)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(errors.SDKError)
+		}
+	}
+
+	return r0, r1
+}
+
+// MockSDK_DownloadCert_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DownloadCert'
+type MockSDK_DownloadCert_Call struct {
+	*mock.Call
+}
+
+// DownloadCert is a helper method to define mock.On call
+//   - token string
+//   - serialNumber string
+func (_e *MockSDK_Expecter) DownloadCert(token interface{}, serialNumber interface{}) *MockSDK_DownloadCert_Call {
+	return &MockSDK_DownloadCert_Call{Call: _e.mock.On("DownloadCert", token, serialNumber)}
+}
+
+func (_c *MockSDK_DownloadCert_Call) Run(run func(token string, serialNumber string)) *MockSDK_DownloadCert_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *MockSDK_DownloadCert_Call) Return(_a0 []byte, _a1 errors.SDKError) *MockSDK_DownloadCert_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSDK_DownloadCert_Call) RunAndReturn(run func(string, string) ([]byte, errors.SDKError)) *MockSDK_DownloadCert_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // IssueCert provides a mock function with given fields: entityID, ipAddrs
 func (_m *MockSDK) IssueCert(entityID string, ipAddrs []string) (sdk.SerialNumber, errors.SDKError) {
 	ret := _m.Called(entityID, ipAddrs)
@@ -252,67 +313,6 @@ func (_c *MockSDK_RenewCert_Call) RunAndReturn(run func(string) errors.SDKError)
 	return _c
 }
 
-// RetrieveCert provides a mock function with given fields: token, serialNumber
-func (_m *MockSDK) RetrieveCert(token string, serialNumber string) ([]byte, errors.SDKError) {
-	ret := _m.Called(token, serialNumber)
-
-	if len(ret) == 0 {
-		panic("no return value specified for RetrieveCert")
-	}
-
-	var r0 []byte
-	var r1 errors.SDKError
-	if rf, ok := ret.Get(0).(func(string, string) ([]byte, errors.SDKError)); ok {
-		return rf(token, serialNumber)
-	}
-	if rf, ok := ret.Get(0).(func(string, string) []byte); ok {
-		r0 = rf(token, serialNumber)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]byte)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(string, string) errors.SDKError); ok {
-		r1 = rf(token, serialNumber)
-	} else {
-		if ret.Get(1) != nil {
-			r1 = ret.Get(1).(errors.SDKError)
-		}
-	}
-
-	return r0, r1
-}
-
-// MockSDK_RetrieveCert_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RetrieveCert'
-type MockSDK_RetrieveCert_Call struct {
-	*mock.Call
-}
-
-// RetrieveCert is a helper method to define mock.On call
-//   - token string
-//   - serialNumber string
-func (_e *MockSDK_Expecter) RetrieveCert(token interface{}, serialNumber interface{}) *MockSDK_RetrieveCert_Call {
-	return &MockSDK_RetrieveCert_Call{Call: _e.mock.On("RetrieveCert", token, serialNumber)}
-}
-
-func (_c *MockSDK_RetrieveCert_Call) Run(run func(token string, serialNumber string)) *MockSDK_RetrieveCert_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string), args[1].(string))
-	})
-	return _c
-}
-
-func (_c *MockSDK_RetrieveCert_Call) Return(_a0 []byte, _a1 errors.SDKError) *MockSDK_RetrieveCert_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *MockSDK_RetrieveCert_Call) RunAndReturn(run func(string, string) ([]byte, errors.SDKError)) *MockSDK_RetrieveCert_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // RetrieveCertDownloadToken provides a mock function with given fields: serialNumber
 func (_m *MockSDK) RetrieveCertDownloadToken(serialNumber string) (sdk.Token, errors.SDKError) {
 	ret := _m.Called(serialNumber)
@@ -415,6 +415,64 @@ func (_c *MockSDK_RevokeCert_Call) Return(_a0 errors.SDKError) *MockSDK_RevokeCe
 }
 
 func (_c *MockSDK_RevokeCert_Call) RunAndReturn(run func(string) errors.SDKError) *MockSDK_RevokeCert_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ViewCert provides a mock function with given fields: serialNumber
+func (_m *MockSDK) ViewCert(serialNumber string) (sdk.Certificate, errors.SDKError) {
+	ret := _m.Called(serialNumber)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ViewCert")
+	}
+
+	var r0 sdk.Certificate
+	var r1 errors.SDKError
+	if rf, ok := ret.Get(0).(func(string) (sdk.Certificate, errors.SDKError)); ok {
+		return rf(serialNumber)
+	}
+	if rf, ok := ret.Get(0).(func(string) sdk.Certificate); ok {
+		r0 = rf(serialNumber)
+	} else {
+		r0 = ret.Get(0).(sdk.Certificate)
+	}
+
+	if rf, ok := ret.Get(1).(func(string) errors.SDKError); ok {
+		r1 = rf(serialNumber)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(errors.SDKError)
+		}
+	}
+
+	return r0, r1
+}
+
+// MockSDK_ViewCert_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ViewCert'
+type MockSDK_ViewCert_Call struct {
+	*mock.Call
+}
+
+// ViewCert is a helper method to define mock.On call
+//   - serialNumber string
+func (_e *MockSDK_Expecter) ViewCert(serialNumber interface{}) *MockSDK_ViewCert_Call {
+	return &MockSDK_ViewCert_Call{Call: _e.mock.On("ViewCert", serialNumber)}
+}
+
+func (_c *MockSDK_ViewCert_Call) Run(run func(serialNumber string)) *MockSDK_ViewCert_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string))
+	})
+	return _c
+}
+
+func (_c *MockSDK_ViewCert_Call) Return(_a0 sdk.Certificate, _a1 errors.SDKError) *MockSDK_ViewCert_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSDK_ViewCert_Call) RunAndReturn(run func(string) (sdk.Certificate, errors.SDKError)) *MockSDK_ViewCert_Call {
 	_c.Call.Return(run)
 	return _c
 }

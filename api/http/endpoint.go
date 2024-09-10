@@ -123,6 +123,29 @@ func listCertsEndpoint(svc certs.Service) endpoint.Endpoint {
 	}
 }
 
+func viewCertEndpoint(svc certs.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req := request.(viewReq)
+		if err := req.validate(); err != nil {
+			return viewCertRes{}, err
+		}
+		cert, err := svc.ViewCert(ctx, req.id)
+		if err != nil {
+			return viewCertRes{}, err
+		}
+		crt := string(cert.Certificate)
+		key := string(cert.Key)
+		return viewCertRes{
+			SerialNumber: cert.SerialNumber,
+			Certificate:  &crt,
+			Key:          &key,
+			Revoked:      cert.Revoked,
+			ExpiryDate:   cert.ExpiryDate,
+			EntityID:     cert.EntityID,
+		}, nil
+	}
+}
+
 func ocspEndpoint(svc certs.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(ocspReq)

@@ -10,13 +10,13 @@ import (
 )
 
 type Certificate struct {
-	SerialNumber string     `db:"serial_number"`
-	Certificate  []byte     `db:"certificate"`
-	Key          []byte     `db:"key"`
-	Revoked      bool       `db:"revoked"`
-	ExpiryDate   time.Time  `db:"expiry_date"`
-	EntityID     string     `db:"entity_id"`
-	DownloadUrl  string     `db:"-"`
+	SerialNumber string    `db:"serial_number"`
+	Certificate  []byte    `db:"certificate"`
+	Key          []byte    `db:"key"`
+	Revoked      bool      `db:"revoked"`
+	ExpiryDate   time.Time `db:"expiry_date"`
+	EntityID     string    `db:"entity_id"`
+	DownloadUrl  string    `db:"-"`
 }
 
 type CertificatePage struct {
@@ -40,6 +40,9 @@ type Service interface {
 
 	// RetrieveCert retrieves a certificate record from the database.
 	RetrieveCert(ctx context.Context, token string, serialNumber string) (Certificate, []byte, error)
+
+	// ViewCert retrieves a certificate record from the database.
+	ViewCert(ctx context.Context, serialNumber string) (Certificate, error)
 
 	// ListCerts retrieves the certificates from the database while applying filters.
 	ListCerts(ctx context.Context, pm PageMetadata) (CertificatePage, error)
