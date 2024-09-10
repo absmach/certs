@@ -59,6 +59,12 @@ func (tm *tracingMiddleware) ListCerts(ctx context.Context, pm certs.PageMetadat
 	return tm.svc.ListCerts(ctx, pm)
 }
 
+func (s *tracingMiddleware) ViewCert(ctx context.Context, serialNumber string) (certs.Certificate, error) {
+	ctx, span := s.tracer.Start(ctx, "view_cert")
+	defer span.End()
+	return s.svc.ViewCert(ctx, serialNumber)
+}
+
 func (tm *tracingMiddleware) OCSP(ctx context.Context, serialNumber string) (*certs.Certificate, int, *x509.Certificate, error) {
 	ctx, span := tm.tracer.Start(ctx, "ocsp")
 	defer span.End()

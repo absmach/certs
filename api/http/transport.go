@@ -49,34 +49,36 @@ func MakeHandler(svc certs.Service, logger *slog.Logger, instanceID string) http
 			EncodeResponse,
 			opts...,
 		), "issue_cert").ServeHTTP)
-
 		r.Patch("/{id}/renew", otelhttp.NewHandler(kithttp.NewServer(
 			renewCertEndpoint(svc),
 			decodeView,
 			EncodeResponse,
 			opts...,
 		), "renew_cert").ServeHTTP)
-
 		r.Patch("/{id}/revoke", otelhttp.NewHandler(kithttp.NewServer(
 			revokeCertEndpoint(svc),
 			decodeView,
 			EncodeResponse,
 			opts...,
 		), "revoke_cert").ServeHTTP)
-
 		r.Get("/{id}/download/token", otelhttp.NewHandler(kithttp.NewServer(
 			requestCertDownloadTokenEndpoint(svc),
 			decodeView,
 			EncodeResponse,
 			opts...,
 		), "get_download_token").ServeHTTP)
-
 		r.Get("/", otelhttp.NewHandler(kithttp.NewServer(
 			listCertsEndpoint(svc),
 			decodeListCerts,
 			EncodeResponse,
 			opts...,
 		), "list_certs").ServeHTTP)
+		r.Get("/{id}", otelhttp.NewHandler(kithttp.NewServer(
+			viewCertEndpoint(svc),
+			decodeView,
+			EncodeResponse,
+			opts...,
+		), "view_cert").ServeHTTP)
 		r.Get("/{id}/download", otelhttp.NewHandler(kithttp.NewServer(
 			downloadCertEndpoint(svc),
 			decodeDownloadCerts,

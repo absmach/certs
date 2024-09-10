@@ -7,6 +7,7 @@ import (
 	"crypto"
 	"crypto/x509"
 	"net/http"
+	"time"
 
 	"github.com/absmach/certs"
 	"golang.org/x/crypto/ocsp"
@@ -24,6 +25,7 @@ type pageRes struct {
 	Offset uint64 `json:"offset"`
 	Total  uint64 `json:"total"`
 }
+
 type renewCertRes struct {
 	renewed bool
 }
@@ -130,6 +132,27 @@ func (res listCertsRes) Code() int {
 
 func (res listCertsRes) Headers() map[string]string {
 	return map[string]string{}
+}
+
+type viewCertRes struct {
+	SerialNumber string    `json:"serial_number"`
+	Certificate  *string   `json:"certificate"`
+	Key          *string   `json:"key"`
+	Revoked      bool      `json:"revoked"`
+	ExpiryDate   time.Time `json:"expiry_date"`
+	EntityID     string    `json:"entity_id"`
+}
+
+func (res viewCertRes) Code() int {
+	return http.StatusOK
+}
+
+func (res viewCertRes) Headers() map[string]string {
+	return map[string]string{}
+}
+
+func (res viewCertRes) Empty() bool {
+	return false
 }
 
 func (res listCertsRes) Empty() bool {

@@ -152,7 +152,24 @@ var cmdCerts = []cobra.Command{
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			cert, err := sdk.RetrieveCert(args[1], args[0])
+			cert, err := sdk.DownloadCert(args[1], args[0])
+			if err != nil {
+				logErrorCmd(*cmd, err)
+				return
+			}
+			logJSONCmd(*cmd, cert)
+		},
+	},
+	{
+		Use:   "view <serial_number> ",
+		Short: "View certificate",
+		Long:  `Views a certificate for a given serial number.`,
+		Run: func(cmd *cobra.Command, args []string) {
+			if len(args) != 1 {
+				logUsageCmd(*cmd, cmd.Use)
+				return
+			}
+			cert, err := sdk.ViewCert(args[0])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return

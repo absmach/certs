@@ -174,6 +174,14 @@ func (s *service) ListCerts(ctx context.Context, pm PageMetadata) (CertificatePa
 	return certPg, nil
 }
 
+func (s *service) ViewCert(ctx context.Context, serialNumber string) (Certificate, error) {
+	cert, err := s.repo.RetrieveCert(ctx, serialNumber)
+	if err != nil {
+		return Certificate{}, errors.Wrap(ErrViewEntity, err)
+	}
+	return cert, nil
+}
+
 // GetCertDownloadToken generates a download token for a certificate.
 // It verifies the token and serial number, and returns a signed JWT token string.
 // The token is valid for 5 minutes.
