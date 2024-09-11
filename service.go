@@ -133,7 +133,7 @@ func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs [
 		Certificate:  pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certBytes}),
 		SerialNumber: template.SerialNumber.String(),
 		EntityID:     entityID,
-		ExpiryDate:   template.NotAfter,
+		ExpiryTime:   template.NotAfter,
 	}
 	if err = s.repo.CreateCert(ctx, dbCert); err != nil {
 		return "", errors.Wrap(ErrCreateEntity, err)
@@ -152,7 +152,7 @@ func (s *service) RevokeCert(ctx context.Context, serialNumber string) error {
 		return errors.Wrap(ErrViewEntity, err)
 	}
 	cert.Revoked = true
-	cert.ExpiryDate = time.Now()
+	cert.ExpiryTime = time.Now()
 	if err != s.repo.UpdateCert(ctx, cert) {
 		return errors.Wrap(ErrUpdateEntity, err)
 	}
@@ -247,7 +247,7 @@ func (s *service) RenewCert(ctx context.Context, serialNumber string) error {
 		return err
 	}
 	cert.Certificate = pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: newCertBytes})
-	cert.ExpiryDate = oldCert.NotAfter
+	cert.ExpiryTime = oldCert.NotAfter
 	if err != s.repo.UpdateCert(ctx, cert) {
 		return errors.Wrap(ErrUpdateEntity, err)
 	}

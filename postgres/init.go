@@ -19,7 +19,7 @@ func Migration() *migrate.MemoryMigrationSource {
                         certificate    TEXT,
                     	key            TEXT,
                     	revoked        BOOLEAN,
-                        expiry_date    TIMESTAMP,
+                        expiry_time    TIMESTAMP,
 						entity_id      VARCHAR(36),
                         PRIMARY KEY (serial_number)
                     )`,

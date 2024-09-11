@@ -184,7 +184,7 @@ func ocspEndpoint(svc certs.Service) endpoint.Endpoint {
 
 		if cert != nil {
 			if cert.Revoked {
-				template.RevokedAt = cert.ExpiryDate
+				template.RevokedAt = cert.ExpiryTime
 				template.RevocationReason = ocsp.Unspecified
 			}
 			pemBlock, _ := pem.Decode(cert.Certificate)
