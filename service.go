@@ -90,7 +90,7 @@ func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs [
 		return "", ErrRootCANotFound
 	}
 
-	// Parse the TTL if provided, otherwise use the default certValidityPeriod
+	// Parse the TTL if provided, otherwise use the default certValidityPeriod.
 	var validity time.Duration
 	if ttl != "" {
 		validity, err = time.ParseDuration(ttl)
