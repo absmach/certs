@@ -57,8 +57,8 @@ type Token struct {
 
 type Certificate struct {
 	SerialNumber string    `json:"serial_number"`
-	Certificate  *string   `json:"certificate"`
-	Key          *string   `json:"key"`
+	Certificate  *string   `json:"certificate,omitempty"`
+	Key          *string   `json:"key,omitempty"`
 	Revoked      bool      `json:"revoked"`
 	ExpiryTime   time.Time `json:"expiry_time"`
 	EntityID     string    `json:"entity_id"`
@@ -66,9 +66,9 @@ type Certificate struct {
 }
 
 type CertificatePage struct {
-	Total        uint64        `json:"total,omitempty"`
-	Offset       uint64        `json:"offset,omitempty"`
-	Limit        uint64        `json:"limit,omitempty"`
+	Total        uint64        `json:"total"`
+	Offset       uint64        `json:"offset"`
+	Limit        uint64        `json:"limit"`
 	Certificates []Certificate `json:"certificates"`
 }
 
