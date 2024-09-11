@@ -139,7 +139,7 @@ type viewCertRes struct {
 	Certificate  *string   `json:"certificate"`
 	Key          *string   `json:"key"`
 	Revoked      bool      `json:"revoked"`
-	ExpiryDate   time.Time `json:"expiry_date"`
+	ExpiryTime   time.Time `json:"expiry_time"`
 	EntityID     string    `json:"entity_id"`
 }
 

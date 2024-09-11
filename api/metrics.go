@@ -61,12 +61,12 @@ func (mm *metricsMiddleware) RetrieveCertDownloadToken(ctx context.Context, seri
 	return mm.svc.RetrieveCertDownloadToken(ctx, serialNumber)
 }
 
-func (mm *metricsMiddleware) IssueCert(ctx context.Context, entityID string, ipAddrs []string) (string, error) {
+func (mm *metricsMiddleware) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string) (string, error) {
 	defer func(begin time.Time) {
 		mm.counter.With("method", "issue_certificate").Add(1)
 		mm.latency.With("method", "issue_certificate").Observe(time.Since(begin).Seconds())
 	}(time.Now())
-	return mm.svc.IssueCert(ctx, entityID, ipAddrs)
+	return mm.svc.IssueCert(ctx, entityID, ttl, ipAddrs)
 }
 
 func (mm *metricsMiddleware) ListCerts(ctx context.Context, pm certs.PageMetadata) (certs.CertificatePage, error) {

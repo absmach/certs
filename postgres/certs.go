@@ -44,8 +44,8 @@ func NewRepository(db postgres.Database) certs.Repository {
 // CreateLog creates computation log in the database.
 func (repo certsRepo) CreateCert(ctx context.Context, cert certs.Certificate) error {
 	q := `
-	INSERT INTO certs (serial_number, certificate, key, entity_id, revoked, expiry_date)
-	VALUES (:serial_number, :certificate, :key, :entity_id, :revoked, :expiry_date)`
+	INSERT INTO certs (serial_number, certificate, key, entity_id, revoked, expiry_time)
+	VALUES (:serial_number, :certificate, :key, :entity_id, :revoked, :expiry_time)`
 	_, err := repo.db.NamedExecContext(ctx, q, cert)
 	if err != nil {
 		return handleError(certs.ErrCreateEntity, err)
@@ -68,7 +68,7 @@ func (repo certsRepo) RetrieveCert(ctx context.Context, serialNumber string) (ce
 
 // UpdateLog updates computation log in the database.
 func (repo certsRepo) UpdateCert(ctx context.Context, cert certs.Certificate) error {
-	q := `UPDATE certs SET certificate = :certificate, key = :key, revoked = :revoked, expiry_date = :expiry_date WHERE serial_number = :serial_number`
+	q := `UPDATE certs SET certificate = :certificate, key = :key, revoked = :revoked, expiry_time = :expiry_time WHERE serial_number = :serial_number`
 	res, err := repo.db.NamedExecContext(ctx, q, cert)
 	if err != nil {
 		return handleError(certs.ErrUpdateEntity, err)
@@ -84,7 +84,7 @@ func (repo certsRepo) UpdateCert(ctx context.Context, cert certs.Certificate) er
 }
 
 func (repo certsRepo) ListCerts(ctx context.Context, pm certs.PageMetadata) (certs.CertificatePage, error) {
-	q := `SELECT serial_number, revoked, expiry_date, entity_id FROM certs %s LIMIT :limit OFFSET :offset`
+	q := `SELECT serial_number, revoked, expiry_time, entity_id FROM certs %s LIMIT :limit OFFSET :offset`
 	condition := ``
 	if pm.EntityID != "" {
 		condition = `WHERE entity_id = :entity_id`

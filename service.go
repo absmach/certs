@@ -75,7 +75,7 @@ func NewService(ctx context.Context, repo Repository) (Service, error) {
 // using the provided template and the generated private key.
 // The certificate is then stored in the repository using the CreateCert method.
 // If the root CA is not found, it returns an error.
-func (s *service) IssueCert(ctx context.Context, entityID string, ipAddrs []string) (string, error) {
+func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string) (string, error) {
 	privKey, err := rsa.GenerateKey(rand.Reader, PrivateKeyBytes)
 	if err != nil {
 		return "", err
@@ -88,6 +88,17 @@ func (s *service) IssueCert(ctx context.Context, entityID string, ipAddrs []stri
 
 	if s.rootCACert == nil || s.rootCAKey == nil {
 		return "", ErrRootCANotFound
+	}
+
+	// Parse the TTL if provided, otherwise use the default certValidityPeriod.
+	var validity time.Duration
+	if ttl != "" {
+		validity, err = time.ParseDuration(ttl)
+		if err != nil {
+			return "", errors.Wrap(ErrMalformedEntity, err)
+		}
+	} else {
+		validity = certValidityPeriod
 	}
 
 	template := x509.Certificate{
@@ -106,7 +117,7 @@ func (s *service) IssueCert(ctx context.Context, entityID string, ipAddrs []stri
 			SerialNumber:       serialNumber.String(),
 		},
 		NotBefore:             time.Now(),
-		NotAfter:              time.Now().Add(certValidityPeriod),
+		NotAfter:              time.Now().Add(validity),
 		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 		BasicConstraintsValid: true,
@@ -122,7 +133,7 @@ func (s *service) IssueCert(ctx context.Context, entityID string, ipAddrs []stri
 		Certificate:  pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certBytes}),
 		SerialNumber: template.SerialNumber.String(),
 		EntityID:     entityID,
-		ExpiryDate:   template.NotAfter,
+		ExpiryTime:   template.NotAfter,
 	}
 	if err = s.repo.CreateCert(ctx, dbCert); err != nil {
 		return "", errors.Wrap(ErrCreateEntity, err)
@@ -141,7 +152,7 @@ func (s *service) RevokeCert(ctx context.Context, serialNumber string) error {
 		return errors.Wrap(ErrViewEntity, err)
 	}
 	cert.Revoked = true
-	cert.ExpiryDate = time.Now()
+	cert.ExpiryTime = time.Now()
 	if err != s.repo.UpdateCert(ctx, cert) {
 		return errors.Wrap(ErrUpdateEntity, err)
 	}
@@ -236,7 +247,7 @@ func (s *service) RenewCert(ctx context.Context, serialNumber string) error {
 		return err
 	}
 	cert.Certificate = pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: newCertBytes})
-	cert.ExpiryDate = oldCert.NotAfter
+	cert.ExpiryTime = oldCert.NotAfter
 	if err != s.repo.UpdateCert(ctx, cert) {
 		return errors.Wrap(ErrUpdateEntity, err)
 	}

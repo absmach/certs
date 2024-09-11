@@ -91,7 +91,7 @@ func issueCertEndpoint(svc certs.Service) endpoint.Endpoint {
 			return issueCertRes{}, err
 		}
 
-		serialNumber, err := svc.IssueCert(ctx, req.entityID, req.IpAddrs)
+		serialNumber, err := svc.IssueCert(ctx, req.entityID, req.TTL, req.IpAddrs)
 		if err != nil {
 			return issueCertRes{}, err
 		}
@@ -140,7 +140,7 @@ func viewCertEndpoint(svc certs.Service) endpoint.Endpoint {
 			Certificate:  &crt,
 			Key:          &key,
 			Revoked:      cert.Revoked,
-			ExpiryDate:   cert.ExpiryDate,
+			ExpiryTime:   cert.ExpiryTime,
 			EntityID:     cert.EntityID,
 		}, nil
 	}
@@ -184,7 +184,7 @@ func ocspEndpoint(svc certs.Service) endpoint.Endpoint {
 
 		if cert != nil {
 			if cert.Revoked {
-				template.RevokedAt = cert.ExpiryDate
+				template.RevokedAt = cert.ExpiryTime
 				template.RevocationReason = ocsp.Unspecified
 			}
 			pemBlock, _ := pem.Decode(cert.Certificate)

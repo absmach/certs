@@ -38,16 +38,19 @@ func TestIssueCert(t *testing.T) {
 	testCases := []struct {
 		desc      string
 		backendId string
+		ttl       string
 		err       error
 	}{
 		{
 			desc:      "successful issue",
 			backendId: "backendId",
+			ttl:       "1h",
 			err:       nil,
 		},
 		{
 			desc:      "failed repo create cert",
 			backendId: "backendId",
+			ttl:       "1h",
 			err:       certs.ErrCreateEntity,
 		},
 	}
@@ -57,7 +60,7 @@ func TestIssueCert(t *testing.T) {
 			repoCall1 := cRepo.On("CreateCert", mock.Anything, mock.Anything).Return(tc.err)
 			defer repoCall1.Unset()
 
-			_, err = svc.IssueCert(context.Background(), tc.backendId, []string{})
+			_, err = svc.IssueCert(context.Background(), tc.backendId, tc.ttl, []string{})
 			require.True(t, errors.Contains(err, tc.err), "expected error %v, got %v", tc.err, err)
 		})
 	}
@@ -260,7 +263,7 @@ func TestRenewCert(t *testing.T) {
 				Certificate:  pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: validCert}),
 				Key:          pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(testKey)}),
 				EntityID:     "backendId",
-				ExpiryDate:   time.Now().Add(time.Hour),
+				ExpiryTime:   time.Now().Add(time.Hour),
 				Revoked:      false,
 			},
 			err: nil,
@@ -280,7 +283,7 @@ func TestRenewCert(t *testing.T) {
 				Certificate:  pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: expiredCert}),
 				Key:          pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(testKey)}),
 				EntityID:     "backendId",
-				ExpiryDate:   time.Now().Add(-time.Hour),
+				ExpiryTime:   time.Now().Add(-time.Hour),
 				Revoked:      false,
 			},
 			err: certs.ErrCertExpired,
@@ -293,7 +296,7 @@ func TestRenewCert(t *testing.T) {
 				Certificate:  pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: revokedCert}),
 				Key:          pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(testKey)}),
 				EntityID:     "backendId",
-				ExpiryDate:   time.Now().Add(time.Hour),
+				ExpiryTime:   time.Now().Add(time.Hour),
 				Revoked:      true,
 			},
 			err: certs.ErrCertRevoked,
@@ -306,7 +309,7 @@ func TestRenewCert(t *testing.T) {
 				Certificate:  pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: validCert}),
 				Key:          pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(testKey)}),
 				EntityID:     "backendId",
-				ExpiryDate:   time.Now().Add(time.Hour),
+				ExpiryTime:   time.Now().Add(time.Hour),
 				Revoked:      false,
 			},
 			err: certs.ErrUpdateEntity,

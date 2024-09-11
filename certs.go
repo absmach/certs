@@ -14,7 +14,7 @@ type Certificate struct {
 	Certificate  []byte    `db:"certificate"`
 	Key          []byte    `db:"key"`
 	Revoked      bool      `db:"revoked"`
-	ExpiryDate   time.Time `db:"expiry_date"`
+	ExpiryTime   time.Time `db:"expiry_time"`
 	EntityID     string    `db:"entity_id"`
 	DownloadUrl  string    `db:"-"`
 }
@@ -51,7 +51,7 @@ type Service interface {
 	RetrieveCertDownloadToken(ctx context.Context, serialNumber string) (string, error)
 
 	// IssueCert issues a certificate from the database.
-	IssueCert(ctx context.Context, entityID string, ipAddrs []string) (string, error)
+	IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string) (string, error)
 
 	// OCSP retrieves the OCSP response for a certificate.
 	OCSP(ctx context.Context, serialNumber string) (*Certificate, int, *x509.Certificate, error)

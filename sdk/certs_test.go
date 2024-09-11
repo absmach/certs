@@ -24,6 +24,7 @@ const (
 	contentType = "application/senml+json"
 	serialNum   = "8e7a30c-bc9f-22de-ae67-1342bc139507"
 	id          = "c333e6f1-59bb-4c39-9e13-3a2766af8ba5"
+	ttl         = "10h"
 )
 
 func setupCerts() (*httptest.Server, *mocks.MockService) {
@@ -50,6 +51,7 @@ func TestIssueCert(t *testing.T) {
 	cases := []struct {
 		desc     string
 		entityID string
+		ttl      string
 		ipAddrs  []string
 		svcresp  string
 		svcerr   error
@@ -59,6 +61,7 @@ func TestIssueCert(t *testing.T) {
 		{
 			desc:     "IssueCert success",
 			entityID: id,
+			ttl:      ttl,
 			ipAddrs:  ipAddr,
 			svcresp:  serialNum,
 			sdkCert: sdk.Certificate{
@@ -70,6 +73,7 @@ func TestIssueCert(t *testing.T) {
 		{
 			desc:     "IssueCert failure",
 			entityID: id,
+			ttl:      ttl,
 			ipAddrs:  ipAddr,
 			svcresp:  "",
 			svcerr:   certs.ErrCreateEntity,
@@ -78,6 +82,7 @@ func TestIssueCert(t *testing.T) {
 		{
 			desc:     "IssueCert with empty entityID",
 			entityID: `""`,
+			ttl:      ttl,
 			ipAddrs:  ipAddr,
 			svcresp:  "",
 			svcerr:   certs.ErrMalformedEntity,
@@ -86,6 +91,19 @@ func TestIssueCert(t *testing.T) {
 		{
 			desc:     "IssueCert with empty ipAddrs",
 			entityID: id,
+			ttl:      ttl,
+			svcresp:  serialNum,
+			sdkCert: sdk.Certificate{
+				SerialNumber: serialNum,
+			},
+			svcerr: nil,
+			err:    nil,
+		},
+		{
+			desc:     "IssueCert with empty ttl",
+			entityID: id,
+			ttl:      "",
+			ipAddrs:  ipAddr,
 			svcresp:  serialNum,
 			sdkCert: sdk.Certificate{
 				SerialNumber: serialNum,
@@ -97,13 +115,13 @@ func TestIssueCert(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			svcCall := svc.On("IssueCert", mock.Anything, tc.entityID, tc.ipAddrs).Return(tc.svcresp, tc.svcerr)
+			svcCall := svc.On("IssueCert", mock.Anything, tc.entityID, tc.ttl, tc.ipAddrs).Return(tc.svcresp, tc.svcerr)
 
-			resp, err := ctsdk.IssueCert(tc.entityID, tc.ipAddrs)
+			resp, err := ctsdk.IssueCert(tc.entityID, tc.ttl, tc.ipAddrs)
 			assert.Equal(t, tc.err, err)
 			if tc.err == nil {
 				assert.Equal(t, tc.sdkCert.SerialNumber, resp.SerialNumber)
-				ok := svcCall.Parent.AssertCalled(t, "IssueCert", mock.Anything, tc.entityID, tc.ipAddrs)
+				ok := svcCall.Parent.AssertCalled(t, "IssueCert", mock.Anything, tc.entityID, tc.ttl, tc.ipAddrs)
 				assert.True(t, ok)
 			}
 			svcCall.Unset()

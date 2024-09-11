@@ -32,12 +32,12 @@ func TestCreateCert(t *testing.T) {
 	}{
 		{
 			desc: "successful save",
-			cert: certs.Certificate{SerialNumber: serialNumber.String(), Certificate: []byte("cert"), Key: []byte("key"), EntityID: id, Revoked: false, ExpiryDate: time.Now()},
+			cert: certs.Certificate{SerialNumber: serialNumber.String(), Certificate: []byte("cert"), Key: []byte("key"), EntityID: id, Revoked: false, ExpiryTime: time.Now()},
 			err:  nil,
 		},
 		{
 			desc: "save with invalid backend id",
-			cert: certs.Certificate{SerialNumber: serialNumber.String(), Certificate: []byte("cert"), Key: []byte("key"), EntityID: "invalid", Revoked: false, ExpiryDate: time.Now()},
+			cert: certs.Certificate{SerialNumber: serialNumber.String(), Certificate: []byte("cert"), Key: []byte("key"), EntityID: "invalid", Revoked: false, ExpiryTime: time.Now()},
 			err:  certs.ErrConflict,
 		},
 	}
@@ -55,7 +55,7 @@ func TestGetCert(t *testing.T) {
 
 	serialNumber := big.NewInt(24)
 
-	err := repo.CreateCert(context.Background(), certs.Certificate{SerialNumber: serialNumber.String(), Certificate: []byte("cert"), Key: []byte("key"), EntityID: id, Revoked: false, ExpiryDate: time.Now()})
+	err := repo.CreateCert(context.Background(), certs.Certificate{SerialNumber: serialNumber.String(), Certificate: []byte("cert"), Key: []byte("key"), EntityID: id, Revoked: false, ExpiryTime: time.Now()})
 	require.NoError(t, err)
 
 	testCases := []struct {
@@ -88,7 +88,7 @@ func TestUpdateCert(t *testing.T) {
 
 	serialNumber := big.NewInt(23)
 
-	err := repo.CreateCert(context.Background(), certs.Certificate{SerialNumber: serialNumber.String(), Certificate: []byte("cert"), Key: []byte("key"), EntityID: id, Revoked: false, ExpiryDate: time.Now()})
+	err := repo.CreateCert(context.Background(), certs.Certificate{SerialNumber: serialNumber.String(), Certificate: []byte("cert"), Key: []byte("key"), EntityID: id, Revoked: false, ExpiryTime: time.Now()})
 	require.NoError(t, err)
 
 	testCases := []struct {
@@ -98,12 +98,12 @@ func TestUpdateCert(t *testing.T) {
 	}{
 		{
 			description: "successful update",
-			cert:        certs.Certificate{SerialNumber: serialNumber.String(), Certificate: []byte("cert"), Key: []byte("key"), EntityID: id, Revoked: true, ExpiryDate: time.Now()},
+			cert:        certs.Certificate{SerialNumber: serialNumber.String(), Certificate: []byte("cert"), Key: []byte("key"), EntityID: id, Revoked: true, ExpiryTime: time.Now()},
 			err:         nil,
 		},
 		{
 			description: "update with invalid id",
-			cert:        certs.Certificate{SerialNumber: invalidId, Certificate: []byte("cert"), Key: []byte("key"), EntityID: id, Revoked: true, ExpiryDate: time.Now()},
+			cert:        certs.Certificate{SerialNumber: invalidId, Certificate: []byte("cert"), Key: []byte("key"), EntityID: id, Revoked: true, ExpiryTime: time.Now()},
 			err:         certs.ErrNotFound,
 		},
 	}
@@ -122,7 +122,7 @@ func TestListCerts(t *testing.T) {
 	for i := 1; i < 22; i++ {
 		serialNumber := big.NewInt(int64(i))
 
-		err := repo.CreateCert(context.Background(), certs.Certificate{SerialNumber: serialNumber.String(), Certificate: []byte("cert"), Key: []byte("key"), EntityID: id, Revoked: false, ExpiryDate: time.Now()})
+		err := repo.CreateCert(context.Background(), certs.Certificate{SerialNumber: serialNumber.String(), Certificate: []byte("cert"), Key: []byte("key"), EntityID: id, Revoked: false, ExpiryTime: time.Now()})
 		require.NoError(t, err)
 	}
 

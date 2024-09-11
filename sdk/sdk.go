@@ -40,12 +40,11 @@ const (
 type ContentType string
 
 type PageMetadata struct {
-	Total    uint64   `json:"total,omitempty"`
-	Offset   uint64   `json:"offset,omitempty"`
-	Limit    uint64   `json:"limit,omitempty"`
-	EntityID string   `json:"entity_id,omitempty"`
-	IpAddrs  []string `json:"ip_addresses,omitempty"`
-	Token    string   `json:"token,omitempty"`
+	Total    uint64 `json:"total,omitempty"`
+	Offset   uint64 `json:"offset,omitempty"`
+	Limit    uint64 `json:"limit,omitempty"`
+	EntityID string `json:"entity_id,omitempty"`
+	Token    string `json:"token,omitempty"`
 }
 
 type SerialNumber struct {
@@ -61,7 +60,7 @@ type Certificate struct {
 	Certificate  *string   `json:"certificate"`
 	Key          *string   `json:"key"`
 	Revoked      bool      `json:"revoked"`
-	ExpiryDate   time.Time `json:"expiry_date"`
+	ExpiryTime   time.Time `json:"expiry_time"`
 	EntityID     string    `json:"entity_id"`
 	DownloadUrl  string    `json:"-"`
 }
@@ -95,9 +94,9 @@ type SDK interface {
 	// IssueCert issues a certificate for a thing required for mTLS.
 	//
 	// example:
-	// serial , _ := sdk.IssueCert("entityID", []string{"ipAddr1", "ipAddr2"})
+	// serial , _ := sdk.IssueCert("entityID", "10h", []string{"ipAddr1", "ipAddr2"})
 	//  fmt.Println(serial)
-	IssueCert(entityID string, ipAddrs []string) (SerialNumber, errors.SDKError)
+	IssueCert(entityID, ttl string, ipAddrs []string) (SerialNumber, errors.SDKError)
 
 	// DownloadCert returns a certificate given certificate ID
 	//
@@ -149,9 +148,10 @@ type SDK interface {
 	OCSP(serialNumber string) (*ocsp.Response, errors.SDKError)
 }
 
-func (sdk mgSDK) IssueCert(entityID string, ipAddrs []string) (SerialNumber, errors.SDKError) {
-	r := PageMetadata{
+func (sdk mgSDK) IssueCert(entityID, ttl string, ipAddrs []string) (SerialNumber, errors.SDKError) {
+	r := certReq{
 		IpAddrs: ipAddrs,
+		TTL:     ttl,
 	}
 	d, err := json.Marshal(r)
 	if err != nil {
@@ -341,4 +341,9 @@ func (pm PageMetadata) query() (string, error) {
 	}
 
 	return q.Encode(), nil
+}
+
+type certReq struct {
+	IpAddrs []string `json:"ip_addresses"`
+	TTL     string   `json:"ttl"`
 }

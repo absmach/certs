@@ -71,28 +71,6 @@ var cmdCerts = []cobra.Command{
 		},
 	},
 	{
-		Use:   "issue <entity_id> '[\"<ip_addr_1>\", \"<ip_addr_2>\"]'",
-		Short: "Issue certificate",
-		Long:  `Issues a certificate for a given entity ID.`,
-		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 2 {
-				logUsageCmd(*cmd, cmd.Use)
-				return
-			}
-			var ipAddrs []string
-			if err := json.Unmarshal([]byte(args[1]), &ipAddrs); err != nil {
-				logErrorCmd(*cmd, err)
-				return
-			}
-			serial, err := sdk.IssueCert(args[0], ipAddrs)
-			if err != nil {
-				logErrorCmd(*cmd, err)
-				return
-			}
-			logJSONCmd(*cmd, serial)
-		},
-	},
-	{
 		Use:   "renew <serial_number> ",
 		Short: "Renew certificate",
 		Long:  `Renews a certificate for a given serial number.`,
@@ -181,11 +159,39 @@ var cmdCerts = []cobra.Command{
 
 // NewCertsCmd returns certificate command.
 func NewCertsCmd() *cobra.Command {
+	var ttl string
+	issueCmd := cobra.Command{
+		Use:   "issue <entity_id> '[\"<ip_addr_1>\", \"<ip_addr_2>\"]' [--ttl=8760h]",
+		Short: "Issue certificate",
+		Long:  `Issues a certificate for a given entity ID.`,
+		Run: func(cmd *cobra.Command, args []string) {
+			if len(args) != 2 {
+				logUsageCmd(*cmd, cmd.Use)
+				return
+			}
+			var ipAddrs []string
+			if err := json.Unmarshal([]byte(args[1]), &ipAddrs); err != nil {
+				logErrorCmd(*cmd, err)
+				return
+			}
+			serial, err := sdk.IssueCert(args[0], ttl, ipAddrs)
+			if err != nil {
+				logErrorCmd(*cmd, err)
+				return
+			}
+			logJSONCmd(*cmd, serial)
+		},
+	}
+
+	issueCmd.Flags().StringVar(&ttl, "ttl", "8760h", "certificate time to live in duration")
+
 	cmd := cobra.Command{
 		Use:   "certs [issue | get | revoke | renew | ocsp | token | download]",
 		Short: "Certificates management",
 		Long:  `Certificates management: issue, get all, get by entity ID, revoke, renew, OCSP, token, download.`,
 	}
+
+	cmd.AddCommand(&issueCmd)
 
 	for i := range cmdCerts {
 		cmd.AddCommand(&cmdCerts[i])
