@@ -140,7 +140,7 @@ func viewCertEndpoint(svc certs.Service) endpoint.Endpoint {
 			Certificate:  &crt,
 			Key:          &key,
 			Revoked:      cert.Revoked,
-			ExpiryDate:   cert.ExpiryDate,
+			ExpiryTime:   cert.ExpiryTime,
 			EntityID:     cert.EntityID,
 		}, nil
 	}

@@ -88,9 +88,9 @@ func (_c *MockSDK_DownloadCert_Call) RunAndReturn(run func(string, string) ([]by
 	return _c
 }
 
-// IssueCert provides a mock function with given fields: entityID, ipAddrs
-func (_m *MockSDK) IssueCert(entityID string, ipAddrs []string) (sdk.SerialNumber, errors.SDKError) {
-	ret := _m.Called(entityID, ipAddrs)
+// IssueCert provides a mock function with given fields: entityID, ttl, ipAddrs
+func (_m *MockSDK) IssueCert(entityID string, ttl string, ipAddrs []string) (sdk.SerialNumber, errors.SDKError) {
+	ret := _m.Called(entityID, ttl, ipAddrs)
 
 	if len(ret) == 0 {
 		panic("no return value specified for IssueCert")
