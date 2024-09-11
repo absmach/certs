@@ -21,7 +21,7 @@ var (
 )
 
 type pageRes struct {
-	Limit  uint64 `json:"limit,omitempty"`
+	Limit  uint64 `json:"limit"`
 	Offset uint64 `json:"offset"`
 	Total  uint64 `json:"total"`
 }
