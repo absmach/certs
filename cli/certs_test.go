@@ -84,7 +84,7 @@ func TestIssueCertCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("IssueCert", mock.Anything, mock.Anything).Return(tc.serial, tc.sdkErr)
+			sdkCall := sdkMock.On("IssueCert", mock.Anything, mock.Anything, mock.Anything).Return(tc.serial, tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{issueCmd}, tc.args...)...)
 			switch tc.logType {
 			case entityLog:

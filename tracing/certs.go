@@ -47,10 +47,10 @@ func (tm *tracingMiddleware) RetrieveCertDownloadToken(ctx context.Context, seri
 	return tm.svc.RetrieveCertDownloadToken(ctx, serialNumber)
 }
 
-func (tm *tracingMiddleware) IssueCert(ctx context.Context, entityID string, ipAddrs []string) (string, error) {
+func (tm *tracingMiddleware) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string) (string, error) {
 	ctx, span := tm.tracer.Start(ctx, "issue_cert")
 	defer span.End()
-	return tm.svc.IssueCert(ctx, entityID, ipAddrs)
+	return tm.svc.IssueCert(ctx, entityID, ttl, ipAddrs)
 }
 
 func (tm *tracingMiddleware) ListCerts(ctx context.Context, pm certs.PageMetadata) (certs.CertificatePage, error) {

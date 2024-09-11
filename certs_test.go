@@ -38,16 +38,19 @@ func TestIssueCert(t *testing.T) {
 	testCases := []struct {
 		desc      string
 		backendId string
+		ttl       string
 		err       error
 	}{
 		{
 			desc:      "successful issue",
 			backendId: "backendId",
+			ttl:       "1h",
 			err:       nil,
 		},
 		{
 			desc:      "failed repo create cert",
 			backendId: "backendId",
+			ttl:       "1h",
 			err:       certs.ErrCreateEntity,
 		},
 	}
@@ -57,7 +60,7 @@ func TestIssueCert(t *testing.T) {
 			repoCall1 := cRepo.On("CreateCert", mock.Anything, mock.Anything).Return(tc.err)
 			defer repoCall1.Unset()
 
-			_, err = svc.IssueCert(context.Background(), tc.backendId, []string{})
+			_, err = svc.IssueCert(context.Background(), tc.backendId, tc.ttl, []string{})
 			require.True(t, errors.Contains(err, tc.err), "expected error %v, got %v", tc.err, err)
 		})
 	}
