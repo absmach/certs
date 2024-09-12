@@ -63,7 +63,8 @@ func EncodeError(_ context.Context, err error, w http.ResponseWriter) {
 		w.WriteHeader(http.StatusUnprocessableEntity)
 
 	case errors.Contains(err, certs.ErrNotFound),
-		errors.Contains(err, certs.ErrRootCANotFound):
+		errors.Contains(err, certs.ErrRootCANotFound),
+		errors.Contains(err, certs.ErrIntermediateCANotFound):
 		err = unwrap(err)
 		w.WriteHeader(http.StatusNotFound)
 

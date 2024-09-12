@@ -33,6 +33,21 @@ const (
 	certValidityPeriod = time.Hour * 24 * 90 // 90 days
 )
 
+type CAType int
+
+const (
+	RootCA CAType = iota
+	IntermediateCA
+)
+
+type CA struct {
+	Type         CAType
+	Certificate  *x509.Certificate
+	PrivateKey   *rsa.PrivateKey
+	SerialNumber string
+	ParentCA     *CA
+}
+
 var (
 	serialNumberLimit  = new(big.Int).Lsh(big.NewInt(1), 128)
 	ErrNotFound        = errors.New("entity not found")
@@ -48,24 +63,29 @@ var (
 )
 
 type service struct {
-	repo       Repository
-	rootCACert *x509.Certificate
-	rootCAKey  *rsa.PrivateKey
+	repo           Repository
+	rootCA         *CA
+	intermediateCA *CA
 }
 
 var _ Service = (*service)(nil)
 
 func NewService(ctx context.Context, repo Repository) (Service, error) {
-	cert, key, err := generateRootCA()
+	svc := &service{}
+	rootCA, err := generateRootCA()
 	if err != nil {
-		return &service{}, err
+		return svc, err
+	}
+	svc.rootCA = rootCA
+	intermediateCA, err := createIntermediateCA(rootCA)
+	if err != nil {
+		return svc, err
+	}
+	svc.intermediateCA = intermediateCA
+	svc = &service{
+		repo: repo,
 	}
 
-	svc := &service{
-		repo:       repo,
-		rootCACert: cert,
-		rootCAKey:  key,
-	}
 	return svc, nil
 }
 
@@ -85,8 +105,8 @@ func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs [
 		return "", err
 	}
 
-	if s.rootCACert == nil || s.rootCAKey == nil {
-		return "", ErrRootCANotFound
+	if s.intermediateCA.Certificate == nil || s.intermediateCA.PrivateKey == nil {
+		return "", ErrIntermediateCANotFound
 	}
 
 	// Parse the TTL if provided, otherwise use the default certValidityPeriod.
@@ -110,9 +130,9 @@ func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs [
 			Locality:           []string{Locality},
 			StreetAddress:      []string{StreetAddress},
 			PostalCode:         []string{PostalCode},
-			CommonName:         s.rootCACert.Subject.CommonName,
-			Names:              s.rootCACert.Subject.Names,
-			ExtraNames:         s.rootCACert.Subject.ExtraNames,
+			CommonName:         s.intermediateCA.Certificate.Subject.CommonName,
+			Names:              s.intermediateCA.Certificate.Subject.Names,
+			ExtraNames:         s.intermediateCA.Certificate.Subject.ExtraNames,
 			SerialNumber:       serialNumber.String(),
 		},
 		NotBefore:             time.Now(),
@@ -120,10 +140,10 @@ func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs [
 		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 		BasicConstraintsValid: true,
-		DNSNames:              append(s.rootCACert.DNSNames, ipAddrs...),
+		DNSNames:              append(s.intermediateCA.Certificate.DNSNames, ipAddrs...),
 	}
 
-	certBytes, err := x509.CreateCertificate(rand.Reader, &template, s.rootCACert, &privKey.PublicKey, s.rootCAKey)
+	certBytes, err := x509.CreateCertificate(rand.Reader, &template, s.intermediateCA.Certificate, &privKey.PublicKey, s.intermediateCA.PrivateKey)
 	if err != nil {
 		return "", err
 	}
@@ -172,7 +192,7 @@ func (s *service) RetrieveCert(ctx context.Context, token, serialNumber string) 
 	if err != nil {
 		return Certificate{}, []byte{}, errors.Wrap(ErrViewEntity, err)
 	}
-	return cert, pem.EncodeToMemory(&pem.Block{Bytes: s.rootCACert.Raw, Type: "CERTIFICATE"}), nil
+	return cert, pem.EncodeToMemory(&pem.Block{Bytes: s.intermediateCA.Certificate.Raw, Type: "CERTIFICATE"}), nil
 }
 
 func (s *service) ListCerts(ctx context.Context, pm PageMetadata) (CertificatePage, error) {
@@ -238,10 +258,10 @@ func (s *service) RenewCert(ctx context.Context, serialNumber string) error {
 	if err != nil {
 		return err
 	}
-	if s.rootCACert == nil || s.rootCAKey == nil {
-		return ErrRootCANotFound
+	if s.intermediateCA.Certificate == nil || s.intermediateCA.PrivateKey == nil {
+		return ErrIntermediateCANotFound
 	}
-	newCertBytes, err := x509.CreateCertificate(rand.Reader, oldCert, s.rootCACert, &privKey.PublicKey, s.rootCAKey)
+	newCertBytes, err := x509.CreateCertificate(rand.Reader, oldCert, s.intermediateCA.Certificate, &privKey.PublicKey, s.intermediateCA.PrivateKey)
 	if err != nil {
 		return err
 	}
@@ -264,14 +284,14 @@ func (s *service) OCSP(ctx context.Context, serialNumber string) (*Certificate, 
 	cert, err := s.repo.RetrieveCert(ctx, serialNumber)
 	if err != nil {
 		if errors.Contains(err, ErrNotFound) {
-			return nil, ocsp.Unknown, s.rootCACert, nil
+			return nil, ocsp.Unknown, s.intermediateCA.Certificate, nil
 		}
-		return nil, ocsp.ServerFailed, s.rootCACert, err
+		return nil, ocsp.ServerFailed, s.intermediateCA.Certificate, err
 	}
 	if cert.Revoked {
-		return &cert, ocsp.Revoked, s.rootCACert, nil
+		return &cert, ocsp.Revoked, s.intermediateCA.Certificate, nil
 	}
-	return &cert, ocsp.Good, s.rootCACert, nil
+	return &cert, ocsp.Good, s.intermediateCA.Certificate, nil
 }
 
 func (s *service) GetEntityID(ctx context.Context, serialNumber string) (string, error) {
@@ -282,15 +302,15 @@ func (s *service) GetEntityID(ctx context.Context, serialNumber string) (string,
 	return cert.EntityID, nil
 }
 
-func generateRootCA() (*x509.Certificate, *rsa.PrivateKey, error) {
-	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+func generateRootCA() (*CA, error) {
+	privateKey, err := rsa.GenerateKey(rand.Reader, PrivateKeyBytes)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	serialNumber, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	certTemplate := &x509.Certificate{
@@ -321,13 +341,78 @@ func generateRootCA() (*x509.Certificate, *rsa.PrivateKey, error) {
 
 	certDER, err := x509.CreateCertificate(rand.Reader, certTemplate, certTemplate, &privateKey.PublicKey, privateKey)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	cert, err := x509.ParseCertificate(certDER)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	return cert, privateKey, nil
+	return &CA{
+		Type:         RootCA,
+		Certificate:  cert,
+		PrivateKey:   privateKey,
+		SerialNumber: cert.SerialNumber.String(),
+		ParentCA:     nil,
+	}, nil
+}
+
+func createIntermediateCA(rootCA *CA) (*CA, error) {
+	intermediateKey, err := rsa.GenerateKey(rand.Reader, PrivateKeyBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
+	if err != nil {
+		return nil, err
+	}
+
+	template := x509.Certificate{
+		SerialNumber: serialNumber,
+		Subject: pkix.Name{
+			CommonName:         "Intermediate CA " + serialNumber.String(),
+			Organization:       []string{Organization},
+			OrganizationalUnit: []string{OrganizationalUnit},
+			Country:            []string{Country},
+			Province:           []string{Province},
+			Locality:           []string{Locality},
+			StreetAddress:      []string{StreetAddress},
+			PostalCode:         []string{PostalCode},
+			SerialNumber:       serialNumber.String(),
+			ExtraNames: []pkix.AttributeTypeAndValue{
+				{
+					Type:  asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 1},
+					Value: emailAddress,
+				},
+			},
+		},
+		NotBefore:             time.Now(),
+		NotAfter:              time.Now().Add(certValidityPeriod),
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+	}
+
+	certBytes, err := x509.CreateCertificate(rand.Reader, &template, rootCA.Certificate, &intermediateKey.PublicKey, rootCA.PrivateKey)
+	if err != nil {
+		return nil, err
+	}
+
+	intermediateCert, err := x509.ParseCertificate(certBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	intermediateCA := &CA{
+		Type:         IntermediateCA,
+		Certificate:  intermediateCert,
+		PrivateKey:   intermediateKey,
+		SerialNumber: serialNumber.String(),
+		ParentCA:     rootCA,
+	}
+
+	return intermediateCA, nil
 }
