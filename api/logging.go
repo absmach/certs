@@ -73,7 +73,7 @@ func (lm *loggingMiddleware) RetrieveCertDownloadToken(ctx context.Context, seri
 	return lm.svc.RetrieveCertDownloadToken(ctx, serialNumber)
 }
 
-func (lm *loggingMiddleware) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string) (serialNumber string, err error) {
+func (lm *loggingMiddleware) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options certs.SubjectOptions) (serialNumber string, err error) {
 	defer func(begin time.Time) {
 		message := fmt.Sprintf("Method issue_cert for took %s to complete", time.Since(begin))
 		if err != nil {
@@ -82,7 +82,7 @@ func (lm *loggingMiddleware) IssueCert(ctx context.Context, entityID, ttl string
 		}
 		lm.logger.Info(message)
 	}(time.Now())
-	return lm.svc.IssueCert(ctx, entityID, ttl, ipAddrs)
+	return lm.svc.IssueCert(ctx, entityID, ttl, ipAddrs, options)
 }
 
 func (lm *loggingMiddleware) ListCerts(ctx context.Context, pm certs.PageMetadata) (cp certs.CertificatePage, err error) {

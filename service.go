@@ -62,6 +62,17 @@ var (
 	ErrCertRevoked     = errors.New("certificate has been revoked and cannot be renewed")
 )
 
+type SubjectOptions struct {
+	CommonName         string
+	Organization       []string `json:"organization"`
+	OrganizationalUnit []string `json:"organizational_unit"`
+	Country            []string `json:"country"`
+	Province           []string `json:"province"`
+	Locality           []string `json:"locality"`
+	StreetAddress      []string `json:"street_address"`
+	PostalCode         []string `json:"postal_code"`
+}
+
 type service struct {
 	repo           Repository
 	rootCA         *CA
@@ -71,22 +82,20 @@ type service struct {
 var _ Service = (*service)(nil)
 
 func NewService(ctx context.Context, repo Repository) (Service, error) {
-	svc := &service{}
+	var svc service
 	rootCA, err := generateRootCA()
 	if err != nil {
-		return svc, err
+		return &svc, err
 	}
 	svc.rootCA = rootCA
 	intermediateCA, err := createIntermediateCA(rootCA)
 	if err != nil {
-		return svc, err
+		return &svc, err
 	}
 	svc.intermediateCA = intermediateCA
-	svc = &service{
-		repo: repo,
-	}
+	svc.repo = repo
 
-	return svc, nil
+	return &svc, nil
 }
 
 // issueCert generates and issues a certificate for a given backendID.
@@ -94,7 +103,7 @@ func NewService(ctx context.Context, repo Repository) (Service, error) {
 // using the provided template and the generated private key.
 // The certificate is then stored in the repository using the CreateCert method.
 // If the root CA is not found, it returns an error.
-func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string) (string, error) {
+func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options SubjectOptions) (string, error) {
 	privKey, err := rsa.GenerateKey(rand.Reader, PrivateKeyBytes)
 	if err != nil {
 		return "", err
@@ -120,21 +129,11 @@ func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs [
 		validity = certValidityPeriod
 	}
 
+	subject := s.getSubject(options)
+
 	template := x509.Certificate{
-		SerialNumber: serialNumber,
-		Subject: pkix.Name{
-			Organization:       []string{Organization},
-			OrganizationalUnit: []string{OrganizationalUnit},
-			Country:            []string{Country},
-			Province:           []string{Province},
-			Locality:           []string{Locality},
-			StreetAddress:      []string{StreetAddress},
-			PostalCode:         []string{PostalCode},
-			CommonName:         s.intermediateCA.Certificate.Subject.CommonName,
-			Names:              s.intermediateCA.Certificate.Subject.Names,
-			ExtraNames:         s.intermediateCA.Certificate.Subject.ExtraNames,
-			SerialNumber:       serialNumber.String(),
-		},
+		SerialNumber:          serialNumber,
+		Subject:               subject,
 		NotBefore:             time.Now(),
 		NotAfter:              time.Now().Add(validity),
 		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
@@ -372,7 +371,7 @@ func createIntermediateCA(rootCA *CA) (*CA, error) {
 	template := x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
-			CommonName:         "Intermediate CA " + serialNumber.String(),
+			CommonName:         CommonName,
 			Organization:       []string{Organization},
 			OrganizationalUnit: []string{OrganizationalUnit},
 			Country:            []string{Country},
@@ -415,4 +414,34 @@ func createIntermediateCA(rootCA *CA) (*CA, error) {
 	}
 
 	return intermediateCA, nil
+}
+
+func (s *service) getSubject(options SubjectOptions) pkix.Name {
+	subject := pkix.Name{
+		CommonName: options.CommonName,
+	}
+
+	if len(options.Organization) > 0 {
+		subject.Organization = options.Organization
+	}
+	if len(options.OrganizationalUnit) > 0 {
+		subject.OrganizationalUnit = options.OrganizationalUnit
+	}
+	if len(options.Country) > 0 {
+		subject.Country = options.Country
+	}
+	if len(options.Province) > 0 {
+		subject.Province = options.Province
+	}
+	if len(options.Locality) > 0 {
+		subject.Locality = options.Locality
+	}
+	if len(options.StreetAddress) > 0 {
+		subject.StreetAddress = options.StreetAddress
+	}
+	if len(options.PostalCode) > 0 {
+		subject.PostalCode = options.PostalCode
+	}
+
+	return subject
 }

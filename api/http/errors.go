@@ -29,4 +29,7 @@ var (
 
 	// ErrInvalidRequest indicates that the request is invalid.
 	ErrInvalidRequest = errors.New("invalid request")
+
+	// ErrMissingCN indicates missing common name.
+	ErrMissingCN = errors.New("missing common name")
 )

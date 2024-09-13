@@ -58,7 +58,7 @@ func TestIssueCert(t *testing.T) {
 			repoCall1 := cRepo.On("CreateCert", mock.Anything, mock.Anything).Return(tc.err)
 			defer repoCall1.Unset()
 
-			_, err = svc.IssueCert(context.Background(), tc.backendId, tc.ttl, []string{})
+			_, err = svc.IssueCert(context.Background(), tc.backendId, tc.ttl, []string{}, certs.SubjectOptions{})
 			require.True(t, errors.Contains(err, tc.err), "expected error %v, got %v", tc.err, err)
 		})
 	}

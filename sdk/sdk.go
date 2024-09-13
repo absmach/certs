@@ -40,11 +40,23 @@ const (
 type ContentType string
 
 type PageMetadata struct {
-	Total    uint64 `json:"total,omitempty"`
-	Offset   uint64 `json:"offset,omitempty"`
-	Limit    uint64 `json:"limit,omitempty"`
-	EntityID string `json:"entity_id,omitempty"`
-	Token    string `json:"token,omitempty"`
+	Total      uint64 `json:"total,omitempty"`
+	Offset     uint64 `json:"offset,omitempty"`
+	Limit      uint64 `json:"limit,omitempty"`
+	EntityID   string `json:"entity_id,omitempty"`
+	Token      string `json:"token,omitempty"`
+	CommonName string `json:"common_name,omitempty"`
+}
+
+type Options struct {
+	CommonName         string
+	Organization       []string `json:"organization"`
+	OrganizationalUnit []string `json:"organizational_unit"`
+	Country            []string `json:"country"`
+	Province           []string `json:"province"`
+	Locality           []string `json:"locality"`
+	StreetAddress      []string `json:"street_address"`
+	PostalCode         []string `json:"postal_code"`
 }
 
 type SerialNumber struct {
@@ -94,9 +106,9 @@ type SDK interface {
 	// IssueCert issues a certificate for a thing required for mTLS.
 	//
 	// example:
-	// serial , _ := sdk.IssueCert("entityID", "10h", []string{"ipAddr1", "ipAddr2"})
+	// serial , _ := sdk.IssueCert("entityID", "10h", []string{"ipAddr1", "ipAddr2"}, sdk.Options{CommonName: "commonName"})
 	//  fmt.Println(serial)
-	IssueCert(entityID, ttl string, ipAddrs []string) (SerialNumber, errors.SDKError)
+	IssueCert(entityID, ttl string, ipAddrs []string, opts Options) (SerialNumber, errors.SDKError)
 
 	// DownloadCert returns a certificate given certificate ID
 	//
@@ -148,23 +160,28 @@ type SDK interface {
 	OCSP(serialNumber string) (*ocsp.Response, errors.SDKError)
 }
 
-func (sdk mgSDK) IssueCert(entityID, ttl string, ipAddrs []string) (SerialNumber, errors.SDKError) {
+func (sdk mgSDK) IssueCert(entityID, ttl string, ipAddrs []string, opts Options) (SerialNumber, errors.SDKError) {
 	r := certReq{
 		IpAddrs: ipAddrs,
 		TTL:     ttl,
+		Options: opts,
 	}
 	d, err := json.Marshal(r)
 	if err != nil {
 		return SerialNumber{}, errors.NewSDKError(err)
 	}
+	url := fmt.Sprintf("%s/%s", issueCertEndpoint, entityID)
 
-	url := fmt.Sprintf("%s/%s/%s", sdk.certsURL, issueCertEndpoint, entityID)
-
+	url, err = sdk.withQueryParams(sdk.certsURL, url, PageMetadata{CommonName: opts.CommonName})
+	if err != nil {
+		return SerialNumber{}, errors.NewSDKError(err)
+	}
+	fmt.Println(url)
 	_, body, sdkerr := sdk.processRequest(http.MethodPost, url, d, nil, http.StatusCreated)
 	if sdkerr != nil {
 		return SerialNumber{}, sdkerr
 	}
-
+	fmt.Println(string(body))
 	var sn SerialNumber
 	if err := json.Unmarshal(body, &sn); err != nil {
 		return SerialNumber{}, errors.NewSDKError(err)
@@ -342,6 +359,9 @@ func (pm PageMetadata) query() (string, error) {
 	if pm.Token != "" {
 		q.Add("token", pm.Token)
 	}
+	if pm.CommonName != "" {
+		q.Add("common_name", pm.CommonName)
+	}
 
 	return q.Encode(), nil
 }
@@ -349,4 +369,5 @@ func (pm PageMetadata) query() (string, error) {
 type certReq struct {
 	IpAddrs []string `json:"ip_addresses"`
 	TTL     string   `json:"ttl"`
+	Options Options  `json:"options"`
 }

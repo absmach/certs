@@ -51,7 +51,7 @@ type Service interface {
 	RetrieveCertDownloadToken(ctx context.Context, serialNumber string) (string, error)
 
 	// IssueCert issues a certificate from the database.
-	IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string) (string, error)
+	IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, option SubjectOptions) (string, error)
 
 	// OCSP retrieves the OCSP response for a certificate.
 	OCSP(ctx context.Context, serialNumber string) (*Certificate, int, *x509.Certificate, error)

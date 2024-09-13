@@ -36,9 +36,10 @@ func (req viewReq) validate() error {
 }
 
 type issueCertReq struct {
-	entityID string   `json:"-"`
-	TTL      string   `json:"ttl"`
-	IpAddrs  []string `json:"ip_addresses"`
+	entityID string               `json:"-"`
+	TTL      string               `json:"ttl"`
+	IpAddrs  []string             `json:"ip_addresses"`
+	Options  certs.SubjectOptions `json:"options"`
 }
 
 func (req issueCertReq) validate() error {

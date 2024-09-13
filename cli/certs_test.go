@@ -32,6 +32,7 @@ const (
 var (
 	serialNumber = "39054620502613157373429341617471746606"
 	id           = "5b4c9ee3-e719-4a0a-9ee5-354932c5e6a4"
+	commonName   = "test-name"
 	extraArg     = "extra-arg"
 )
 
@@ -56,6 +57,7 @@ func TestIssueCertCmd(t *testing.T) {
 			desc: "issue cert successfully",
 			args: []string{
 				id,
+				commonName,
 				ipAddrs,
 			},
 			logType: entityLog,
@@ -66,7 +68,6 @@ func TestIssueCertCmd(t *testing.T) {
 			args: []string{
 				id,
 				ipAddrs,
-				extraArg,
 			},
 			logType: usageLog,
 		},
@@ -74,17 +75,29 @@ func TestIssueCertCmd(t *testing.T) {
 			desc: "issue cert failed",
 			args: []string{
 				id,
+				commonName,
 				ipAddrs,
 			},
 			sdkErr:        errors.NewSDKErrorWithStatus(certs.ErrCreateEntity, http.StatusUnprocessableEntity),
 			errLogMessage: fmt.Sprintf("\nerror: %s\n\n", errors.NewSDKErrorWithStatus(certs.ErrCreateEntity, http.StatusUnprocessableEntity)),
 			logType:       errLog,
 		},
+		{
+			desc: "issue cert with 4 args",
+			args: []string{
+				id,
+				commonName,
+				ipAddrs,
+				"{\"organization\":[\"organization_name\"]}",
+			},
+			logType: entityLog,
+			serial:  sdk.SerialNumber{SerialNumber: serialNumber},
+		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("IssueCert", mock.Anything, mock.Anything, mock.Anything).Return(tc.serial, tc.sdkErr)
+			sdkCall := sdkMock.On("IssueCert", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(tc.serial, tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{issueCmd}, tc.args...)...)
 			switch tc.logType {
 			case entityLog:

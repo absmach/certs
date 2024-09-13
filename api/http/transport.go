@@ -28,6 +28,8 @@ const (
 	offsetKey       = "offset"
 	limitKey        = "limit"
 	entityKey       = "entity_id"
+	commonName      = "common_name"
+	token           = "token"
 	ocspStatusParam = "force_status"
 	entityIDParam   = "entityID"
 	defOffset       = 0
@@ -107,7 +109,7 @@ func decodeView(_ context.Context, r *http.Request) (interface{}, error) {
 }
 
 func decodeDownloadCerts(_ context.Context, r *http.Request) (interface{}, error) {
-	token, err := readStringQuery(r, "token", "")
+	token, err := readStringQuery(r, token, "")
 	if err != nil {
 		return nil, err
 	}
@@ -140,13 +142,22 @@ func decodeIssueCert(_ context.Context, r *http.Request) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+	cn, err := readStringQuery(r, commonName, "")
+	if err != nil {
+		return nil, err
+	}
+	if cn == "" {
+		return nil, ErrMissingCN
+	}
 	req := issueCertReq{
 		entityID: chi.URLParam(r, entityIDParam),
+		Options: certs.SubjectOptions{
+			CommonName: cn,
+		},
 	}
 	if err := json.Unmarshal(body, &req); err != nil {
 		return nil, errors.Wrap(ErrInvalidRequest, err)
 	}
-
 	return req, nil
 }
 

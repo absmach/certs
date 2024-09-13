@@ -88,9 +88,9 @@ func (_c *MockSDK_DownloadCert_Call) RunAndReturn(run func(string, string) ([]by
 	return _c
 }
 
-// IssueCert provides a mock function with given fields: entityID, ttl, ipAddrs
-func (_m *MockSDK) IssueCert(entityID string, ttl string, ipAddrs []string) (sdk.SerialNumber, errors.SDKError) {
-	ret := _m.Called(entityID, ttl, ipAddrs)
+// IssueCert provides a mock function with given fields: entityID, ttl, ipAddrs, opts
+func (_m *MockSDK) IssueCert(entityID string, ttl string, ipAddrs []string, opts sdk.Options) (sdk.SerialNumber, errors.SDKError) {
+	ret := _m.Called(entityID, ttl, ipAddrs, opts)
 
 	if len(ret) == 0 {
 		panic("no return value specified for IssueCert")
@@ -98,17 +98,17 @@ func (_m *MockSDK) IssueCert(entityID string, ttl string, ipAddrs []string) (sdk
 
 	var r0 sdk.SerialNumber
 	var r1 errors.SDKError
-	if rf, ok := ret.Get(0).(func(string, string, []string) (sdk.SerialNumber, errors.SDKError)); ok {
-		return rf(entityID, ttl, ipAddrs)
+	if rf, ok := ret.Get(0).(func(string, string, []string, sdk.Options) (sdk.SerialNumber, errors.SDKError)); ok {
+		return rf(entityID, ttl, ipAddrs, opts)
 	}
-	if rf, ok := ret.Get(0).(func(string, string, []string) sdk.SerialNumber); ok {
-		r0 = rf(entityID, ttl, ipAddrs)
+	if rf, ok := ret.Get(0).(func(string, string, []string, sdk.Options) sdk.SerialNumber); ok {
+		r0 = rf(entityID, ttl, ipAddrs, opts)
 	} else {
 		r0 = ret.Get(0).(sdk.SerialNumber)
 	}
 
-	if rf, ok := ret.Get(1).(func(string, string, []string) errors.SDKError); ok {
-		r1 = rf(entityID, ttl, ipAddrs)
+	if rf, ok := ret.Get(1).(func(string, string, []string, sdk.Options) errors.SDKError); ok {
+		r1 = rf(entityID, ttl, ipAddrs, opts)
 	} else {
 		if ret.Get(1) != nil {
 			r1 = ret.Get(1).(errors.SDKError)
@@ -127,13 +127,14 @@ type MockSDK_IssueCert_Call struct {
 //   - entityID string
 //   - ttl string
 //   - ipAddrs []string
-func (_e *MockSDK_Expecter) IssueCert(entityID interface{}, ttl interface{}, ipAddrs interface{}) *MockSDK_IssueCert_Call {
-	return &MockSDK_IssueCert_Call{Call: _e.mock.On("IssueCert", entityID, ttl, ipAddrs)}
+//   - opts sdk.Options
+func (_e *MockSDK_Expecter) IssueCert(entityID interface{}, ttl interface{}, ipAddrs interface{}, opts interface{}) *MockSDK_IssueCert_Call {
+	return &MockSDK_IssueCert_Call{Call: _e.mock.On("IssueCert", entityID, ttl, ipAddrs, opts)}
 }
 
-func (_c *MockSDK_IssueCert_Call) Run(run func(entityID string, ttl string, ipAddrs []string)) *MockSDK_IssueCert_Call {
+func (_c *MockSDK_IssueCert_Call) Run(run func(entityID string, ttl string, ipAddrs []string, opts sdk.Options)) *MockSDK_IssueCert_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string), args[1].(string), args[2].([]string))
+		run(args[0].(string), args[1].(string), args[2].([]string), args[3].(sdk.Options))
 	})
 	return _c
 }
@@ -143,7 +144,7 @@ func (_c *MockSDK_IssueCert_Call) Return(_a0 sdk.SerialNumber, _a1 errors.SDKErr
 	return _c
 }
 
-func (_c *MockSDK_IssueCert_Call) RunAndReturn(run func(string, string, []string) (sdk.SerialNumber, errors.SDKError)) *MockSDK_IssueCert_Call {
+func (_c *MockSDK_IssueCert_Call) RunAndReturn(run func(string, string, []string, sdk.Options) (sdk.SerialNumber, errors.SDKError)) *MockSDK_IssueCert_Call {
 	_c.Call.Return(run)
 	return _c
 }
