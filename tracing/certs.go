@@ -76,3 +76,9 @@ func (tm *tracingMiddleware) GetEntityID(ctx context.Context, serialNumber strin
 	defer span.End()
 	return tm.svc.GetEntityID(ctx, serialNumber)
 }
+
+func (tm *tracingMiddleware) GenerateCRL(ctx context.Context, caType certs.CertType) ([]byte, error) {
+	ctx, span := tm.tracer.Start(ctx, "generate_crl")
+	defer span.End()
+	return tm.svc.GenerateCRL(ctx, caType)
+}

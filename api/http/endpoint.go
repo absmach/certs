@@ -219,3 +219,20 @@ func ocspEndpoint(svc certs.Service) endpoint.Endpoint {
 		}, nil
 	}
 }
+
+func generateCRLEndpoint(svc certs.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req := request.(crlReq)
+		if err := req.validate(); err != nil {
+			return crlRes{}, err
+		}
+		crlBytes, err := svc.GenerateCRL(ctx, req.certtype)
+		if err != nil {
+			return crlRes{}, err
+		}
+
+		return crlRes{
+			CrlBytes: crlBytes,
+		}, nil
+	}
+}

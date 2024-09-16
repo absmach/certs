@@ -100,3 +100,11 @@ func (mm *metricsMiddleware) GetEntityID(ctx context.Context, serialNumber strin
 	}(time.Now())
 	return mm.svc.GetEntityID(ctx, serialNumber)
 }
+
+func (mm *metricsMiddleware) GenerateCRL(ctx context.Context, caType certs.CertType) ([]byte, error) {
+	defer func(begin time.Time) {
+		mm.counter.With("method", "generate_crl").Add(1)
+		mm.latency.With("method", "generate_crl").Observe(time.Since(begin).Seconds())
+	}(time.Now())
+	return mm.svc.GenerateCRL(ctx, caType)
+}

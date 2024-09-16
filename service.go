@@ -33,19 +33,19 @@ const (
 	certValidityPeriod = time.Hour * 24 * 90 // 90 days
 )
 
-type CAType int
+type CertType int
 
 const (
-	RootCA CAType = iota
+	RootCA CertType = iota
 	IntermediateCA
+	ClientCert
 )
 
 type CA struct {
-	Type         CAType
+	Type         CertType
 	Certificate  *x509.Certificate
 	PrivateKey   *rsa.PrivateKey
 	SerialNumber string
-	ParentCA     *CA
 }
 
 var (
@@ -83,17 +83,14 @@ var _ Service = (*service)(nil)
 
 func NewService(ctx context.Context, repo Repository) (Service, error) {
 	var svc service
-	rootCA, err := generateRootCA()
-	if err != nil {
-		return &svc, err
-	}
-	svc.rootCA = rootCA
-	intermediateCA, err := createIntermediateCA(rootCA)
-	if err != nil {
-		return &svc, err
-	}
-	svc.intermediateCA = intermediateCA
 	svc.repo = repo
+	if err := svc.loadCACerts(ctx); err != nil {
+		return &svc, err
+	}
+
+	if err := svc.rotateCA(ctx); err != nil {
+		return &svc, err
+	}
 
 	return &svc, nil
 }
@@ -152,6 +149,7 @@ func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs [
 		SerialNumber: template.SerialNumber.String(),
 		EntityID:     entityID,
 		ExpiryTime:   template.NotAfter,
+		Type:         ClientCert,
 	}
 	if err = s.repo.CreateCert(ctx, dbCert); err != nil {
 		return "", errors.Wrap(ErrCreateEntity, err)
@@ -301,8 +299,63 @@ func (s *service) GetEntityID(ctx context.Context, serialNumber string) (string,
 	return cert.EntityID, nil
 }
 
-func generateRootCA() (*CA, error) {
-	privateKey, err := rsa.GenerateKey(rand.Reader, PrivateKeyBytes)
+func (s *service) GenerateCRL(ctx context.Context, caType CertType) ([]byte, error) {
+	var ca *CA
+
+	switch caType {
+    case RootCA:
+        ca = s.rootCA
+    case IntermediateCA:
+        if s.intermediateCA == nil {
+            return nil, errors.New("no intermediate CA available")
+        }
+        ca = s.intermediateCA
+    default:
+        return nil, errors.New("invalid CA type")
+    }
+
+	revokedCerts, err := s.repo.ListRevokedCerts(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	revokedCertificates := make([]pkix.RevokedCertificate, len(revokedCerts))
+	for i, cert := range revokedCerts {
+		serialNumber := new(big.Int)
+		serialNumber.SetString(cert.SerialNumber, 10)
+		revokedCertificates[i] = pkix.RevokedCertificate{
+			SerialNumber:   serialNumber,
+			RevocationTime: cert.ExpiryTime,
+		}
+	}
+
+	// CRL valid for 24 hours
+	now := time.Now()
+	expiry := now.Add(24 * time.Hour)
+
+	crlTemplate := &x509.RevocationList{
+		Number:              big.NewInt(time.Now().UnixNano()),
+		ThisUpdate:          now,
+		NextUpdate:          expiry,
+		RevokedCertificates: revokedCertificates,
+	}
+
+	crlBytes, err := x509.CreateRevocationList(rand.Reader, crlTemplate, ca.Certificate, ca.PrivateKey)
+	if err != nil {
+		return nil, err
+	}
+
+	pemBlock := &pem.Block{
+		Type:  "X509 CRL",
+		Bytes: crlBytes,
+	}
+	pemBytes := pem.EncodeToMemory(pemBlock)
+
+	return pemBytes, nil
+}
+
+func (s *service) generateRootCA(ctx context.Context) (*CA, error) {
+	rootKey, err := rsa.GenerateKey(rand.Reader, PrivateKeyBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -338,26 +391,43 @@ func generateRootCA() (*CA, error) {
 		IsCA:                  true,
 	}
 
-	certDER, err := x509.CreateCertificate(rand.Reader, certTemplate, certTemplate, &privateKey.PublicKey, privateKey)
+	certBytes, err := x509.CreateCertificate(rand.Reader, certTemplate, certTemplate, &rootKey.PublicKey, rootKey)
 	if err != nil {
 		return nil, err
 	}
 
-	cert, err := x509.ParseCertificate(certDER)
+	cert, err := x509.ParseCertificate(certBytes)
 	if err != nil {
+		return nil, err
+	}
+
+	if err != s.saveCA(ctx, cert, rootKey, RootCA) {
 		return nil, err
 	}
 
 	return &CA{
 		Type:         RootCA,
 		Certificate:  cert,
-		PrivateKey:   privateKey,
+		PrivateKey:   rootKey,
 		SerialNumber: cert.SerialNumber.String(),
-		ParentCA:     nil,
 	}, nil
 }
 
-func createIntermediateCA(rootCA *CA) (*CA, error) {
+func (s *service) saveCA(ctx context.Context, cert *x509.Certificate, privateKey *rsa.PrivateKey, CertType CertType) error {
+	dbCert := Certificate{
+		Key:          pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(privateKey)}),
+		Certificate:  pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw}),
+		SerialNumber: cert.SerialNumber.String(),
+		ExpiryTime:   cert.NotAfter,
+		Type:         CertType,
+	}
+	if err := s.repo.CreateCert(ctx, dbCert); err != nil {
+		return errors.Wrap(ErrCreateEntity, err)
+	}
+	return nil
+}
+
+func (s *service) createIntermediateCA(ctx context.Context, rootCA *CA) (*CA, error) {
 	intermediateKey, err := rsa.GenerateKey(rand.Reader, PrivateKeyBytes)
 	if err != nil {
 		return nil, err
@@ -405,12 +475,15 @@ func createIntermediateCA(rootCA *CA) (*CA, error) {
 		return nil, err
 	}
 
+	if err != s.saveCA(ctx, intermediateCert, intermediateKey, IntermediateCA) {
+		return nil, err
+	}
+
 	intermediateCA := &CA{
 		Type:         IntermediateCA,
 		Certificate:  intermediateCert,
 		PrivateKey:   intermediateKey,
 		SerialNumber: serialNumber.String(),
-		ParentCA:     rootCA,
 	}
 
 	return intermediateCA, nil
@@ -444,4 +517,108 @@ func (s *service) getSubject(options SubjectOptions) pkix.Name {
 	}
 
 	return subject
+}
+
+func (s *service) rotateCA(ctx context.Context) error {
+	shouldRotate := s.shouldRotateCA()
+
+	if shouldRotate == true {
+		certificates, err := s.repo.GetCAs(ctx)
+		if err != nil {
+			return err
+		}
+		for _, cert := range certificates {
+			if err := s.RevokeCert(ctx, cert.SerialNumber); err != nil {
+				return err
+			}
+		}
+
+		newRootCA, err := s.generateRootCA(ctx)
+		if err != nil {
+			return err
+		}
+		s.rootCA = newRootCA
+		newIntermediateCA, err := s.createIntermediateCA(ctx, newRootCA)
+		if err != nil {
+			return err
+		}
+		s.intermediateCA = newIntermediateCA
+	}
+
+	return nil
+}
+
+func (s *service) shouldRotateCA() bool {
+	if s.rootCA == nil || s.rootCA.Certificate == nil {
+		return true
+	}
+
+	now := time.Now()
+
+	// Check if the certificate is expiring soon i.e., within 30 days.
+	if now.Add(30 * 24 * time.Hour).After(s.rootCA.Certificate.NotAfter) {
+		return true
+	}
+	return false
+}
+
+func (s *service) loadCACerts(ctx context.Context) error {
+	certificates, err := s.repo.GetCAs(ctx)
+	if err != nil {
+		return err
+	}
+
+	for _, c := range certificates {
+		if c.Type == RootCA {
+			rblock, _ := pem.Decode(c.Certificate)
+			if rblock == nil {
+				return errors.New("failed to parse certificate PEM")
+			}
+
+			rootCert, err := x509.ParseCertificate(rblock.Bytes)
+			if err != nil {
+				return err
+			}
+			rkey, _ := pem.Decode(c.Key)
+			if rkey == nil {
+				return errors.New("failed to parse key PEM")
+			}
+			rootKey, err := x509.ParsePKCS1PrivateKey(rkey.Bytes)
+			if err != nil {
+				return err
+			}
+			s.rootCA = &CA{
+				Type:         c.Type,
+				Certificate:  rootCert,
+				PrivateKey:   rootKey,
+				SerialNumber: c.SerialNumber,
+			}
+		}
+
+		iblock, _ := pem.Decode(c.Certificate)
+		if iblock == nil {
+			return errors.New("failed to parse certificate PEM")
+		}
+		if c.Type == IntermediateCA {
+			interCert, err := x509.ParseCertificate(iblock.Bytes)
+			if err != nil {
+				return err
+			}
+			ikey, _ := pem.Decode(c.Key)
+			if ikey == nil {
+				return errors.New("failed to parse key PEM")
+			}
+			interKey, err := x509.ParsePKCS1PrivateKey(ikey.Bytes)
+			if err != nil {
+				return err
+			}
+			s.intermediateCA = &CA{
+				Type:         c.Type,
+				Certificate:  interCert,
+				PrivateKey:   interKey,
+				SerialNumber: c.SerialNumber,
+			}
+		}
+	}
+	return nil
 }

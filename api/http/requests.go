@@ -35,6 +35,17 @@ func (req viewReq) validate() error {
 	return nil
 }
 
+type crlReq struct {
+	certtype certs.CertType
+}
+
+func (req crlReq) validate() error {
+	if req.certtype != certs.IntermediateCA {
+		return errors.Wrap(certs.ErrMalformedEntity, errors.New("invalid CA type"))
+	}
+	return nil
+}
+
 type issueCertReq struct {
 	entityID string               `json:"-"`
 	TTL      string               `json:"ttl"`

@@ -132,3 +132,15 @@ func (lm *loggingMiddleware) GetEntityID(ctx context.Context, serialNumber strin
 	}(time.Now())
 	return lm.svc.GetEntityID(ctx, serialNumber)
 }
+
+func (lm *loggingMiddleware) GenerateCRL(ctx context.Context, caType certs.CertType) (crl []byte, err error) {
+	defer func(begin time.Time) {
+		message := fmt.Sprintf("Method generate_crl took %s to complete", time.Since(begin))
+		if err != nil {
+			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
+			return
+		}
+		lm.logger.Info(message)
+	}(time.Now())
+	return lm.svc.GenerateCRL(ctx, caType)
+}

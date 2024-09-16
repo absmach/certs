@@ -154,6 +154,22 @@ func (res viewCertRes) Empty() bool {
 	return false
 }
 
+type crlRes struct {
+	CrlBytes []byte `json:"crl"`
+}
+
+func (res crlRes) Code() int {
+	return http.StatusOK
+}
+
+func (res crlRes) Headers() map[string]string {
+	return map[string]string{}
+}
+
+func (res crlRes) Empty() bool {
+	return false
+}
+
 type ocspRes struct {
 	template   ocsp.Response
 	signer     crypto.Signer

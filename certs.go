@@ -16,6 +16,7 @@ type Certificate struct {
 	Revoked      bool      `db:"revoked"`
 	ExpiryTime   time.Time `db:"expiry_time"`
 	EntityID     string    `db:"entity_id"`
+	Type         CertType  `json:"-" db:"type"`
 	DownloadUrl  string    `db:"-"`
 }
 
@@ -58,6 +59,9 @@ type Service interface {
 
 	// GetEntityID retrieves the entity ID for a certificate.
 	GetEntityID(ctx context.Context, serialNumber string) (string, error)
+
+	// GenerateCRL creates
+	GenerateCRL(ctx context.Context, caType CertType) ([]byte, error)
 }
 
 type Repository interface {
@@ -72,4 +76,10 @@ type Repository interface {
 
 	// ListCerts retrieves the certificates from the database while applying filters.
 	ListCerts(ctx context.Context, pm PageMetadata) (CertificatePage, error)
+
+	// GetCAs retrieves rootCA and intermediateCA from database.
+	GetCAs(ctx context.Context) ([]Certificate, error)
+
+	// ListRevokedCerts retrieves revoked lists from database.
+	ListRevokedCerts(ctx context.Context) ([]Certificate, error)
 }

@@ -30,14 +30,19 @@ var invalidToken = "123"
 func TestIssueCert(t *testing.T) {
 	cRepo := new(mocks.MockRepository)
 
+	repoCall := cRepo.On("GetCAs", mock.Anything).Return([]certs.Certificate{}, nil)
+	repoCall1 := cRepo.On("CreateCert", mock.Anything, mock.Anything).Return(nil)
 	svc, err := certs.NewService(context.Background(), cRepo)
 	require.NoError(t, err)
+	repoCall.Unset()
+	repoCall1.Unset()
 
 	testCases := []struct {
 		desc      string
 		backendId string
 		ttl       string
 		err       error
+		getCAErr  error
 	}{
 		{
 			desc:      "successful issue",
@@ -56,10 +61,10 @@ func TestIssueCert(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
 			repoCall1 := cRepo.On("CreateCert", mock.Anything, mock.Anything).Return(tc.err)
-			defer repoCall1.Unset()
 
 			_, err = svc.IssueCert(context.Background(), tc.backendId, tc.ttl, []string{}, certs.SubjectOptions{})
 			require.True(t, errors.Contains(err, tc.err), "expected error %v, got %v", tc.err, err)
+			repoCall1.Unset()
 		})
 	}
 }
@@ -69,13 +74,12 @@ func TestRevokeCert(t *testing.T) {
 
 	invalidSerialNumber := "invalid serial number"
 
-	listCall := cRepo.On("ListCerts", mock.Anything, mock.Anything, mock.Anything).Return(certs.CertificatePage{}, nil)
-	t.Cleanup(func() {
-		listCall.Unset()
-	})
-
+	repoCall := cRepo.On("GetCAs", mock.Anything).Return([]certs.Certificate{}, nil)
+	repoCall1 := cRepo.On("CreateCert", mock.Anything, mock.Anything).Return(nil)
 	svc, err := certs.NewService(context.Background(), cRepo)
 	require.NoError(t, err)
+	repoCall.Unset()
+	repoCall1.Unset()
 
 	testCases := []struct {
 		desc         string
@@ -122,8 +126,12 @@ func TestRevokeCert(t *testing.T) {
 func TestGetCertDownloadToken(t *testing.T) {
 	cRepo := new(mocks.MockRepository)
 
+	repoCall := cRepo.On("GetCAs", mock.Anything).Return([]certs.Certificate{}, nil)
+	repoCall1 := cRepo.On("CreateCert", mock.Anything, mock.Anything).Return(nil)
 	svc, err := certs.NewService(context.Background(), cRepo)
 	require.NoError(t, err)
+	repoCall.Unset()
+	repoCall1.Unset()
 
 	testCases := []struct {
 		desc   string
@@ -152,8 +160,12 @@ func TestGetCert(t *testing.T) {
 	validToken, err := jwtToken.SignedString([]byte(serialNumber))
 	require.NoError(t, err)
 
+	repoCall := cRepo.On("GetCAs", mock.Anything).Return([]certs.Certificate{}, nil)
+	repoCall1 := cRepo.On("CreateCert", mock.Anything, mock.Anything).Return(nil)
 	svc, err := certs.NewService(context.Background(), cRepo)
 	require.NoError(t, err)
+	repoCall.Unset()
+	repoCall1.Unset()
 
 	testCases := []struct {
 		desc   string
@@ -243,8 +255,12 @@ func TestRenewCert(t *testing.T) {
 	}, &x509.Certificate{}, &testKey.PublicKey, testKey)
 	require.NoError(t, err)
 
+	repoCall := cRepo.On("GetCAs", mock.Anything).Return([]certs.Certificate{}, nil)
+	repoCall1 := cRepo.On("CreateCert", mock.Anything, mock.Anything).Return(nil)
 	svc, err := certs.NewService(context.Background(), cRepo)
 	require.NoError(t, err)
+	repoCall.Unset()
+	repoCall1.Unset()
 
 	testCases := []struct {
 		desc        string
@@ -328,10 +344,15 @@ func TestRenewCert(t *testing.T) {
 	}
 }
 
-func TestService_GetEntityID(t *testing.T) {
+func TestGetEntityID(t *testing.T) {
 	cRepo := new(mocks.MockRepository)
+
+	repoCall := cRepo.On("GetCAs", mock.Anything).Return([]certs.Certificate{}, nil)
+	repoCall1 := cRepo.On("CreateCert", mock.Anything, mock.Anything).Return(nil)
 	svc, err := certs.NewService(context.Background(), cRepo)
 	require.NoError(t, err)
+	repoCall.Unset()
+	repoCall1.Unset()
 
 	ctx := context.Background()
 	serialNumber := "1234567890"
@@ -354,10 +375,15 @@ func TestService_GetEntityID(t *testing.T) {
 	})
 }
 
-func TestService_ListCerts(t *testing.T) {
+func TestListCerts(t *testing.T) {
 	cRepo := new(mocks.MockRepository)
+
+	repoCall := cRepo.On("GetCAs", mock.Anything).Return([]certs.Certificate{}, nil)
+	repoCall1 := cRepo.On("CreateCert", mock.Anything, mock.Anything).Return(nil)
 	svc, err := certs.NewService(context.Background(), cRepo)
 	require.NoError(t, err)
+	repoCall.Unset()
+	repoCall1.Unset()
 
 	ctx := context.Background()
 	pageMetadata := certs.PageMetadata{Limit: 10, Offset: 0, EntityID: "entity-123"}

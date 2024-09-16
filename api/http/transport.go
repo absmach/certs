@@ -34,6 +34,7 @@ const (
 	entityIDParam   = "entityID"
 	defOffset       = 0
 	defLimit        = 10
+	defType         = 1
 )
 
 // MakeHandler returns a HTTP handler for API endpoints.
@@ -93,6 +94,12 @@ func MakeHandler(svc certs.Service, logger *slog.Logger, instanceID string) http
 			encodeOSCPResponse,
 			opts...,
 		), "ocsp").ServeHTTP)
+		r.Get("/crl", otelhttp.NewHandler(kithttp.NewServer(
+			generateCRLEndpoint(svc),
+			decodeCRL,
+			EncodeResponse,
+			opts...,
+		), "generate_crl").ServeHTTP)
 	})
 
 	r.Get("/health", certs.Health("certs", instanceID))
@@ -104,6 +111,17 @@ func MakeHandler(svc certs.Service, logger *slog.Logger, instanceID string) http
 func decodeView(_ context.Context, r *http.Request) (interface{}, error) {
 	req := viewReq{
 		id: chi.URLParam(r, "id"),
+	}
+	return req, nil
+}
+
+func decodeCRL(_ context.Context, r *http.Request) (interface{}, error) {
+	certType, err := readNumQuery(r, "", defType)
+	if err != nil {
+		return nil, err
+	}
+	req := crlReq{
+		certtype: certs.CertType(certType),
 	}
 	return req, nil
 }

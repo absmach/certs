@@ -44,8 +44,8 @@ func NewRepository(db postgres.Database) certs.Repository {
 // CreateLog creates computation log in the database.
 func (repo certsRepo) CreateCert(ctx context.Context, cert certs.Certificate) error {
 	q := `
-	INSERT INTO certs (serial_number, certificate, key, entity_id, revoked, expiry_time)
-	VALUES (:serial_number, :certificate, :key, :entity_id, :revoked, :expiry_time)`
+	INSERT INTO certs (serial_number, certificate, key, entity_id, revoked, expiry_time, type)
+	VALUES (:serial_number, :certificate, :key, :entity_id, :revoked, :expiry_time, :type)`
 	_, err := repo.db.NamedExecContext(ctx, q, cert)
 	if err != nil {
 		return handleError(certs.ErrCreateEntity, err)
@@ -64,6 +64,32 @@ func (repo certsRepo) RetrieveCert(ctx context.Context, serialNumber string) (ce
 		return certs.Certificate{}, errors.Wrap(certs.ErrViewEntity, err)
 	}
 	return cert, nil
+}
+
+// GetCAs reterives rootCA and intermediateCA from database.
+func (repo certsRepo) GetCAs(ctx context.Context) ([]certs.Certificate, error) {
+	q := `SELECT * FROM certs WHERE type != :type`
+
+	var certificates []certs.Certificate
+	params := map[string]interface{}{
+		"type":     certs.ClientCert,
+	}
+	rows, err := repo.db.NamedQueryContext(ctx, q, params)
+	if err != nil {
+		return []certs.Certificate{}, handleError(certs.ErrViewEntity, err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		cert := &certs.Certificate{}
+		if err := rows.StructScan(cert); err != nil {
+			return []certs.Certificate{}, errors.Wrap(certs.ErrViewEntity, err)
+		}
+
+		certificates = append(certificates, *cert)
+	}
+
+	return certificates, nil
 }
 
 // UpdateLog updates computation log in the database.
@@ -85,13 +111,13 @@ func (repo certsRepo) UpdateCert(ctx context.Context, cert certs.Certificate) er
 
 func (repo certsRepo) ListCerts(ctx context.Context, pm certs.PageMetadata) (certs.CertificatePage, error) {
 	q := `SELECT serial_number, revoked, expiry_time, entity_id FROM certs %s LIMIT :limit OFFSET :offset`
-	condition := ``
+	var condition string
 	if pm.EntityID != "" {
-		condition = `WHERE entity_id = :entity_id`
-		q = fmt.Sprintf(q, condition)
+		condition = `WHERE entity_id = :entity_id AND type = 2`
 	} else {
-		q = fmt.Sprintf(q, condition)
+		condition = `WHERE type = 2`
 	}
+	q = fmt.Sprintf(q, condition)
 	var certificates []certs.Certificate
 
 	params := map[string]interface{}{
@@ -123,6 +149,31 @@ func (repo certsRepo) ListCerts(ctx context.Context, pm certs.PageMetadata) (cer
 		PageMetadata: pm,
 		Certificates: certificates,
 	}, nil
+}
+
+func (repo certsRepo) ListRevokedCerts(ctx context.Context) ([]certs.Certificate, error) {
+    query := `
+        SELECT serial_number, entity_id, expiry_time
+        FROM certs
+        WHERE revoked = true
+    `
+    
+    rows, err := repo.db.QueryContext(ctx, query)
+    if err != nil {
+        return nil, handleError(certs.ErrViewEntity, err)
+    }
+    defer rows.Close()
+
+    var revokedCerts []certs.Certificate
+    for rows.Next() {
+        var cert *certs.Certificate
+        if err := rows.Scan(&cert); err != nil {
+            return nil, handleError(certs.ErrViewEntity, err)
+        }
+        revokedCerts = append(revokedCerts, *cert)
+    }
+
+    return revokedCerts, nil
 }
 
 func (repo certsRepo) total(ctx context.Context, query string, params interface{}) (uint64, error) {
