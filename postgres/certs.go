@@ -157,7 +157,6 @@ func (repo certsRepo) ListRevokedCerts(ctx context.Context) ([]certs.Certificate
         FROM certs
         WHERE revoked = true
     `
-    
     rows, err := repo.db.QueryContext(ctx, query)
     if err != nil {
         return nil, handleError(certs.ErrViewEntity, err)
@@ -166,11 +165,11 @@ func (repo certsRepo) ListRevokedCerts(ctx context.Context) ([]certs.Certificate
 
     var revokedCerts []certs.Certificate
     for rows.Next() {
-        var cert *certs.Certificate
-        if err := rows.Scan(&cert); err != nil {
+        var cert certs.Certificate
+        if err := rows.Scan(&cert.SerialNumber, &cert.EntityID, &cert.ExpiryTime); err != nil {
             return nil, handleError(certs.ErrViewEntity, err)
         }
-        revokedCerts = append(revokedCerts, *cert)
+        revokedCerts = append(revokedCerts, cert)
     }
 
     return revokedCerts, nil
