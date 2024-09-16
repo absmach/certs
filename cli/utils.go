@@ -6,7 +6,10 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 
+	ctxsdk "github.com/absmach/certs/sdk"
 	"github.com/fatih/color"
 	"github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/cobra"
@@ -56,4 +59,38 @@ func logErrorCmd(cmd cobra.Command, err error) {
 
 func logOKCmd(cmd cobra.Command) {
 	fmt.Fprintf(cmd.OutOrStdout(), "\n%s\n\n", color.BlueString("ok"))
+}
+
+func logSaveCertFiles(cmd cobra.Command, certBundle ctxsdk.CertificateBundle) {
+	files := map[string][]byte{
+		"ca.pem":   certBundle.CA,
+		"cert.pem": certBundle.Certificate,
+		"key.pem":  certBundle.PrivateKey,
+	}
+
+	for filename, content := range files {
+		err := saveToFile(filename, content)
+		if err != nil {
+			logErrorCmd(cmd, err)
+			return
+		}
+		fmt.Fprintf(cmd.OutOrStdout(), "Saved %s\n", filename)
+	}
+	fmt.Fprintf(cmd.OutOrStdout(), "\nAll certificate files have been saved successfully.\n")
+}
+
+func saveToFile(filename string, content []byte) error {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get current working directory: %w", err)
+	}
+
+	filePath := filepath.Join(cwd, filename)
+
+	err = os.WriteFile(filePath, content, 0600)
+	if err != nil {
+		return fmt.Errorf("failed to write file %s: %w", filename, err)
+	}
+
+	return nil
 }

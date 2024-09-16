@@ -28,24 +28,22 @@ func (_m *MockSDK) EXPECT() *MockSDK_Expecter {
 }
 
 // DownloadCert provides a mock function with given fields: token, serialNumber
-func (_m *MockSDK) DownloadCert(token string, serialNumber string) ([]byte, errors.SDKError) {
+func (_m *MockSDK) DownloadCert(token string, serialNumber string) (sdk.CertificateBundle, errors.SDKError) {
 	ret := _m.Called(token, serialNumber)
 
 	if len(ret) == 0 {
 		panic("no return value specified for DownloadCert")
 	}
 
-	var r0 []byte
+	var r0 sdk.CertificateBundle
 	var r1 errors.SDKError
-	if rf, ok := ret.Get(0).(func(string, string) ([]byte, errors.SDKError)); ok {
+	if rf, ok := ret.Get(0).(func(string, string) (sdk.CertificateBundle, errors.SDKError)); ok {
 		return rf(token, serialNumber)
 	}
-	if rf, ok := ret.Get(0).(func(string, string) []byte); ok {
+	if rf, ok := ret.Get(0).(func(string, string) sdk.CertificateBundle); ok {
 		r0 = rf(token, serialNumber)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]byte)
-		}
+		r0 = ret.Get(0).(sdk.CertificateBundle)
 	}
 
 	if rf, ok := ret.Get(1).(func(string, string) errors.SDKError); ok {
@@ -78,12 +76,12 @@ func (_c *MockSDK_DownloadCert_Call) Run(run func(token string, serialNumber str
 	return _c
 }
 
-func (_c *MockSDK_DownloadCert_Call) Return(_a0 []byte, _a1 errors.SDKError) *MockSDK_DownloadCert_Call {
+func (_c *MockSDK_DownloadCert_Call) Return(_a0 sdk.CertificateBundle, _a1 errors.SDKError) *MockSDK_DownloadCert_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockSDK_DownloadCert_Call) RunAndReturn(run func(string, string) ([]byte, errors.SDKError)) *MockSDK_DownloadCert_Call {
+func (_c *MockSDK_DownloadCert_Call) RunAndReturn(run func(string, string) (sdk.CertificateBundle, errors.SDKError)) *MockSDK_DownloadCert_Call {
 	_c.Call.Return(run)
 	return _c
 }
