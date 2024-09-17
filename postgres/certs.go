@@ -72,7 +72,7 @@ func (repo certsRepo) GetCAs(ctx context.Context) ([]certs.Certificate, error) {
 
 	var certificates []certs.Certificate
 	params := map[string]interface{}{
-		"type":     certs.ClientCert,
+		"type": certs.ClientCert,
 	}
 	rows, err := repo.db.NamedQueryContext(ctx, q, params)
 	if err != nil {
@@ -152,27 +152,27 @@ func (repo certsRepo) ListCerts(ctx context.Context, pm certs.PageMetadata) (cer
 }
 
 func (repo certsRepo) ListRevokedCerts(ctx context.Context) ([]certs.Certificate, error) {
-    query := `
+	query := `
         SELECT serial_number, entity_id, expiry_time
         FROM certs
         WHERE revoked = true
     `
-    rows, err := repo.db.QueryContext(ctx, query)
-    if err != nil {
-        return nil, handleError(certs.ErrViewEntity, err)
-    }
-    defer rows.Close()
+	rows, err := repo.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, handleError(certs.ErrViewEntity, err)
+	}
+	defer rows.Close()
 
-    var revokedCerts []certs.Certificate
-    for rows.Next() {
-        var cert certs.Certificate
-        if err := rows.Scan(&cert.SerialNumber, &cert.EntityID, &cert.ExpiryTime); err != nil {
-            return nil, handleError(certs.ErrViewEntity, err)
-        }
-        revokedCerts = append(revokedCerts, cert)
-    }
+	var revokedCerts []certs.Certificate
+	for rows.Next() {
+		var cert certs.Certificate
+		if err := rows.Scan(&cert.SerialNumber, &cert.EntityID, &cert.ExpiryTime); err != nil {
+			return nil, handleError(certs.ErrViewEntity, err)
+		}
+		revokedCerts = append(revokedCerts, cert)
+	}
 
-    return revokedCerts, nil
+	return revokedCerts, nil
 }
 
 func (repo certsRepo) total(ctx context.Context, query string, params interface{}) (uint64, error) {

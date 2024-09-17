@@ -303,16 +303,19 @@ func (s *service) GenerateCRL(ctx context.Context, caType CertType) ([]byte, err
 	var ca *CA
 
 	switch caType {
-    case RootCA:
-        ca = s.rootCA
-    case IntermediateCA:
-        if s.intermediateCA == nil {
-            return nil, errors.New("no intermediate CA available")
-        }
-        ca = s.intermediateCA
-    default:
-        return nil, errors.New("invalid CA type")
-    }
+	case RootCA:
+		if s.rootCA == nil {
+			return nil, errors.New("root CA not initialized")
+		}
+		ca = s.rootCA
+	case IntermediateCA:
+		if s.intermediateCA == nil {
+			return nil, errors.New("intermediate CA not initialized")
+		}
+		ca = s.intermediateCA
+	default:
+		return nil, errors.New("invalid CA type")
+	}
 
 	revokedCerts, err := s.repo.ListRevokedCerts(ctx)
 	if err != nil {

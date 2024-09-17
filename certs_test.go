@@ -411,3 +411,83 @@ func TestListCerts(t *testing.T) {
 		assert.Empty(t, certPage)
 	})
 }
+
+func TestGenerateCRL(t *testing.T) {
+	cRepo := new(mocks.MockRepository)
+
+	privateKey, _ := rsa.GenerateKey(rand.Reader, 2048)
+	template := &x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject: pkix.Name{
+			CommonName: "Test CA",
+		},
+		NotBefore:             time.Now(),
+		NotAfter:              time.Now().Add(time.Hour * 24 * 365),
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+	}
+
+	certDER, _ := x509.CreateCertificate(rand.Reader, template, template, &privateKey.PublicKey, privateKey)
+
+	repoCall := cRepo.On("GetCAs", mock.Anything).Return([]certs.Certificate{
+		{Type: certs.RootCA, Certificate: pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER}), Key: pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(privateKey)})},
+		{Type: certs.IntermediateCA, Certificate: pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER}), Key: pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(privateKey)})},
+	}, nil)
+	repoCall1 := cRepo.On("CreateCert", mock.Anything, mock.Anything).Return(nil)
+	svc, err := certs.NewService(context.Background(), cRepo)
+	require.NoError(t, err)
+	repoCall.Unset()
+	repoCall1.Unset()
+
+	testCases := []struct {
+		desc    string
+		caType  certs.CertType
+		certs   []certs.Certificate
+		repoErr error
+		err     error
+	}{
+		{
+			desc:   "generate CRL with root CA",
+			caType: certs.RootCA,
+			certs: []certs.Certificate{
+				{SerialNumber: "1", ExpiryTime: time.Now(), EntityID: "123"},
+				{SerialNumber: "2", ExpiryTime: time.Now(), EntityID: "456"},
+			},
+			err: nil,
+		},
+		{
+			desc:   "generate CRL with intermediate CA",
+			caType: certs.IntermediateCA,
+			certs: []certs.Certificate{
+				{SerialNumber: "3", ExpiryTime: time.Now()},
+			},
+			err: nil,
+		},
+		{
+			desc:   "invalid CA type",
+			caType: certs.CertType(999),
+			err:    errors.New("invalid CA type"),
+		},
+		{
+			desc:    "ListRevokedCerts error",
+			caType:  certs.RootCA,
+			repoErr: certs.ErrViewEntity,
+			err:     certs.ErrViewEntity,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			repoCall := cRepo.On("ListRevokedCerts", mock.Anything).Return(tc.certs, tc.repoErr)
+			_, err := svc.GenerateCRL(context.Background(), tc.caType)
+			if tc.err != nil {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tc.err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+			repoCall.Unset()
+		})
+	}
+}
