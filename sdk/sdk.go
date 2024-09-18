@@ -336,6 +336,9 @@ func (pm PageMetadata) query() (string, error) {
 	if pm.Total != 0 {
 		q.Add("total", strconv.FormatUint(pm.Total, 10))
 	}
+	if pm.EntityID != "" {
+		q.Add("entity_id", pm.EntityID)
+	}
 	if pm.Token != "" {
 		q.Add("token", pm.Token)
 	}

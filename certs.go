@@ -10,18 +10,18 @@ import (
 )
 
 type Certificate struct {
-	SerialNumber string    `json:"serial_number" db:"serial_number"`
-	Certificate  []byte    `json:"certificate" db:"certificate"`
-	Key          []byte    `json:"key" db:"key"`
-	Revoked      bool      `json:"revoked" db:"revoked"`
-	ExpiryTime   time.Time `json:"expiry_time" db:"expiry_time"`
-	EntityID     string    `json:"entity_id" db:"entity_id"`
-	DownloadUrl  string    `json:"-" db:"-"`
+	SerialNumber string    `db:"serial_number"`
+	Certificate  []byte    `db:"certificate"`
+	Key          []byte    `db:"key"`
+	Revoked      bool      `db:"revoked"`
+	ExpiryTime   time.Time `db:"expiry_time"`
+	EntityID     string    `db:"entity_id"`
+	DownloadUrl  string    `db:"-"`
 }
 
 type CertificatePage struct {
 	PageMetadata
-	Certificates []Certificate `json:"certificates"`
+	Certificates []Certificate
 }
 
 type PageMetadata struct {
