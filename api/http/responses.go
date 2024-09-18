@@ -25,14 +25,6 @@ type pageRes struct {
 	Total  uint64 `json:"total"`
 }
 
-type cert struct {
-	SerialNumber string    `json:"serial_number"`
-	Revoked      bool      `json:"revoked"`
-	ExpiryTime   time.Time `json:"expiry_time"`
-	EntityID     string    `json:"entity_id"`
-	DownloadUrl  string    `json:"-"`
-}
-
 type renewCertRes struct {
 	renewed bool
 }
@@ -132,7 +124,7 @@ type listCertsRes struct {
 	Total        uint64 `json:"total"`
 	Offset       uint64 `json:"offset"`
 	Limit        uint64 `json:"limit"`
-	Certificates []cert `json:"certificates"`
+	Certificates []viewCertRes `json:"certificates"`
 }
 
 func (res listCertsRes) Code() int {
@@ -145,8 +137,8 @@ func (res listCertsRes) Headers() map[string]string {
 
 type viewCertRes struct {
 	SerialNumber string    `json:"serial_number"`
-	Certificate  *string   `json:"certificate"`
-	Key          *string   `json:"key"`
+	Certificate  string   `json:"certificate"`
+	Key          string   `json:"key"`
 	Revoked      bool      `json:"revoked"`
 	ExpiryTime   time.Time `json:"expiry_time"`
 	EntityID     string    `json:"entity_id"`

@@ -112,9 +112,9 @@ func listCertsEndpoint(svc certs.Service) endpoint.Endpoint {
 			return listCertsRes{}, err
 		}
 
-		var crts []cert
+		var crts []viewCertRes
 		for _, c := range(certPage.Certificates) {
-			crts = append(crts, cert{
+			crts = append(crts, viewCertRes{
 				SerialNumber: c.SerialNumber,
 				Revoked: c.Revoked,
 				EntityID: c.EntityID,
@@ -141,12 +141,11 @@ func viewCertEndpoint(svc certs.Service) endpoint.Endpoint {
 		if err != nil {
 			return viewCertRes{}, err
 		}
-		crt := string(cert.Certificate)
-		key := string(cert.Key)
+
 		return viewCertRes{
 			SerialNumber: cert.SerialNumber,
-			Certificate:  &crt,
-			Key:          &key,
+			Certificate:  string(cert.Certificate),
+			Key:          string(cert.Key),
 			Revoked:      cert.Revoked,
 			ExpiryTime:   cert.ExpiryTime,
 			EntityID:     cert.EntityID,
