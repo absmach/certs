@@ -112,11 +112,21 @@ func listCertsEndpoint(svc certs.Service) endpoint.Endpoint {
 			return listCertsRes{}, err
 		}
 
+		var crts []cert
+		for _, c := range(certPage.Certificates) {
+			crts = append(crts, cert{
+				SerialNumber: c.SerialNumber,
+				Revoked: c.Revoked,
+				EntityID: c.EntityID,
+				ExpiryTime: c.ExpiryTime,
+			})
+		}
+
 		return listCertsRes{
 			Total:        certPage.Total,
 			Offset:       certPage.Offset,
 			Limit:        certPage.Limit,
-			Certificates: certPage.Certificates,
+			Certificates: crts,
 		}, nil
 	}
 }

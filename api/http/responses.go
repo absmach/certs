@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/absmach/certs"
 	"golang.org/x/crypto/ocsp"
 )
 
@@ -24,6 +23,14 @@ type pageRes struct {
 	Limit  uint64 `json:"limit"`
 	Offset uint64 `json:"offset"`
 	Total  uint64 `json:"total"`
+}
+
+type cert struct {
+	SerialNumber string    `json:"serial_number"`
+	Revoked      bool      `json:"revoked"`
+	ExpiryTime   time.Time `json:"expiry_time"`
+	EntityID     string    `json:"entity_id"`
+	DownloadUrl  string    `json:"-"`
 }
 
 type renewCertRes struct {
@@ -122,10 +129,10 @@ func (res issueCertRes) Empty() bool {
 }
 
 type listCertsRes struct {
-	Total        uint64              `json:"total"`
-	Offset       uint64              `json:"offset"`
-	Limit        uint64              `json:"limit"`
-	Certificates []certs.Certificate `json:"certificates"`
+	Total        uint64 `json:"total"`
+	Offset       uint64 `json:"offset"`
+	Limit        uint64 `json:"limit"`
+	Certificates []cert `json:"certificates"`
 }
 
 func (res listCertsRes) Code() int {
