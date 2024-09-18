@@ -113,11 +113,9 @@ func listCertsEndpoint(svc certs.Service) endpoint.Endpoint {
 		}
 
 		return listCertsRes{
-			pageRes: pageRes{
-				Total:  certPage.Total,
-				Offset: certPage.Offset,
-				Limit:  certPage.Limit,
-			},
+			Total:        certPage.Total,
+			Offset:       certPage.Offset,
+			Limit:        certPage.Limit,
 			Certificates: certPage.Certificates,
 		}, nil
 	}

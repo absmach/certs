@@ -122,7 +122,9 @@ func (res issueCertRes) Empty() bool {
 }
 
 type listCertsRes struct {
-	pageRes
+	Total        uint64              `json:"total"`
+	Offset       uint64              `json:"offset"`
+	Limit        uint64              `json:"limit"`
 	Certificates []certs.Certificate `json:"certificates"`
 }
 

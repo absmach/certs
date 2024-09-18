@@ -69,7 +69,7 @@ type CertificatePage struct {
 	Total        uint64        `json:"total"`
 	Offset       uint64        `json:"offset"`
 	Limit        uint64        `json:"limit"`
-	Certificates []Certificate `json:"certificates"`
+	Certificates []Certificate `json:"certificates,omitempty"`
 }
 
 type Config struct {
