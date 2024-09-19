@@ -78,7 +78,7 @@ type Repository interface {
 	ListCerts(ctx context.Context, pm PageMetadata) (CertificatePage, error)
 
 	// GetCAs retrieves rootCA and intermediateCA from database.
-	GetCAs(ctx context.Context) ([]Certificate, error)
+	GetCAs(ctx context.Context, caType ...CertType) ([]Certificate, error)
 
 	// ListRevokedCerts retrieves revoked lists from database.
 	ListRevokedCerts(ctx context.Context) ([]Certificate, error)

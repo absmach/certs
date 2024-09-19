@@ -73,9 +73,16 @@ func (_c *MockRepository_CreateCert_Call) RunAndReturn(run func(context.Context,
 	return _c
 }
 
-// GetCAs provides a mock function with given fields: ctx
-func (_m *MockRepository) GetCAs(ctx context.Context) ([]certs.Certificate, error) {
-	ret := _m.Called(ctx)
+// GetCAs provides a mock function with given fields: ctx, caType
+func (_m *MockRepository) GetCAs(ctx context.Context, caType ...certs.CertType) ([]certs.Certificate, error) {
+	_va := make([]interface{}, len(caType))
+	for _i := range caType {
+		_va[_i] = caType[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, ctx)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetCAs")
@@ -83,19 +90,19 @@ func (_m *MockRepository) GetCAs(ctx context.Context) ([]certs.Certificate, erro
 
 	var r0 []certs.Certificate
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context) ([]certs.Certificate, error)); ok {
-		return rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, ...certs.CertType) ([]certs.Certificate, error)); ok {
+		return rf(ctx, caType...)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context) []certs.Certificate); ok {
-		r0 = rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, ...certs.CertType) []certs.Certificate); ok {
+		r0 = rf(ctx, caType...)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]certs.Certificate)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(ctx)
+	if rf, ok := ret.Get(1).(func(context.Context, ...certs.CertType) error); ok {
+		r1 = rf(ctx, caType...)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -110,13 +117,21 @@ type MockRepository_GetCAs_Call struct {
 
 // GetCAs is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *MockRepository_Expecter) GetCAs(ctx interface{}) *MockRepository_GetCAs_Call {
-	return &MockRepository_GetCAs_Call{Call: _e.mock.On("GetCAs", ctx)}
+//   - caType ...certs.CertType
+func (_e *MockRepository_Expecter) GetCAs(ctx interface{}, caType ...interface{}) *MockRepository_GetCAs_Call {
+	return &MockRepository_GetCAs_Call{Call: _e.mock.On("GetCAs",
+		append([]interface{}{ctx}, caType...)...)}
 }
 
-func (_c *MockRepository_GetCAs_Call) Run(run func(ctx context.Context)) *MockRepository_GetCAs_Call {
+func (_c *MockRepository_GetCAs_Call) Run(run func(ctx context.Context, caType ...certs.CertType)) *MockRepository_GetCAs_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context))
+		variadicArgs := make([]certs.CertType, len(args)-1)
+		for i, a := range args[1:] {
+			if a != nil {
+				variadicArgs[i] = a.(certs.CertType)
+			}
+		}
+		run(args[0].(context.Context), variadicArgs...)
 	})
 	return _c
 }
@@ -126,7 +141,7 @@ func (_c *MockRepository_GetCAs_Call) Return(_a0 []certs.Certificate, _a1 error)
 	return _c
 }
 
-func (_c *MockRepository_GetCAs_Call) RunAndReturn(run func(context.Context) ([]certs.Certificate, error)) *MockRepository_GetCAs_Call {
+func (_c *MockRepository_GetCAs_Call) RunAndReturn(run func(context.Context, ...certs.CertType) ([]certs.Certificate, error)) *MockRepository_GetCAs_Call {
 	_c.Call.Return(run)
 	return _c
 }

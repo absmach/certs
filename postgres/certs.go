@@ -67,13 +67,18 @@ func (repo certsRepo) RetrieveCert(ctx context.Context, serialNumber string) (ce
 }
 
 // GetCAs reterives rootCA and intermediateCA from database.
-func (repo certsRepo) GetCAs(ctx context.Context) ([]certs.Certificate, error) {
-	q := `SELECT * FROM certs WHERE type != :type`
+func (repo certsRepo) GetCAs(ctx context.Context, caType ...certs.CertType) ([]certs.Certificate, error) {
+	q := `SELECT * FROM certs WHERE type IN (:types)`
 
 	var certificates []certs.Certificate
 	params := map[string]interface{}{
-		"type": certs.ClientCert,
+		"type": caType,
 	}
+
+	if len(caType) == 0 {
+		params["types"] = []certs.CertType{certs.RootCA, certs.IntermediateCA}
+	}
+
 	rows, err := repo.db.NamedQueryContext(ctx, q, params)
 	if err != nil {
 		return []certs.Certificate{}, handleError(certs.ErrViewEntity, err)

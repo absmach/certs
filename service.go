@@ -20,18 +20,21 @@ import (
 )
 
 const (
-	CommonName          = "AbstractMachines_Selfsigned_ca"
-	Organization        = "AbstractMacines"
-	OrganizationalUnit  = "AbstractMachines_ca"
-	Country             = "Sirbea"
-	Province            = "Sirbea"
-	Locality            = "Sirbea"
-	StreetAddress       = "Sirbea"
-	PostalCode          = "Sirbea"
-	emailAddress        = "info@abstractmachines.rs"
-	PrivateKeyBytes     = 2048
-	certValidityPeriod  = time.Hour * 24 * 90 // 90 days
-	certExpiryThreshold = time.Hour * 24 * 30 // 30 days
+	CommonName                   = "AbstractMachines_Selfsigned_ca"
+	Organization                 = "AbstractMacines"
+	OrganizationalUnit           = "AbstractMachines_ca"
+	Country                      = "Sirbea"
+	Province                     = "Sirbea"
+	Locality                     = "Sirbea"
+	StreetAddress                = "Sirbea"
+	PostalCode                   = "Sirbea"
+	emailAddress                 = "info@abstractmachines.rs"
+	PrivateKeyBytes              = 2048
+	RootCAValidityPeriod         = time.Hour * 24 * 365 // 365 days
+	IntermediateCAVAlidityPeriod = time.Hour * 24 * 90  // 90 days
+	certValidityPeriod           = time.Hour * 24 * 90  // 30 days
+	rCertExpiryThreshold         = time.Hour * 24 * 30  // 30 days
+	iCertExpiryThreshold         = time.Hour * 24 * 10  // 10 days
 )
 
 type CertType int
@@ -89,8 +92,19 @@ func NewService(ctx context.Context, repo Repository) (Service, error) {
 		return &svc, err
 	}
 
-	if err := svc.rotateCA(ctx); err != nil {
-		return &svc, err
+	// check if root ca should be rotated
+	rotateRoot := svc.shouldRotateCA(RootCA)
+	if rotateRoot {
+		if err := svc.rotateCA(ctx, RootCA); err != nil {
+			return &svc, err
+		}
+	}
+
+	rotateIntermediate := svc.shouldRotateCA(IntermediateCA)
+	if rotateIntermediate {
+		if err := svc.rotateCA(ctx, IntermediateCA); err != nil {
+			return &svc, err
+		}
 	}
 
 	return &svc, nil
@@ -389,7 +403,7 @@ func (s *service) generateRootCA(ctx context.Context) (*CA, error) {
 			},
 		},
 		NotBefore:             time.Now(),
-		NotAfter:              time.Now().Add(time.Hour * 24),
+		NotAfter:              time.Now().Add(RootCAValidityPeriod),
 		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
 		BasicConstraintsValid: true,
 		IsCA:                  true,
@@ -462,7 +476,7 @@ func (s *service) createIntermediateCA(ctx context.Context, rootCA *CA) (*CA, er
 			},
 		},
 		NotBefore:             time.Now(),
-		NotAfter:              time.Now().Add(certValidityPeriod),
+		NotAfter:              time.Now().Add(IntermediateCAVAlidityPeriod),
 		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
 		BasicConstraintsValid: true,
@@ -523,10 +537,10 @@ func (s *service) getSubject(options SubjectOptions) pkix.Name {
 	return subject
 }
 
-func (s *service) rotateCA(ctx context.Context) error {
-	shouldRotate := s.shouldRotateCA()
+func (s *service) rotateCA(ctx context.Context, ctype CertType) error {
 
-	if shouldRotate {
+	switch ctype {
+	case RootCA:
 		certificates, err := s.repo.GetCAs(ctx)
 		if err != nil {
 			return err
@@ -536,7 +550,6 @@ func (s *service) rotateCA(ctx context.Context) error {
 				return err
 			}
 		}
-
 		newRootCA, err := s.generateRootCA(ctx)
 		if err != nil {
 			return err
@@ -547,22 +560,54 @@ func (s *service) rotateCA(ctx context.Context) error {
 			return err
 		}
 		s.intermediateCA = newIntermediateCA
+
+	case IntermediateCA:
+		certificates, err := s.repo.GetCAs(ctx, IntermediateCA)
+		if err != nil {
+			return err
+		}
+		for _, cert := range certificates {
+			if err := s.RevokeCert(ctx, cert.SerialNumber); err != nil {
+				return err
+			}
+		}
+		newIntermediateCA, err := s.createIntermediateCA(ctx, s.rootCA)
+		if err != nil {
+			return err
+		}
+		s.intermediateCA = newIntermediateCA
+
+	default:
+		return ErrCertInvalidType
 	}
 
 	return nil
 }
 
-func (s *service) shouldRotateCA() bool {
-	if s.rootCA == nil || s.rootCA.Certificate == nil {
-		return true
+func (s *service) shouldRotateCA(ctype CertType) bool {
+	switch ctype {
+	case RootCA:
+		if s.rootCA == nil {
+			return true
+		}
+		now := time.Now()
+
+		// Check if the certificate is expiring soon i.e., within 30 days.
+		if now.Add(rCertExpiryThreshold).After(s.rootCA.Certificate.NotAfter) {
+			return true
+		}
+	case IntermediateCA:
+		if s.intermediateCA == nil {
+			return true
+		}
+		now := time.Now()
+
+		// Check if the certificate is expiring soon i.e., within 10 days.
+		if now.Add(iCertExpiryThreshold).After(s.intermediateCA.Certificate.NotAfter) {
+			return true
+		}
 	}
 
-	now := time.Now()
-
-	// Check if the certificate is expiring soon i.e., within 30 days.
-	if now.Add(certExpiryThreshold).After(s.rootCA.Certificate.NotAfter) {
-		return true
-	}
 	return false
 }
 
