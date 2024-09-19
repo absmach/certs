@@ -20,17 +20,18 @@ import (
 )
 
 const (
-	CommonName         = "AbstractMachines_Selfsigned_ca"
-	Organization       = "AbstractMacines"
-	OrganizationalUnit = "AbstractMachines_ca"
-	Country            = "Sirbea"
-	Province           = "Sirbea"
-	Locality           = "Sirbea"
-	StreetAddress      = "Sirbea"
-	PostalCode         = "Sirbea"
-	emailAddress       = "info@abstractmachines.rs"
-	PrivateKeyBytes    = 2048
-	certValidityPeriod = time.Hour * 24 * 90 // 90 days
+	CommonName          = "AbstractMachines_Selfsigned_ca"
+	Organization        = "AbstractMacines"
+	OrganizationalUnit  = "AbstractMachines_ca"
+	Country             = "Sirbea"
+	Province            = "Sirbea"
+	Locality            = "Sirbea"
+	StreetAddress       = "Sirbea"
+	PostalCode          = "Sirbea"
+	emailAddress        = "info@abstractmachines.rs"
+	PrivateKeyBytes     = 2048
+	certValidityPeriod  = time.Hour * 24 * 90 // 90 days
+	certExpiryThreshold = time.Hour * 24 * 30 // 30 days
 )
 
 type CertType int
@@ -525,7 +526,7 @@ func (s *service) getSubject(options SubjectOptions) pkix.Name {
 func (s *service) rotateCA(ctx context.Context) error {
 	shouldRotate := s.shouldRotateCA()
 
-	if shouldRotate == true {
+	if shouldRotate {
 		certificates, err := s.repo.GetCAs(ctx)
 		if err != nil {
 			return err
@@ -559,7 +560,7 @@ func (s *service) shouldRotateCA() bool {
 	now := time.Now()
 
 	// Check if the certificate is expiring soon i.e., within 30 days.
-	if now.Add(30 * 24 * time.Hour).After(s.rootCA.Certificate.NotAfter) {
+	if now.Add(certExpiryThreshold).After(s.rootCA.Certificate.NotAfter) {
 		return true
 	}
 	return false
