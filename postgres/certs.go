@@ -68,18 +68,19 @@ func (repo certsRepo) RetrieveCert(ctx context.Context, serialNumber string) (ce
 
 // GetCAs reterives rootCA and intermediateCA from database.
 func (repo certsRepo) GetCAs(ctx context.Context, caType ...certs.CertType) ([]certs.Certificate, error) {
-	q := `SELECT * FROM certs WHERE type IN (:types)`
-
+	q := `SELECT serial_number, key, certificate, expiry_time, revoked, type FROM certs WHERE type = ANY($1)`
 	var certificates []certs.Certificate
-	params := map[string]interface{}{
-		"type": caType,
+
+	types := make([]int, 0, len(caType))
+	for i, t := range caType {
+		types[i] = int(t)
 	}
 
-	if len(caType) == 0 {
-		params["types"] = []certs.CertType{certs.RootCA, certs.IntermediateCA}
+	if len(types) == 0 {
+		types = []int{int(certs.RootCA), int(certs.IntermediateCA)}
 	}
 
-	rows, err := repo.db.NamedQueryContext(ctx, q, params)
+	rows, err := repo.db.QueryContext(ctx, q, types)
 	if err != nil {
 		return []certs.Certificate{}, handleError(certs.ErrViewEntity, err)
 	}
@@ -87,11 +88,22 @@ func (repo certsRepo) GetCAs(ctx context.Context, caType ...certs.CertType) ([]c
 
 	for rows.Next() {
 		cert := &certs.Certificate{}
-		if err := rows.StructScan(cert); err != nil {
+		if err := rows.Scan(
+			&cert.SerialNumber,
+			&cert.Key,
+			&cert.Certificate,
+			&cert.ExpiryTime,
+			&cert.Revoked,
+			&cert.Type,
+		); err != nil {
 			return []certs.Certificate{}, errors.Wrap(certs.ErrViewEntity, err)
 		}
 
 		certificates = append(certificates, *cert)
+	}
+
+	if err = rows.Err(); err != nil {
+		return []certs.Certificate{}, errors.Wrap(certs.ErrViewEntity, err)
 	}
 
 	return certificates, nil
