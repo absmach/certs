@@ -57,8 +57,8 @@ type Token struct {
 
 type Certificate struct {
 	SerialNumber string    `json:"serial_number"`
-	Certificate  *string   `json:"certificate,omitempty"`
-	Key          *string   `json:"key,omitempty"`
+	Certificate  string    `json:"certificate,omitempty"`
+	Key          string    `json:"key,omitempty"`
 	Revoked      bool      `json:"revoked"`
 	ExpiryTime   time.Time `json:"expiry_time"`
 	EntityID     string    `json:"entity_id"`
@@ -335,6 +335,9 @@ func (pm PageMetadata) query() (string, error) {
 	}
 	if pm.Total != 0 {
 		q.Add("total", strconv.FormatUint(pm.Total, 10))
+	}
+	if pm.EntityID != "" {
+		q.Add("entity_id", pm.EntityID)
 	}
 	if pm.Token != "" {
 		q.Add("token", pm.Token)
