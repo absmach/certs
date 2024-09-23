@@ -40,7 +40,7 @@ jobs:
                 
               mocks:
                 - ".github/workflows/check-generated-files.yml"
-                - "sdk/sdk.go"
+                - "sdk/mocks/sdk.go"
                 - "mocks/repository.go"
                 - "mocks/service.go"
 
