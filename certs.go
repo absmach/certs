@@ -16,7 +16,7 @@ type Certificate struct {
 	Revoked      bool      `db:"revoked"`
 	ExpiryTime   time.Time `db:"expiry_time"`
 	EntityID     string    `db:"entity_id"`
-	Type         CertType  `json:"-" db:"type"`
+	Type         CertType  `db:"type"`
 	DownloadUrl  string    `db:"-"`
 }
 
