@@ -113,4 +113,3 @@ jobs:
                   check_mock_changes ./sdk/mocks/sdk.go "SDK ./sdk/mocks/sdk.go"
                   check_mock_changes ./mocks/repository.go "Certs Repository ./mocks/repository.go"
                   check_mock_changes ./mocks/service.go "Certs Service ./mocks/service.go"
-        

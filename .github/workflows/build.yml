@@ -54,4 +54,3 @@ jobs:
             build-args: |
                 SVC=certs
             tags: ghcr.io/absmach/certs:latest
-    
