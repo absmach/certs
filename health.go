@@ -17,14 +17,14 @@ const (
 
 var (
 	// Version represents the last service git tag in git history.
-	// It's meant to be set using go build ldflags:
+	// It's meant to be set using go build ldflags.
 	Version = "0.0.0"
 	// Commit represents the service git commit hash.
-	// It's meant to be set using go build ldflags:
+	// It's meant to be set using go build ldflags.
 
 	Commit = "ffffffff"
 	// BuildTime represetns the service build time.
-	// It's meant to be set using go build ldflags:
+	// It's meant to be set using go build ldflags.
 	BuildTime = "1970-01-01_00:00:00"
 )
 

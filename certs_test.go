@@ -25,9 +25,7 @@ import (
 
 const serialNumber = "serial number"
 
-var (
-	invalidToken = "123"
-)
+var invalidToken = "123"
 
 func TestIssueCert(t *testing.T) {
 	cRepo := new(mocks.MockRepository)

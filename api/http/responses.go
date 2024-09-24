@@ -19,12 +19,6 @@ var (
 	_ Response = (*ocspRes)(nil)
 )
 
-type pageRes struct {
-	Limit  uint64 `json:"limit"`
-	Offset uint64 `json:"offset"`
-	Total  uint64 `json:"total"`
-}
-
 type renewCertRes struct {
 	renewed bool
 }
@@ -135,6 +129,10 @@ func (res listCertsRes) Headers() map[string]string {
 	return map[string]string{}
 }
 
+func (res listCertsRes) Empty() bool {
+	return false
+}
+
 type viewCertRes struct {
 	SerialNumber string    `json:"serial_number"`
 	Certificate  string    `json:"certificate"`
@@ -153,10 +151,6 @@ func (res viewCertRes) Headers() map[string]string {
 }
 
 func (res viewCertRes) Empty() bool {
-	return false
-}
-
-func (res listCertsRes) Empty() bool {
 	return false
 }
 

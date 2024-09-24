@@ -45,13 +45,9 @@ type config struct {
 const filePermission = 0o644
 
 var (
-	errReadFail            = errors.New("failed to read config file")
-	errNoKey               = errors.New("no such key")
-	errUnsupportedKeyValue = errors.New("unsupported data type for key")
-	errWritingConfig       = errors.New("error in writing the updated config to file")
-	errInvalidURL          = errors.New("invalid url")
-	errURLParseFail        = errors.New("failed to parse url")
-	defaultConfigPath      = "./config.toml"
+	errReadFail       = errors.New("failed to read config file")
+	errWritingConfig  = errors.New("error in writing the updated config to file")
+	defaultConfigPath = "./config.toml"
 )
 
 func read(file string) (config, error) {
