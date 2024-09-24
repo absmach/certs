@@ -1,0 +1,56 @@
+# Copyright (c) Abstract Machines
+# SPDX-License-Identifier: Apache-2.0
+
+name: Create and publish a Docker image
+
+on:
+    push:
+      branches: ["main"]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push-image:
+    runs-on: ubuntu-latest
+
+    permissions:
+        contents: read
+        packages: write
+
+    steps:
+        - name: Checkout repository
+          uses: actions/checkout@v4
+    
+        - name: Check for changes in services
+          uses: dorny/paths-filter@v3
+          id: filter
+          with:
+            filters: |
+                certs:
+                    - "certs/**"
+                    - "cmd/certs/**"
+                    - "docker/Dockerfile"
+
+                dependencies:
+                    - "go.mod"
+                    - "go.sum"
+
+        - name: Log in to the Container registry
+          uses: docker/login-action@v3
+          with:
+            registry: ${{ env.REGISTRY }}
+            username: ${{ github.actor }}
+            password: ${{ secrets.GITHUB_TOKEN }}
+
+        - name: Build certs and push Docker image
+          if: steps.filter.outputs.certs == 'true' || steps.filter.outputs.dependencies == 'true'
+          uses: docker/build-push-action@v5
+          with:
+            context: .
+            file: ./docker/Dockerfile
+            push: true
+            build-args: |
+                SVC=certs
+            tags: ghcr.io/absmach/certs:latest

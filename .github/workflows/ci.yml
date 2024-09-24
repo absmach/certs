@@ -1,0 +1,112 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-build:
+    name: Lint and Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.22.x
+          cache-dependency-path: "go.sum"
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.60.3
+          args: --config ./.golangci.yml
+
+      - name: Build all Binaries
+        run: make all
+
+  run-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.23.x
+
+      - name: Install dependencies
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run Prettier
+        id: prettier-run
+        uses: rutajdash/prettier-cli-action@v1.0.1
+        with:
+          config_path: ./.prettierrc
+          file_pattern: "**/*.html **/*.css"
+
+      - name: Prettier Output
+        if: ${{ failure() }}
+        shell: bash
+        run: |
+          echo "The following files are not formatted:"
+          echo "${{steps.prettier-run.outputs.prettier_output}}"
+
+      - name: Check for changes in services
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          base: main
+          filters: |
+            workflow:
+              - ".github/workflows/ci.yaml"
+
+            certs:
+              - "cmd/certs/**"
+              - "sdk/**"
+              - "certs.pb.go"
+              - "certs_grpc.pb.go"
+              - "postgres/**"
+
+            cli:
+              - "cmd/cli/**"
+              - "sdk/**"
+              - "cli/**"
+
+      - name: Create coverage directory
+        run: mkdir coverage
+
+      - name: Run certs tests
+        if: steps.changes.outputs.certs == 'true' || steps.changes.outputs.workflow == 'true'
+        run: go test --race -v -count=1 -coverprofile=coverage/certs.out ./...
+
+      - name: Run cli tests
+        if: steps.changes.outputs.cli == 'true' || steps.changes.outputs.workflow == 'true'
+        run: go test --race -v -count=1 -coverprofile=coverage/cli.out ./cli/...
+
+      - name: Run postgres tests
+        if: steps.changes.outputs.postgres == 'true' || steps.changes.outputs.workflow == 'true'
+        run: go test --race -v -count=1 -coverprofile=coverage/postgres.out ./postgres/...
+
+      - name: Run sdk tests
+        if: steps.changes.outputs.sdk == 'true' || steps.changes.outputs.workflow == 'true'
+        run: go test --race -v -count=1 -coverprofile=coverage/sdk.out ./sdk/...
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV }}
+          directory: ./coverage/
+          name: codecov-umbrella
+          verbose: true
