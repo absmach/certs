@@ -86,17 +86,19 @@ type CA struct {
 }
 
 var (
-	serialNumberLimit  = new(big.Int).Lsh(big.NewInt(1), 128)
-	ErrNotFound        = errors.New("entity not found")
-	ErrConflict        = errors.New("entity already exists")
-	ErrCreateEntity    = errors.New("failed to create entity")
-	ErrViewEntity      = errors.New("view entity failed")
-	ErrGetToken        = errors.New("failed to get token")
-	ErrUpdateEntity    = errors.New("update entity failed")
-	ErrMalformedEntity = errors.New("malformed entity specification")
-	ErrRootCANotFound  = errors.New("root CA not found")
-	ErrCertExpired     = errors.New("certificate expired before renewal")
-	ErrCertRevoked     = errors.New("certificate has been revoked and cannot be renewed")
+	serialNumberLimit         = new(big.Int).Lsh(big.NewInt(1), 128)
+	ErrNotFound               = errors.New("entity not found")
+	ErrConflict               = errors.New("entity already exists")
+	ErrCreateEntity           = errors.New("failed to create entity")
+	ErrViewEntity             = errors.New("view entity failed")
+	ErrGetToken               = errors.New("failed to get token")
+	ErrUpdateEntity           = errors.New("update entity failed")
+	ErrMalformedEntity        = errors.New("malformed entity specification")
+	ErrRootCANotFound         = errors.New("root CA not found")
+	ErrIntermediateCANotFound = errors.New("intermediate CA not found")
+	ErrCertExpired            = errors.New("certificate expired before renewal")
+	ErrCertRevoked            = errors.New("certificate has been revoked and cannot be renewed")
+	ErrCertInvalidType        = errors.New("invalid cert type")
 )
 
 type SubjectOptions struct {
