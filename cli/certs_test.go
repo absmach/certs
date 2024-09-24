@@ -369,7 +369,6 @@ func TestGetTokenCmd(t *testing.T) {
 					t.Fatalf("Failed to unmarshal JSON: %v", err)
 				}
 				assert.Equal(t, tc.token, token, fmt.Sprintf("%v unexpected response, expected: %v, got: %v", tc.desc, tc.token, token))
-
 			}
 			sdkCall.Unset()
 		})
