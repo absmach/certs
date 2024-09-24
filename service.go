@@ -573,7 +573,6 @@ func (s *service) getSubject(options SubjectOptions) pkix.Name {
 }
 
 func (s *service) rotateCA(ctx context.Context, ctype CertType) error {
-
 	switch ctype {
 	case RootCA:
 		certificates, err := s.repo.GetCAs(ctx)
