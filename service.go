@@ -45,6 +45,39 @@ const (
 	ClientCert
 )
 
+const (
+	Root    = "RootCA"
+	Inter   = "IntermediateCA"
+	Client  = "ClientCert"
+	Unknown = "Unknown"
+)
+
+func (c CertType) String() string {
+	switch c {
+	case RootCA:
+		return Root
+	case IntermediateCA:
+		return Inter
+	case ClientCert:
+		return Client
+	default:
+		return Unknown
+	}
+}
+
+func CertTypeFromString(s string) (CertType, error) {
+	switch s {
+	case Root:
+		return RootCA, nil
+	case Inter:
+		return IntermediateCA, nil
+	case Client:
+		return ClientCert, nil
+	default:
+		return -1, errors.New("unknown cert type")
+	}
+}
+
 type CA struct {
 	Type         CertType
 	Certificate  *x509.Certificate

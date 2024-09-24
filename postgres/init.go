@@ -21,7 +21,7 @@ func Migration() *migrate.MemoryMigrationSource {
                     	revoked        BOOLEAN,
                         expiry_time    TIMESTAMP,
 						entity_id      VARCHAR(36),
-						type		   INT,
+						type TEXT CHECK (type IN ('RootCA', 'IntermediateCA', 'ClientCert')),
                         PRIMARY KEY (serial_number)
                     )`,
 				},
