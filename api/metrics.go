@@ -61,12 +61,12 @@ func (mm *metricsMiddleware) RetrieveCertDownloadToken(ctx context.Context, seri
 	return mm.svc.RetrieveCertDownloadToken(ctx, serialNumber)
 }
 
-func (mm *metricsMiddleware) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string) (string, error) {
+func (mm *metricsMiddleware) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options certs.SubjectOptions) (string, error) {
 	defer func(begin time.Time) {
 		mm.counter.With("method", "issue_certificate").Add(1)
 		mm.latency.With("method", "issue_certificate").Observe(time.Since(begin).Seconds())
 	}(time.Now())
-	return mm.svc.IssueCert(ctx, entityID, ttl, ipAddrs)
+	return mm.svc.IssueCert(ctx, entityID, ttl, ipAddrs, options)
 }
 
 func (mm *metricsMiddleware) ListCerts(ctx context.Context, pm certs.PageMetadata) (certs.CertificatePage, error) {
@@ -99,4 +99,12 @@ func (mm *metricsMiddleware) GetEntityID(ctx context.Context, serialNumber strin
 		mm.latency.With("method", "get_entity_id").Observe(time.Since(begin).Seconds())
 	}(time.Now())
 	return mm.svc.GetEntityID(ctx, serialNumber)
+}
+
+func (mm *metricsMiddleware) GenerateCRL(ctx context.Context, caType certs.CertType) ([]byte, error) {
+	defer func(begin time.Time) {
+		mm.counter.With("method", "generate_crl").Add(1)
+		mm.latency.With("method", "generate_crl").Observe(time.Since(begin).Seconds())
+	}(time.Now())
+	return mm.svc.GenerateCRL(ctx, caType)
 }

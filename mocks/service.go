@@ -28,6 +28,65 @@ func (_m *MockService) EXPECT() *MockService_Expecter {
 	return &MockService_Expecter{mock: &_m.Mock}
 }
 
+// GenerateCRL provides a mock function with given fields: ctx, caType
+func (_m *MockService) GenerateCRL(ctx context.Context, caType certs.CertType) ([]byte, error) {
+	ret := _m.Called(ctx, caType)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GenerateCRL")
+	}
+
+	var r0 []byte
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, certs.CertType) ([]byte, error)); ok {
+		return rf(ctx, caType)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, certs.CertType) []byte); ok {
+		r0 = rf(ctx, caType)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]byte)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, certs.CertType) error); ok {
+		r1 = rf(ctx, caType)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockService_GenerateCRL_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GenerateCRL'
+type MockService_GenerateCRL_Call struct {
+	*mock.Call
+}
+
+// GenerateCRL is a helper method to define mock.On call
+//   - ctx context.Context
+//   - caType certs.CertType
+func (_e *MockService_Expecter) GenerateCRL(ctx interface{}, caType interface{}) *MockService_GenerateCRL_Call {
+	return &MockService_GenerateCRL_Call{Call: _e.mock.On("GenerateCRL", ctx, caType)}
+}
+
+func (_c *MockService_GenerateCRL_Call) Run(run func(ctx context.Context, caType certs.CertType)) *MockService_GenerateCRL_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(certs.CertType))
+	})
+	return _c
+}
+
+func (_c *MockService_GenerateCRL_Call) Return(_a0 []byte, _a1 error) *MockService_GenerateCRL_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockService_GenerateCRL_Call) RunAndReturn(run func(context.Context, certs.CertType) ([]byte, error)) *MockService_GenerateCRL_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetEntityID provides a mock function with given fields: ctx, serialNumber
 func (_m *MockService) GetEntityID(ctx context.Context, serialNumber string) (string, error) {
 	ret := _m.Called(ctx, serialNumber)
@@ -85,9 +144,9 @@ func (_c *MockService_GetEntityID_Call) RunAndReturn(run func(context.Context, s
 	return _c
 }
 
-// IssueCert provides a mock function with given fields: ctx, entityID, ttl, ipAddrs
-func (_m *MockService) IssueCert(ctx context.Context, entityID string, ttl string, ipAddrs []string) (string, error) {
-	ret := _m.Called(ctx, entityID, ttl, ipAddrs)
+// IssueCert provides a mock function with given fields: ctx, entityID, ttl, ipAddrs, option
+func (_m *MockService) IssueCert(ctx context.Context, entityID string, ttl string, ipAddrs []string, option certs.SubjectOptions) (string, error) {
+	ret := _m.Called(ctx, entityID, ttl, ipAddrs, option)
 
 	if len(ret) == 0 {
 		panic("no return value specified for IssueCert")
@@ -95,17 +154,17 @@ func (_m *MockService) IssueCert(ctx context.Context, entityID string, ttl strin
 
 	var r0 string
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, []string) (string, error)); ok {
-		return rf(ctx, entityID, ttl, ipAddrs)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, []string, certs.SubjectOptions) (string, error)); ok {
+		return rf(ctx, entityID, ttl, ipAddrs, option)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, []string) string); ok {
-		r0 = rf(ctx, entityID, ttl, ipAddrs)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, []string, certs.SubjectOptions) string); ok {
+		r0 = rf(ctx, entityID, ttl, ipAddrs, option)
 	} else {
 		r0 = ret.Get(0).(string)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string, string, []string) error); ok {
-		r1 = rf(ctx, entityID, ttl, ipAddrs)
+	if rf, ok := ret.Get(1).(func(context.Context, string, string, []string, certs.SubjectOptions) error); ok {
+		r1 = rf(ctx, entityID, ttl, ipAddrs, option)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -123,13 +182,14 @@ type MockService_IssueCert_Call struct {
 //   - entityID string
 //   - ttl string
 //   - ipAddrs []string
-func (_e *MockService_Expecter) IssueCert(ctx interface{}, entityID interface{}, ttl interface{}, ipAddrs interface{}) *MockService_IssueCert_Call {
-	return &MockService_IssueCert_Call{Call: _e.mock.On("IssueCert", ctx, entityID, ttl, ipAddrs)}
+//   - option certs.SubjectOptions
+func (_e *MockService_Expecter) IssueCert(ctx interface{}, entityID interface{}, ttl interface{}, ipAddrs interface{}, option interface{}) *MockService_IssueCert_Call {
+	return &MockService_IssueCert_Call{Call: _e.mock.On("IssueCert", ctx, entityID, ttl, ipAddrs, option)}
 }
 
-func (_c *MockService_IssueCert_Call) Run(run func(ctx context.Context, entityID string, ttl string, ipAddrs []string)) *MockService_IssueCert_Call {
+func (_c *MockService_IssueCert_Call) Run(run func(ctx context.Context, entityID string, ttl string, ipAddrs []string, option certs.SubjectOptions)) *MockService_IssueCert_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].([]string))
+		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].([]string), args[4].(certs.SubjectOptions))
 	})
 	return _c
 }
@@ -139,7 +199,7 @@ func (_c *MockService_IssueCert_Call) Return(_a0 string, _a1 error) *MockService
 	return _c
 }
 
-func (_c *MockService_IssueCert_Call) RunAndReturn(run func(context.Context, string, string, []string) (string, error)) *MockService_IssueCert_Call {
+func (_c *MockService_IssueCert_Call) RunAndReturn(run func(context.Context, string, string, []string, certs.SubjectOptions) (string, error)) *MockService_IssueCert_Call {
 	_c.Call.Return(run)
 	return _c
 }

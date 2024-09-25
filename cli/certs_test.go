@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"testing"
 
@@ -32,6 +33,7 @@ const (
 var (
 	serialNumber = "39054620502613157373429341617471746606"
 	id           = "5b4c9ee3-e719-4a0a-9ee5-354932c5e6a4"
+	commonName   = "test-name"
 	extraArg     = "extra-arg"
 )
 
@@ -56,6 +58,7 @@ func TestIssueCertCmd(t *testing.T) {
 			desc: "issue cert successfully",
 			args: []string{
 				id,
+				commonName,
 				ipAddrs,
 			},
 			logType: entityLog,
@@ -66,7 +69,6 @@ func TestIssueCertCmd(t *testing.T) {
 			args: []string{
 				id,
 				ipAddrs,
-				extraArg,
 			},
 			logType: usageLog,
 		},
@@ -74,17 +76,29 @@ func TestIssueCertCmd(t *testing.T) {
 			desc: "issue cert failed",
 			args: []string{
 				id,
+				commonName,
 				ipAddrs,
 			},
 			sdkErr:        errors.NewSDKErrorWithStatus(certs.ErrCreateEntity, http.StatusUnprocessableEntity),
 			errLogMessage: fmt.Sprintf("\nerror: %s\n\n", errors.NewSDKErrorWithStatus(certs.ErrCreateEntity, http.StatusUnprocessableEntity)),
 			logType:       errLog,
 		},
+		{
+			desc: "issue cert with 4 args",
+			args: []string{
+				id,
+				commonName,
+				ipAddrs,
+				"{\"organization\":[\"organization_name\"]}",
+			},
+			logType: entityLog,
+			serial:  sdk.SerialNumber{SerialNumber: serialNumber},
+		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("IssueCert", mock.Anything, mock.Anything, mock.Anything).Return(tc.serial, tc.sdkErr)
+			sdkCall := sdkMock.On("IssueCert", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(tc.serial, tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{issueCmd}, tc.args...)...)
 			switch tc.logType {
 			case entityLog:
@@ -375,7 +389,7 @@ func TestGetTokenCmd(t *testing.T) {
 	}
 }
 
-func TestRetrieveCertCmd(t *testing.T) {
+func TestDownloadCertCmd(t *testing.T) {
 	sdkMock := new(sdkmocks.MockSDK)
 	cli.SetSDK(sdkMock)
 	certCmd := cli.NewCertsCmd()
@@ -387,18 +401,26 @@ func TestRetrieveCertCmd(t *testing.T) {
 		args          []string
 		sdkErr        errors.SDKError
 		errLogMessage string
+		logMessage    string
 		logType       outputLog
+		certBundle    sdk.CertificateBundle
 	}{
 		{
-			desc: "retrieve cert successfully",
+			desc: "download cert successfully",
 			args: []string{
 				serialNumber,
 				token,
 			},
 			logType: entityLog,
+			certBundle: sdk.CertificateBundle{
+				CA:          []byte("ca"),
+				Certificate: []byte("certificate"),
+				PrivateKey:  []byte("privatekey"),
+			},
+			logMessage: "Saved ca.pem\nSaved cert.pem\nSaved key.pem\n\nAll certificate files have been saved successfully.\n",
 		},
 		{
-			desc: "retrieve cert with invalid args",
+			desc: "download cert with invalid args",
 			args: []string{
 				serialNumber,
 				token,
@@ -407,7 +429,7 @@ func TestRetrieveCertCmd(t *testing.T) {
 			logType: usageLog,
 		},
 		{
-			desc: "retrieve cert failed",
+			desc: "download cert failed",
 			args: []string{
 				serialNumber,
 				token,
@@ -415,14 +437,22 @@ func TestRetrieveCertCmd(t *testing.T) {
 			sdkErr:        errors.NewSDKErrorWithStatus(certs.ErrUpdateEntity, http.StatusUnprocessableEntity),
 			errLogMessage: fmt.Sprintf("\nerror: %s\n\n", errors.NewSDKErrorWithStatus(certs.ErrUpdateEntity, http.StatusUnprocessableEntity)),
 			logType:       errLog,
+			certBundle:    sdk.CertificateBundle{},
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("RetrieveCert", mock.Anything, mock.Anything).Return([]byte{}, tc.sdkErr)
+			defer func() {
+				cleanupFiles(t, []string{"ca.pem", "cert.pem", "key.pem"})
+			}()
+			sdkCall := sdkMock.On("DownloadCert", mock.Anything, mock.Anything).Return(tc.certBundle, tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{downloadCmd}, tc.args...)...)
 			switch tc.logType {
+			case entityLog:
+				assert.True(t, strings.Contains(out, "Saved key.pem"), fmt.Sprintf("%s invalid output: %s", tc.desc, out))
+				assert.True(t, strings.Contains(out, "Saved cert.pem"), fmt.Sprintf("%s invalid output: %s", tc.desc, out))
+				assert.True(t, strings.Contains(out, "Saved ca.pem"), fmt.Sprintf("%s invalid output: %s", tc.desc, out))
 			case usageLog:
 				assert.False(t, strings.Contains(out, rootCmd.Use), fmt.Sprintf("%s invalid usage: %s", tc.desc, out))
 			case errLog:
@@ -430,5 +460,14 @@ func TestRetrieveCertCmd(t *testing.T) {
 			}
 			sdkCall.Unset()
 		})
+	}
+}
+
+func cleanupFiles(t *testing.T, filenames []string) {
+	for _, filename := range filenames {
+		err := os.Remove(filename)
+		if err != nil && !os.IsNotExist(err) {
+			t.Logf("Failed to remove file %s: %v", filename, err)
+		}
 	}
 }

@@ -30,14 +30,19 @@ var invalidToken = "123"
 func TestIssueCert(t *testing.T) {
 	cRepo := new(mocks.MockRepository)
 
+	repoCall := cRepo.On("GetCAs", mock.Anything).Return([]certs.Certificate{}, nil)
+	repoCall1 := cRepo.On("CreateCert", mock.Anything, mock.Anything).Return(nil)
 	svc, err := certs.NewService(context.Background(), cRepo)
 	require.NoError(t, err)
+	repoCall.Unset()
+	repoCall1.Unset()
 
 	testCases := []struct {
 		desc      string
 		backendId string
 		ttl       string
 		err       error
+		getCAErr  error
 	}{
 		{
 			desc:      "successful issue",
@@ -56,10 +61,10 @@ func TestIssueCert(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
 			repoCall1 := cRepo.On("CreateCert", mock.Anything, mock.Anything).Return(tc.err)
-			defer repoCall1.Unset()
 
-			_, err = svc.IssueCert(context.Background(), tc.backendId, tc.ttl, []string{})
+			_, err = svc.IssueCert(context.Background(), tc.backendId, tc.ttl, []string{}, certs.SubjectOptions{})
 			require.True(t, errors.Contains(err, tc.err), "expected error %v, got %v", tc.err, err)
+			repoCall1.Unset()
 		})
 	}
 }
@@ -69,13 +74,12 @@ func TestRevokeCert(t *testing.T) {
 
 	invalidSerialNumber := "invalid serial number"
 
-	listCall := cRepo.On("ListCerts", mock.Anything, mock.Anything, mock.Anything).Return(certs.CertificatePage{}, nil)
-	t.Cleanup(func() {
-		listCall.Unset()
-	})
-
+	repoCall := cRepo.On("GetCAs", mock.Anything).Return([]certs.Certificate{}, nil)
+	repoCall1 := cRepo.On("CreateCert", mock.Anything, mock.Anything).Return(nil)
 	svc, err := certs.NewService(context.Background(), cRepo)
 	require.NoError(t, err)
+	repoCall.Unset()
+	repoCall1.Unset()
 
 	testCases := []struct {
 		desc         string
@@ -122,8 +126,12 @@ func TestRevokeCert(t *testing.T) {
 func TestGetCertDownloadToken(t *testing.T) {
 	cRepo := new(mocks.MockRepository)
 
+	repoCall := cRepo.On("GetCAs", mock.Anything).Return([]certs.Certificate{}, nil)
+	repoCall1 := cRepo.On("CreateCert", mock.Anything, mock.Anything).Return(nil)
 	svc, err := certs.NewService(context.Background(), cRepo)
 	require.NoError(t, err)
+	repoCall.Unset()
+	repoCall1.Unset()
 
 	testCases := []struct {
 		desc   string
@@ -152,8 +160,12 @@ func TestGetCert(t *testing.T) {
 	validToken, err := jwtToken.SignedString([]byte(serialNumber))
 	require.NoError(t, err)
 
+	repoCall := cRepo.On("GetCAs", mock.Anything).Return([]certs.Certificate{}, nil)
+	repoCall1 := cRepo.On("CreateCert", mock.Anything, mock.Anything).Return(nil)
 	svc, err := certs.NewService(context.Background(), cRepo)
 	require.NoError(t, err)
+	repoCall.Unset()
+	repoCall1.Unset()
 
 	testCases := []struct {
 		desc   string
@@ -243,8 +255,12 @@ func TestRenewCert(t *testing.T) {
 	}, &x509.Certificate{}, &testKey.PublicKey, testKey)
 	require.NoError(t, err)
 
+	repoCall := cRepo.On("GetCAs", mock.Anything).Return([]certs.Certificate{}, nil)
+	repoCall1 := cRepo.On("CreateCert", mock.Anything, mock.Anything).Return(nil)
 	svc, err := certs.NewService(context.Background(), cRepo)
 	require.NoError(t, err)
+	repoCall.Unset()
+	repoCall1.Unset()
 
 	testCases := []struct {
 		desc        string
@@ -328,10 +344,15 @@ func TestRenewCert(t *testing.T) {
 	}
 }
 
-func TestService_GetEntityID(t *testing.T) {
+func TestGetEntityID(t *testing.T) {
 	cRepo := new(mocks.MockRepository)
+
+	repoCall := cRepo.On("GetCAs", mock.Anything).Return([]certs.Certificate{}, nil)
+	repoCall1 := cRepo.On("CreateCert", mock.Anything, mock.Anything).Return(nil)
 	svc, err := certs.NewService(context.Background(), cRepo)
 	require.NoError(t, err)
+	repoCall.Unset()
+	repoCall1.Unset()
 
 	ctx := context.Background()
 	serialNumber := "1234567890"
@@ -354,10 +375,15 @@ func TestService_GetEntityID(t *testing.T) {
 	})
 }
 
-func TestService_ListCerts(t *testing.T) {
+func TestListCerts(t *testing.T) {
 	cRepo := new(mocks.MockRepository)
+
+	repoCall := cRepo.On("GetCAs", mock.Anything).Return([]certs.Certificate{}, nil)
+	repoCall1 := cRepo.On("CreateCert", mock.Anything, mock.Anything).Return(nil)
 	svc, err := certs.NewService(context.Background(), cRepo)
 	require.NoError(t, err)
+	repoCall.Unset()
+	repoCall1.Unset()
 
 	ctx := context.Background()
 	pageMetadata := certs.PageMetadata{Limit: 10, Offset: 0, EntityID: "entity-123"}
@@ -384,4 +410,84 @@ func TestService_ListCerts(t *testing.T) {
 		assert.Error(t, err)
 		assert.Empty(t, certPage)
 	})
+}
+
+func TestGenerateCRL(t *testing.T) {
+	cRepo := new(mocks.MockRepository)
+
+	privateKey, _ := rsa.GenerateKey(rand.Reader, 2048)
+	template := &x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject: pkix.Name{
+			CommonName: "Test CA",
+		},
+		NotBefore:             time.Now(),
+		NotAfter:              time.Now().Add(time.Hour * 24 * 365),
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+	}
+
+	certDER, _ := x509.CreateCertificate(rand.Reader, template, template, &privateKey.PublicKey, privateKey)
+
+	repoCall := cRepo.On("GetCAs", mock.Anything).Return([]certs.Certificate{
+		{Type: certs.RootCA, Certificate: pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER}), Key: pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(privateKey)})},
+		{Type: certs.IntermediateCA, Certificate: pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER}), Key: pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(privateKey)})},
+	}, nil)
+	repoCall1 := cRepo.On("CreateCert", mock.Anything, mock.Anything).Return(nil)
+	svc, err := certs.NewService(context.Background(), cRepo)
+	require.NoError(t, err)
+	repoCall.Unset()
+	repoCall1.Unset()
+
+	testCases := []struct {
+		desc    string
+		caType  certs.CertType
+		certs   []certs.Certificate
+		repoErr error
+		err     error
+	}{
+		{
+			desc:   "generate CRL with root CA",
+			caType: certs.RootCA,
+			certs: []certs.Certificate{
+				{SerialNumber: "1", ExpiryTime: time.Now(), EntityID: "123"},
+				{SerialNumber: "2", ExpiryTime: time.Now(), EntityID: "456"},
+			},
+			err: nil,
+		},
+		{
+			desc:   "generate CRL with intermediate CA",
+			caType: certs.IntermediateCA,
+			certs: []certs.Certificate{
+				{SerialNumber: "3", ExpiryTime: time.Now()},
+			},
+			err: nil,
+		},
+		{
+			desc:   "invalid CA type",
+			caType: certs.CertType(999),
+			err:    errors.New("invalid CA type"),
+		},
+		{
+			desc:    "ListRevokedCerts error",
+			caType:  certs.RootCA,
+			repoErr: certs.ErrViewEntity,
+			err:     certs.ErrViewEntity,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			repoCall := cRepo.On("ListRevokedCerts", mock.Anything).Return(tc.certs, tc.repoErr)
+			_, err := svc.GenerateCRL(context.Background(), tc.caType)
+			if tc.err != nil {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tc.err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+			repoCall.Unset()
+		})
+	}
 }

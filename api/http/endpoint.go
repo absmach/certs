@@ -91,7 +91,7 @@ func issueCertEndpoint(svc certs.Service) endpoint.Endpoint {
 			return issueCertRes{}, err
 		}
 
-		serialNumber, err := svc.IssueCert(ctx, req.entityID, req.TTL, req.IpAddrs)
+		serialNumber, err := svc.IssueCert(ctx, req.entityID, req.TTL, req.IpAddrs, req.Options)
 		if err != nil {
 			return issueCertRes{}, err
 		}
@@ -216,6 +216,23 @@ func ocspEndpoint(svc certs.Service) endpoint.Endpoint {
 			template:   template,
 			issuerCert: issuerCert,
 			signer:     signer,
+		}, nil
+	}
+}
+
+func generateCRLEndpoint(svc certs.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req := request.(crlReq)
+		if err := req.validate(); err != nil {
+			return crlRes{}, err
+		}
+		crlBytes, err := svc.GenerateCRL(ctx, req.certtype)
+		if err != nil {
+			return crlRes{}, err
+		}
+
+		return crlRes{
+			CrlBytes: crlBytes,
 		}, nil
 	}
 }

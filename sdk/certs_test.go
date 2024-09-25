@@ -25,6 +25,7 @@ const (
 	serialNum   = "8e7a30c-bc9f-22de-ae67-1342bc139507"
 	id          = "c333e6f1-59bb-4c39-9e13-3a2766af8ba5"
 	ttl         = "10h"
+	commonName  = "test"
 )
 
 func setupCerts() (*httptest.Server, *mocks.MockService) {
@@ -49,21 +50,23 @@ func TestIssueCert(t *testing.T) {
 
 	ipAddr := []string{"192.128.101.82"}
 	cases := []struct {
-		desc     string
-		entityID string
-		ttl      string
-		ipAddrs  []string
-		svcresp  string
-		svcerr   error
-		err      errors.SDKError
-		sdkCert  sdk.Certificate
+		desc       string
+		entityID   string
+		ttl        string
+		ipAddrs    []string
+		commonName string
+		svcresp    string
+		svcerr     error
+		err        errors.SDKError
+		sdkCert    sdk.Certificate
 	}{
 		{
-			desc:     "IssueCert success",
-			entityID: id,
-			ttl:      ttl,
-			ipAddrs:  ipAddr,
-			svcresp:  serialNum,
+			desc:       "IssueCert success",
+			entityID:   id,
+			ttl:        ttl,
+			ipAddrs:    ipAddr,
+			commonName: commonName,
+			svcresp:    serialNum,
 			sdkCert: sdk.Certificate{
 				SerialNumber: serialNum,
 			},
@@ -71,28 +74,31 @@ func TestIssueCert(t *testing.T) {
 			err:    nil,
 		},
 		{
-			desc:     "IssueCert failure",
-			entityID: id,
-			ttl:      ttl,
-			ipAddrs:  ipAddr,
-			svcresp:  "",
-			svcerr:   certs.ErrCreateEntity,
-			err:      errors.NewSDKErrorWithStatus(certs.ErrCreateEntity, http.StatusUnprocessableEntity),
+			desc:       "IssueCert failure",
+			entityID:   id,
+			ttl:        ttl,
+			ipAddrs:    ipAddr,
+			commonName: commonName,
+			svcresp:    "",
+			svcerr:     certs.ErrCreateEntity,
+			err:        errors.NewSDKErrorWithStatus(certs.ErrCreateEntity, http.StatusUnprocessableEntity),
 		},
 		{
-			desc:     "IssueCert with empty entityID",
-			entityID: `""`,
-			ttl:      ttl,
-			ipAddrs:  ipAddr,
-			svcresp:  "",
-			svcerr:   certs.ErrMalformedEntity,
-			err:      errors.NewSDKErrorWithStatus(certs.ErrMalformedEntity, http.StatusBadRequest),
+			desc:       "IssueCert with empty entityID",
+			entityID:   `""`,
+			ttl:        ttl,
+			ipAddrs:    ipAddr,
+			commonName: commonName,
+			svcresp:    "",
+			svcerr:     certs.ErrMalformedEntity,
+			err:        errors.NewSDKErrorWithStatus(certs.ErrMalformedEntity, http.StatusBadRequest),
 		},
 		{
-			desc:     "IssueCert with empty ipAddrs",
-			entityID: id,
-			ttl:      ttl,
-			svcresp:  serialNum,
+			desc:       "IssueCert with empty ipAddrs",
+			entityID:   id,
+			ttl:        ttl,
+			commonName: commonName,
+			svcresp:    serialNum,
 			sdkCert: sdk.Certificate{
 				SerialNumber: serialNum,
 			},
@@ -100,28 +106,39 @@ func TestIssueCert(t *testing.T) {
 			err:    nil,
 		},
 		{
-			desc:     "IssueCert with empty ttl",
-			entityID: id,
-			ttl:      "",
-			ipAddrs:  ipAddr,
-			svcresp:  serialNum,
+			desc:       "IssueCert with empty ttl",
+			entityID:   id,
+			ttl:        "",
+			ipAddrs:    ipAddr,
+			commonName: commonName,
+			svcresp:    serialNum,
 			sdkCert: sdk.Certificate{
 				SerialNumber: serialNum,
 			},
 			svcerr: nil,
 			err:    nil,
+		},
+		{
+			desc:       "IssueCert with empty commonName",
+			entityID:   id,
+			ttl:        ttl,
+			ipAddrs:    ipAddr,
+			commonName: "",
+			svcresp:    "",
+			svcerr:     httpapi.ErrMissingCN,
+			err:        errors.NewSDKErrorWithStatus(httpapi.ErrMissingCN, http.StatusBadRequest),
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			svcCall := svc.On("IssueCert", mock.Anything, tc.entityID, tc.ttl, tc.ipAddrs).Return(tc.svcresp, tc.svcerr)
+			svcCall := svc.On("IssueCert", mock.Anything, tc.entityID, tc.ttl, tc.ipAddrs, mock.Anything).Return(tc.svcresp, tc.svcerr)
 
-			resp, err := ctsdk.IssueCert(tc.entityID, tc.ttl, tc.ipAddrs)
+			resp, err := ctsdk.IssueCert(tc.entityID, tc.ttl, tc.ipAddrs, sdk.Options{CommonName: tc.commonName})
 			assert.Equal(t, tc.err, err)
 			if tc.err == nil {
 				assert.Equal(t, tc.sdkCert.SerialNumber, resp.SerialNumber)
-				ok := svcCall.Parent.AssertCalled(t, "IssueCert", mock.Anything, tc.entityID, tc.ttl, tc.ipAddrs)
+				ok := svcCall.Parent.AssertCalled(t, "IssueCert", mock.Anything, tc.entityID, tc.ttl, tc.ipAddrs, certs.SubjectOptions{CommonName: tc.commonName})
 				assert.True(t, ok)
 			}
 			svcCall.Unset()

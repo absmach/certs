@@ -4,6 +4,7 @@
 package sdk
 
 import (
+	"archive/zip"
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
@@ -40,11 +41,23 @@ const (
 type ContentType string
 
 type PageMetadata struct {
-	Total    uint64 `json:"total,omitempty"`
-	Offset   uint64 `json:"offset,omitempty"`
-	Limit    uint64 `json:"limit,omitempty"`
-	EntityID string `json:"entity_id,omitempty"`
-	Token    string `json:"token,omitempty"`
+	Total      uint64 `json:"total,omitempty"`
+	Offset     uint64 `json:"offset,omitempty"`
+	Limit      uint64 `json:"limit,omitempty"`
+	EntityID   string `json:"entity_id,omitempty"`
+	Token      string `json:"token,omitempty"`
+	CommonName string `json:"common_name,omitempty"`
+}
+
+type Options struct {
+	CommonName         string
+	Organization       []string `json:"organization"`
+	OrganizationalUnit []string `json:"organizational_unit"`
+	Country            []string `json:"country"`
+	Province           []string `json:"province"`
+	Locality           []string `json:"locality"`
+	StreetAddress      []string `json:"street_address"`
+	PostalCode         []string `json:"postal_code"`
 }
 
 type SerialNumber struct {
@@ -90,20 +103,26 @@ type mgSDK struct {
 	curlFlag       bool
 }
 
+type CertificateBundle struct {
+	CA          []byte `json:"ca"`
+	Certificate []byte `json:"certificate"`
+	PrivateKey  []byte `json:"private_key"`
+}
+
 type SDK interface {
 	// IssueCert issues a certificate for a thing required for mTLS.
 	//
 	// example:
-	// serial , _ := sdk.IssueCert("entityID", "10h", []string{"ipAddr1", "ipAddr2"})
+	// serial , _ := sdk.IssueCert("entityID", "10h", []string{"ipAddr1", "ipAddr2"}, sdk.Options{CommonName: "commonName"})
 	//  fmt.Println(serial)
-	IssueCert(entityID, ttl string, ipAddrs []string) (SerialNumber, errors.SDKError)
+	IssueCert(entityID, ttl string, ipAddrs []string, opts Options) (SerialNumber, errors.SDKError)
 
 	// DownloadCert returns a certificate given certificate ID
 	//
 	// example:
-	//  cert, _ := sdk.DownloadCert("serialNumber", "download-token")
-	//  fmt.Println(cert)
-	DownloadCert(token, serialNumber string) ([]byte, errors.SDKError)
+	//  certBundle, _ := sdk.DownloadCert("serialNumber", "download-token")
+	//  fmt.Println(certBundle)
+	DownloadCert(token, serialNumber string) (CertificateBundle, errors.SDKError)
 
 	// RevokeCert revokes certificate for thing with thingID
 	//
@@ -148,23 +167,26 @@ type SDK interface {
 	OCSP(serialNumber string) (*ocsp.Response, errors.SDKError)
 }
 
-func (sdk mgSDK) IssueCert(entityID, ttl string, ipAddrs []string) (SerialNumber, errors.SDKError) {
+func (sdk mgSDK) IssueCert(entityID, ttl string, ipAddrs []string, opts Options) (SerialNumber, errors.SDKError) {
 	r := certReq{
 		IpAddrs: ipAddrs,
 		TTL:     ttl,
+		Options: opts,
 	}
 	d, err := json.Marshal(r)
 	if err != nil {
 		return SerialNumber{}, errors.NewSDKError(err)
 	}
+	url := fmt.Sprintf("%s/%s", issueCertEndpoint, entityID)
 
-	url := fmt.Sprintf("%s/%s/%s", sdk.certsURL, issueCertEndpoint, entityID)
-
+	url, err = sdk.withQueryParams(sdk.certsURL, url, PageMetadata{CommonName: opts.CommonName})
+	if err != nil {
+		return SerialNumber{}, errors.NewSDKError(err)
+	}
 	_, body, sdkerr := sdk.processRequest(http.MethodPost, url, d, nil, http.StatusCreated)
 	if sdkerr != nil {
 		return SerialNumber{}, sdkerr
 	}
-
 	var sn SerialNumber
 	if err := json.Unmarshal(body, &sn); err != nil {
 		return SerialNumber{}, errors.NewSDKError(err)
@@ -173,20 +195,41 @@ func (sdk mgSDK) IssueCert(entityID, ttl string, ipAddrs []string) (SerialNumber
 	return sn, nil
 }
 
-func (sdk mgSDK) DownloadCert(token, serialNumber string) ([]byte, errors.SDKError) {
+func (sdk mgSDK) DownloadCert(token, serialNumber string) (CertificateBundle, errors.SDKError) {
 	pm := PageMetadata{
 		Token: token,
 	}
 	url, err := sdk.withQueryParams(sdk.certsURL, fmt.Sprintf("%s/%s/download", certsEndpoint, serialNumber), pm)
 	if err != nil {
-		return []byte{}, errors.NewSDKError(err)
+		return CertificateBundle{}, errors.NewSDKError(err)
 	}
 	_, body, sdkerr := sdk.processRequest(http.MethodGet, url, nil, nil, http.StatusOK)
 	if sdkerr != nil {
-		return []byte{}, sdkerr
+		return CertificateBundle{}, sdkerr
 	}
 
-	return body, nil
+	zipReader, err := zip.NewReader(bytes.NewReader(body), int64(len(body)))
+	if err != nil {
+		return CertificateBundle{}, errors.NewSDKError(err)
+	}
+
+	var bundle CertificateBundle
+	for _, file := range zipReader.File {
+		fileContent, err := readZipFile(file)
+		if err != nil {
+			return CertificateBundle{}, errors.NewSDKError(err)
+		}
+		switch file.Name {
+		case "ca.pem":
+			bundle.CA = fileContent
+		case "cert.pem":
+			bundle.Certificate = fileContent
+		case "key.pem":
+			bundle.PrivateKey = fileContent
+		}
+	}
+
+	return bundle, nil
 }
 
 func (sdk mgSDK) ViewCert(serialNumber string) (Certificate, errors.SDKError) {
@@ -342,11 +385,24 @@ func (pm PageMetadata) query() (string, error) {
 	if pm.Token != "" {
 		q.Add("token", pm.Token)
 	}
+	if pm.CommonName != "" {
+		q.Add("common_name", pm.CommonName)
+	}
 
 	return q.Encode(), nil
+}
+
+func readZipFile(file *zip.File) ([]byte, error) {
+	fc, err := file.Open()
+	if err != nil {
+		return nil, err
+	}
+	defer fc.Close()
+	return io.ReadAll(fc)
 }
 
 type certReq struct {
 	IpAddrs []string `json:"ip_addresses"`
 	TTL     string   `json:"ttl"`
+	Options Options  `json:"options"`
 }

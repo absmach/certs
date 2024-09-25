@@ -135,8 +135,8 @@ func (res listCertsRes) Empty() bool {
 
 type viewCertRes struct {
 	SerialNumber string    `json:"serial_number"`
-	Certificate  string    `json:"certificate"`
-	Key          string    `json:"key"`
+	Certificate  string    `json:"certificate,omitempty"`
+	Key          string    `json:"key,omitempty"`
 	Revoked      bool      `json:"revoked"`
 	ExpiryTime   time.Time `json:"expiry_time"`
 	EntityID     string    `json:"entity_id"`
@@ -151,6 +151,22 @@ func (res viewCertRes) Headers() map[string]string {
 }
 
 func (res viewCertRes) Empty() bool {
+	return false
+}
+
+type crlRes struct {
+	CrlBytes []byte `json:"crl"`
+}
+
+func (res crlRes) Code() int {
+	return http.StatusOK
+}
+
+func (res crlRes) Headers() map[string]string {
+	return map[string]string{}
+}
+
+func (res crlRes) Empty() bool {
 	return false
 }
 
