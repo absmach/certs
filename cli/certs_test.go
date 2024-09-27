@@ -45,14 +45,14 @@ func TestIssueCertCmd(t *testing.T) {
 
 	ipAddrs := "[\"192.168.100.22\"]"
 
-	var sn sdk.SerialNumber
+	var cert sdk.Certificate
 	cases := []struct {
 		desc          string
 		args          []string
 		sdkErr        errors.SDKError
 		errLogMessage string
 		logType       outputLog
-		serial        sdk.SerialNumber
+		cert          sdk.Certificate
 	}{
 		{
 			desc: "issue cert successfully",
@@ -62,7 +62,7 @@ func TestIssueCertCmd(t *testing.T) {
 				ipAddrs,
 			},
 			logType: entityLog,
-			serial:  sdk.SerialNumber{SerialNumber: serialNumber},
+			cert:    sdk.Certificate{SerialNumber: serialNumber},
 		},
 		{
 			desc: "issue cert with invalid args",
@@ -92,19 +92,19 @@ func TestIssueCertCmd(t *testing.T) {
 				"{\"organization\":[\"organization_name\"]}",
 			},
 			logType: entityLog,
-			serial:  sdk.SerialNumber{SerialNumber: serialNumber},
+			cert:    sdk.Certificate{SerialNumber: serialNumber},
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("IssueCert", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(tc.serial, tc.sdkErr)
+			sdkCall := sdkMock.On("IssueCert", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(tc.cert, tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{issueCmd}, tc.args...)...)
 			switch tc.logType {
 			case entityLog:
-				err := json.Unmarshal([]byte(out), &sn)
+				err := json.Unmarshal([]byte(out), &cert)
 				assert.Nil(t, err)
-				assert.Equal(t, tc.serial, sn, fmt.Sprintf("%s unexpected response: expected: %v, got: %v", tc.desc, tc.serial, sn))
+				assert.Equal(t, tc.cert, cert, fmt.Sprintf("%s unexpected response: expected: %v, got: %v", tc.desc, tc.cert, cert))
 			case errLog:
 				assert.Equal(t, tc.errLogMessage, out, fmt.Sprintf("%s unexpected error response: expected %s got errLogMessage:%s", tc.desc, tc.errLogMessage, out))
 			case usageLog:

@@ -91,12 +91,19 @@ func issueCertEndpoint(svc certs.Service) endpoint.Endpoint {
 			return issueCertRes{}, err
 		}
 
-		serialNumber, err := svc.IssueCert(ctx, req.entityID, req.TTL, req.IpAddrs, req.Options)
+		cert, err := svc.IssueCert(ctx, req.entityID, req.TTL, req.IpAddrs, req.Options)
 		if err != nil {
 			return issueCertRes{}, err
 		}
 
-		return issueCertRes{issued: true, SerialNumber: serialNumber}, nil
+		return issueCertRes{
+			SerialNumber: cert.SerialNumber,
+			Certificate:  string(cert.Certificate),
+			ExpiryTime:   cert.ExpiryTime,
+			EntityID:     cert.EntityID,
+			Revoked:      cert.Revoked,
+			issued:       true,
+		}, nil
 	}
 }
 
