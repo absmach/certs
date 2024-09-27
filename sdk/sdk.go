@@ -109,8 +109,8 @@ type SDK interface {
 	// IssueCert issues a certificate for a thing required for mTLS.
 	//
 	// example:
-	// serial , _ := sdk.IssueCert("entityID", "10h", []string{"ipAddr1", "ipAddr2"}, sdk.Options{CommonName: "commonName"})
-	//  fmt.Println(serial)
+	// cert , _ := sdk.IssueCert("entityID", "10h", []string{"ipAddr1", "ipAddr2"}, sdk.Options{CommonName: "commonName"})
+	//  fmt.Println(cert)
 	IssueCert(entityID, ttl string, ipAddrs []string, opts Options) (Certificate, errors.SDKError)
 
 	// DownloadCert returns a certificate given certificate ID
