@@ -47,7 +47,7 @@ func (tm *tracingMiddleware) RetrieveCertDownloadToken(ctx context.Context, seri
 	return tm.svc.RetrieveCertDownloadToken(ctx, serialNumber)
 }
 
-func (tm *tracingMiddleware) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options certs.SubjectOptions) (string, error) {
+func (tm *tracingMiddleware) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options certs.SubjectOptions) (certs.Certificate, error) {
 	ctx, span := tm.tracer.Start(ctx, "issue_cert")
 	defer span.End()
 	return tm.svc.IssueCert(ctx, entityID, ttl, ipAddrs, options)

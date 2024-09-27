@@ -55,7 +55,7 @@ func TestIssueCert(t *testing.T) {
 		ttl        string
 		ipAddrs    []string
 		commonName string
-		svcresp    string
+		svcresp    certs.Certificate
 		svcerr     error
 		err        errors.SDKError
 		sdkCert    sdk.Certificate
@@ -66,7 +66,9 @@ func TestIssueCert(t *testing.T) {
 			ttl:        ttl,
 			ipAddrs:    ipAddr,
 			commonName: commonName,
-			svcresp:    serialNum,
+			svcresp: certs.Certificate{
+				SerialNumber: serialNum,
+			},
 			sdkCert: sdk.Certificate{
 				SerialNumber: serialNum,
 			},
@@ -79,7 +81,7 @@ func TestIssueCert(t *testing.T) {
 			ttl:        ttl,
 			ipAddrs:    ipAddr,
 			commonName: commonName,
-			svcresp:    "",
+			svcresp:    certs.Certificate{},
 			svcerr:     certs.ErrCreateEntity,
 			err:        errors.NewSDKErrorWithStatus(certs.ErrCreateEntity, http.StatusUnprocessableEntity),
 		},
@@ -89,7 +91,7 @@ func TestIssueCert(t *testing.T) {
 			ttl:        ttl,
 			ipAddrs:    ipAddr,
 			commonName: commonName,
-			svcresp:    "",
+			svcresp:    certs.Certificate{},
 			svcerr:     certs.ErrMalformedEntity,
 			err:        errors.NewSDKErrorWithStatus(certs.ErrMalformedEntity, http.StatusBadRequest),
 		},
@@ -98,7 +100,7 @@ func TestIssueCert(t *testing.T) {
 			entityID:   id,
 			ttl:        ttl,
 			commonName: commonName,
-			svcresp:    serialNum,
+			svcresp:    certs.Certificate{SerialNumber: serialNum},
 			sdkCert: sdk.Certificate{
 				SerialNumber: serialNum,
 			},
@@ -111,7 +113,7 @@ func TestIssueCert(t *testing.T) {
 			ttl:        "",
 			ipAddrs:    ipAddr,
 			commonName: commonName,
-			svcresp:    serialNum,
+			svcresp:    certs.Certificate{SerialNumber: serialNum},
 			sdkCert: sdk.Certificate{
 				SerialNumber: serialNum,
 			},
@@ -124,7 +126,7 @@ func TestIssueCert(t *testing.T) {
 			ttl:        ttl,
 			ipAddrs:    ipAddr,
 			commonName: "",
-			svcresp:    "",
+			svcresp:    certs.Certificate{},
 			svcerr:     httpapi.ErrMissingCN,
 			err:        errors.NewSDKErrorWithStatus(httpapi.ErrMissingCN, http.StatusBadRequest),
 		},

@@ -185,12 +185,12 @@ func NewCertsCmd() *cobra.Command {
 				}
 			}
 
-			serial, err := sdk.IssueCert(args[0], ttl, ipAddrs, option)
+			cert, err := sdk.IssueCert(args[0], ttl, ipAddrs, option)
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
-			logJSONCmd(*cmd, serial)
+			logJSONCmd(*cmd, cert)
 		},
 	}
 

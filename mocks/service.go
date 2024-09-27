@@ -145,22 +145,22 @@ func (_c *MockService_GetEntityID_Call) RunAndReturn(run func(context.Context, s
 }
 
 // IssueCert provides a mock function with given fields: ctx, entityID, ttl, ipAddrs, option
-func (_m *MockService) IssueCert(ctx context.Context, entityID string, ttl string, ipAddrs []string, option certs.SubjectOptions) (string, error) {
+func (_m *MockService) IssueCert(ctx context.Context, entityID string, ttl string, ipAddrs []string, option certs.SubjectOptions) (certs.Certificate, error) {
 	ret := _m.Called(ctx, entityID, ttl, ipAddrs, option)
 
 	if len(ret) == 0 {
 		panic("no return value specified for IssueCert")
 	}
 
-	var r0 string
+	var r0 certs.Certificate
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, []string, certs.SubjectOptions) (string, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, []string, certs.SubjectOptions) (certs.Certificate, error)); ok {
 		return rf(ctx, entityID, ttl, ipAddrs, option)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, []string, certs.SubjectOptions) string); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, []string, certs.SubjectOptions) certs.Certificate); ok {
 		r0 = rf(ctx, entityID, ttl, ipAddrs, option)
 	} else {
-		r0 = ret.Get(0).(string)
+		r0 = ret.Get(0).(certs.Certificate)
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, string, string, []string, certs.SubjectOptions) error); ok {
@@ -194,12 +194,12 @@ func (_c *MockService_IssueCert_Call) Run(run func(ctx context.Context, entityID
 	return _c
 }
 
-func (_c *MockService_IssueCert_Call) Return(_a0 string, _a1 error) *MockService_IssueCert_Call {
+func (_c *MockService_IssueCert_Call) Return(_a0 certs.Certificate, _a1 error) *MockService_IssueCert_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockService_IssueCert_Call) RunAndReturn(run func(context.Context, string, string, []string, certs.SubjectOptions) (string, error)) *MockService_IssueCert_Call {
+func (_c *MockService_IssueCert_Call) RunAndReturn(run func(context.Context, string, string, []string, certs.SubjectOptions) (certs.Certificate, error)) *MockService_IssueCert_Call {
 	_c.Call.Return(run)
 	return _c
 }

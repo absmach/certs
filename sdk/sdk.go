@@ -60,10 +60,6 @@ type Options struct {
 	PostalCode         []string `json:"postal_code"`
 }
 
-type SerialNumber struct {
-	SerialNumber string `json:"serial_number"`
-}
-
 type Token struct {
 	Token string `json:"token"`
 }
@@ -115,7 +111,7 @@ type SDK interface {
 	// example:
 	// serial , _ := sdk.IssueCert("entityID", "10h", []string{"ipAddr1", "ipAddr2"}, sdk.Options{CommonName: "commonName"})
 	//  fmt.Println(serial)
-	IssueCert(entityID, ttl string, ipAddrs []string, opts Options) (SerialNumber, errors.SDKError)
+	IssueCert(entityID, ttl string, ipAddrs []string, opts Options) (Certificate, errors.SDKError)
 
 	// DownloadCert returns a certificate given certificate ID
 	//
@@ -167,7 +163,7 @@ type SDK interface {
 	OCSP(serialNumber string) (*ocsp.Response, errors.SDKError)
 }
 
-func (sdk mgSDK) IssueCert(entityID, ttl string, ipAddrs []string, opts Options) (SerialNumber, errors.SDKError) {
+func (sdk mgSDK) IssueCert(entityID, ttl string, ipAddrs []string, opts Options) (Certificate, errors.SDKError) {
 	r := certReq{
 		IpAddrs: ipAddrs,
 		TTL:     ttl,
@@ -175,24 +171,24 @@ func (sdk mgSDK) IssueCert(entityID, ttl string, ipAddrs []string, opts Options)
 	}
 	d, err := json.Marshal(r)
 	if err != nil {
-		return SerialNumber{}, errors.NewSDKError(err)
+		return Certificate{}, errors.NewSDKError(err)
 	}
 	url := fmt.Sprintf("%s/%s", issueCertEndpoint, entityID)
 
 	url, err = sdk.withQueryParams(sdk.certsURL, url, PageMetadata{CommonName: opts.CommonName})
 	if err != nil {
-		return SerialNumber{}, errors.NewSDKError(err)
+		return Certificate{}, errors.NewSDKError(err)
 	}
 	_, body, sdkerr := sdk.processRequest(http.MethodPost, url, d, nil, http.StatusCreated)
 	if sdkerr != nil {
-		return SerialNumber{}, sdkerr
+		return Certificate{}, sdkerr
 	}
-	var sn SerialNumber
-	if err := json.Unmarshal(body, &sn); err != nil {
-		return SerialNumber{}, errors.NewSDKError(err)
+	var cert Certificate
+	if err := json.Unmarshal(body, &cert); err != nil {
+		return Certificate{}, errors.NewSDKError(err)
 	}
 
-	return sn, nil
+	return cert, nil
 }
 
 func (sdk mgSDK) DownloadCert(token, serialNumber string) (CertificateBundle, errors.SDKError) {

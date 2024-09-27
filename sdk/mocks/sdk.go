@@ -87,22 +87,22 @@ func (_c *MockSDK_DownloadCert_Call) RunAndReturn(run func(string, string) (sdk.
 }
 
 // IssueCert provides a mock function with given fields: entityID, ttl, ipAddrs, opts
-func (_m *MockSDK) IssueCert(entityID string, ttl string, ipAddrs []string, opts sdk.Options) (sdk.SerialNumber, errors.SDKError) {
+func (_m *MockSDK) IssueCert(entityID string, ttl string, ipAddrs []string, opts sdk.Options) (sdk.Certificate, errors.SDKError) {
 	ret := _m.Called(entityID, ttl, ipAddrs, opts)
 
 	if len(ret) == 0 {
 		panic("no return value specified for IssueCert")
 	}
 
-	var r0 sdk.SerialNumber
+	var r0 sdk.Certificate
 	var r1 errors.SDKError
-	if rf, ok := ret.Get(0).(func(string, string, []string, sdk.Options) (sdk.SerialNumber, errors.SDKError)); ok {
+	if rf, ok := ret.Get(0).(func(string, string, []string, sdk.Options) (sdk.Certificate, errors.SDKError)); ok {
 		return rf(entityID, ttl, ipAddrs, opts)
 	}
-	if rf, ok := ret.Get(0).(func(string, string, []string, sdk.Options) sdk.SerialNumber); ok {
+	if rf, ok := ret.Get(0).(func(string, string, []string, sdk.Options) sdk.Certificate); ok {
 		r0 = rf(entityID, ttl, ipAddrs, opts)
 	} else {
-		r0 = ret.Get(0).(sdk.SerialNumber)
+		r0 = ret.Get(0).(sdk.Certificate)
 	}
 
 	if rf, ok := ret.Get(1).(func(string, string, []string, sdk.Options) errors.SDKError); ok {
@@ -137,12 +137,12 @@ func (_c *MockSDK_IssueCert_Call) Run(run func(entityID string, ttl string, ipAd
 	return _c
 }
 
-func (_c *MockSDK_IssueCert_Call) Return(_a0 sdk.SerialNumber, _a1 errors.SDKError) *MockSDK_IssueCert_Call {
+func (_c *MockSDK_IssueCert_Call) Return(_a0 sdk.Certificate, _a1 errors.SDKError) *MockSDK_IssueCert_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockSDK_IssueCert_Call) RunAndReturn(run func(string, string, []string, sdk.Options) (sdk.SerialNumber, errors.SDKError)) *MockSDK_IssueCert_Call {
+func (_c *MockSDK_IssueCert_Call) RunAndReturn(run func(string, string, []string, sdk.Options) (sdk.Certificate, errors.SDKError)) *MockSDK_IssueCert_Call {
 	_c.Call.Return(run)
 	return _c
 }

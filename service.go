@@ -150,19 +150,19 @@ func NewService(ctx context.Context, repo Repository) (Service, error) {
 // using the provided template and the generated private key.
 // The certificate is then stored in the repository using the CreateCert method.
 // If the root CA is not found, it returns an error.
-func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options SubjectOptions) (string, error) {
+func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options SubjectOptions) (Certificate, error) {
 	privKey, err := rsa.GenerateKey(rand.Reader, PrivateKeyBytes)
 	if err != nil {
-		return "", err
+		return Certificate{}, err
 	}
 
 	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
 	if err != nil {
-		return "", err
+		return Certificate{}, err
 	}
 
 	if s.intermediateCA.Certificate == nil || s.intermediateCA.PrivateKey == nil {
-		return "", ErrIntermediateCANotFound
+		return Certificate{}, ErrIntermediateCANotFound
 	}
 
 	// Parse the TTL if provided, otherwise use the default certValidityPeriod.
@@ -170,7 +170,7 @@ func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs [
 	if ttl != "" {
 		validity, err = time.ParseDuration(ttl)
 		if err != nil {
-			return "", errors.Wrap(ErrMalformedEntity, err)
+			return Certificate{}, errors.Wrap(ErrMalformedEntity, err)
 		}
 	} else {
 		validity = certValidityPeriod
@@ -191,7 +191,7 @@ func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs [
 
 	certBytes, err := x509.CreateCertificate(rand.Reader, &template, s.intermediateCA.Certificate, &privKey.PublicKey, s.intermediateCA.PrivateKey)
 	if err != nil {
-		return "", err
+		return Certificate{}, err
 	}
 	dbCert := Certificate{
 		Key:          pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(privKey)}),
@@ -202,10 +202,17 @@ func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs [
 		Type:         ClientCert,
 	}
 	if err = s.repo.CreateCert(ctx, dbCert); err != nil {
-		return "", errors.Wrap(ErrCreateEntity, err)
+		return Certificate{}, errors.Wrap(ErrCreateEntity, err)
 	}
 
-	return dbCert.SerialNumber, nil
+	return Certificate{
+		Certificate:  dbCert.Certificate,
+		SerialNumber: dbCert.SerialNumber,
+		EntityID:     dbCert.EntityID,
+		ExpiryTime:   dbCert.ExpiryTime,
+		Revoked:      dbCert.Revoked,
+		Type:         dbCert.Type,
+	}, nil
 }
 
 // RevokeCert revokes a certificate identified by its serial number.
