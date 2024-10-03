@@ -75,24 +75,6 @@ func (res requestCertDownloadTokenRes) Empty() bool {
 	return false
 }
 
-type downloadCertRes struct {
-	Certificate []byte `json:"certificate"`
-	PrivateKey  []byte `json:"private_key"`
-	CA          []byte `json:"ca"`
-}
-
-func (res downloadCertRes) Code() int {
-	return http.StatusOK
-}
-
-func (res downloadCertRes) Headers() map[string]string {
-	return map[string]string{}
-}
-
-func (res downloadCertRes) Empty() bool {
-	return false
-}
-
 type issueCertRes struct {
 	SerialNumber string    `json:"serial_number"`
 	Certificate  string    `json:"certificate,omitempty"`
