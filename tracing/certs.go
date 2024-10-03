@@ -41,10 +41,10 @@ func (tm *tracingMiddleware) RetrieveCert(ctx context.Context, token, serialNumb
 	return tm.svc.RetrieveCert(ctx, token, serialNumber)
 }
 
-func (tm *tracingMiddleware) RetrieveCertDownloadToken(ctx context.Context, serialNumber string) (string, error) {
+func (tm *tracingMiddleware) RetrieveCertDownloadToken(ctx context.Context, serialNumber ...string) (string, error) {
 	ctx, span := tm.tracer.Start(ctx, "get_cert_download_token")
 	defer span.End()
-	return tm.svc.RetrieveCertDownloadToken(ctx, serialNumber)
+	return tm.svc.RetrieveCertDownloadToken(ctx, serialNumber...)
 }
 
 func (tm *tracingMiddleware) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options certs.SubjectOptions) (certs.Certificate, error) {
@@ -59,10 +59,10 @@ func (tm *tracingMiddleware) ListCerts(ctx context.Context, pm certs.PageMetadat
 	return tm.svc.ListCerts(ctx, pm)
 }
 
-func (s *tracingMiddleware) ViewCert(ctx context.Context, serialNumber string) (certs.Certificate, error) {
+func (s *tracingMiddleware) ViewCert(ctx context.Context, serialNumber ...string) (certs.Certificate, error) {
 	ctx, span := s.tracer.Start(ctx, "view_cert")
 	defer span.End()
-	return s.svc.ViewCert(ctx, serialNumber)
+	return s.svc.ViewCert(ctx, serialNumber...)
 }
 
 func (tm *tracingMiddleware) OCSP(ctx context.Context, serialNumber string) (*certs.Certificate, int, *x509.Certificate, error) {
@@ -81,4 +81,10 @@ func (tm *tracingMiddleware) GenerateCRL(ctx context.Context, caType certs.CertT
 	ctx, span := tm.tracer.Start(ctx, "generate_crl")
 	defer span.End()
 	return tm.svc.GenerateCRL(ctx, caType)
+}
+
+func (tm *tracingMiddleware) GetSigningCA(ctx context.Context,token string) (certs.Certificate, error) {
+	ctx, span := tm.tracer.Start(ctx, "get_signing_ca")
+	defer span.End()
+	return tm.svc.GetSigningCA(ctx, token)
 }

@@ -100,6 +100,24 @@ func MakeHandler(svc certs.Service, logger *slog.Logger, instanceID string) http
 			EncodeResponse,
 			opts...,
 		), "generate_crl").ServeHTTP)
+		r.Get("/get-ca/token", otelhttp.NewHandler(kithttp.NewServer(
+			getDownloadCATokenEndpoint(svc),
+			decodeView,
+			EncodeResponse,
+			opts...,
+		), "get_ca_token").ServeHTTP)
+		r.Get("/view-ca", otelhttp.NewHandler(kithttp.NewServer(
+			viewCAEndpoint(svc),
+			decodeDownloadCA,
+			EncodeResponse,
+			opts...,
+		), "view_ca").ServeHTTP)
+		r.Get("/download-ca", otelhttp.NewHandler(kithttp.NewServer(
+			downloadCAEndpoint(svc),
+			decodeDownloadCA,
+			encodeCADownloadResponse,
+			opts...,
+		), "download_ca").ServeHTTP)
 	})
 
 	r.Get("/health", certs.Health("certs", instanceID))
@@ -134,6 +152,18 @@ func decodeDownloadCerts(_ context.Context, r *http.Request) (interface{}, error
 	req := downloadReq{
 		token: token,
 		id:    chi.URLParam(r, "id"),
+	}
+
+	return req, nil
+}
+
+func decodeDownloadCA(_ context.Context, r *http.Request) (interface{}, error) {
+	token, err := readStringQuery(r, token, "")
+	if err != nil {
+		return nil, err
+	}
+	req := downloadReq{
+		token: token,
 	}
 
 	return req, nil
@@ -260,6 +290,41 @@ func encodeFileDownloadResponse(_ context.Context, w http.ResponseWriter, respon
 	}
 
 	f, err = zw.Create("key.pem")
+	if err != nil {
+		return err
+	}
+
+	if _, err = f.Write(resp.PrivateKey); err != nil {
+		return err
+	}
+
+	if err := zw.Close(); err != nil {
+		return err
+	}
+
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", resp.Filename))
+	w.Header().Set("Content-Type", resp.ContentType)
+
+	_, err = w.Write(buffer.Bytes())
+
+	return err
+}
+
+func encodeCADownloadResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
+	resp := response.(fileDownloadRes)
+	var buffer bytes.Buffer
+	zw := zip.NewWriter(&buffer)
+
+	f, err := zw.Create("ca.crt")
+	if err != nil {
+		return err
+	}
+
+	if _, err = f.Write(resp.Certificate); err != nil {
+		return err
+	}
+
+	f, err = zw.Create("ca.key")
 	if err != nil {
 		return err
 	}

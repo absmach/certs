@@ -138,12 +138,12 @@ func (res listCertsRes) Empty() bool {
 }
 
 type viewCertRes struct {
-	SerialNumber string    `json:"serial_number"`
+	SerialNumber string    `json:"serial_number,omitempty"`
 	Certificate  string    `json:"certificate,omitempty"`
-	Key          string    `json:"key,omitempty"`
-	Revoked      bool      `json:"revoked"`
-	ExpiryTime   time.Time `json:"expiry_time"`
-	EntityID     string    `json:"entity_id"`
+	Key          string    `json:"key,omitempty,omitempty"`
+	Revoked      bool      `json:"revoked,omitempty"`
+	ExpiryTime   time.Time `json:"expiry_time,omitempty"`
+	EntityID     string    `json:"entity_id,omitempty"`
 }
 
 func (res viewCertRes) Code() int {

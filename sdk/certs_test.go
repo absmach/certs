@@ -26,6 +26,7 @@ const (
 	id          = "c333e6f1-59bb-4c39-9e13-3a2766af8ba5"
 	ttl         = "10h"
 	commonName  = "test"
+	token       = "token"
 )
 
 func setupCerts() (*httptest.Server, *mocks.MockService) {
@@ -535,6 +536,188 @@ func TestViewCert(t *testing.T) {
 				assert.True(t, ok)
 			}
 			assert.Equal(t, tc.sdkCert.SerialNumber, c.SerialNumber, fmt.Sprintf("expected: %v, got: %v", tc.sdkCert.SerialNumber, c.SerialNumber))
+			svcCall.Unset()
+		})
+	}
+}
+
+func TestDownloadCACert(t *testing.T) {
+	ts, svc := setupCerts()
+	defer ts.Close()
+
+	sdkConfig := sdk.Config{
+		CertsURL:        ts.URL,
+		MsgContentType:  contentType,
+		TLSVerification: false,
+	}
+
+	ctsdk := sdk.NewSDK(sdkConfig)
+
+	cert := sdk.Certificate{
+		SerialNumber: serialNum,
+	}
+
+	cases := []struct {
+		desc    string
+		token   string
+		svcresp certs.Certificate
+		svcerr  error
+		err     errors.SDKError
+		sdkCert sdk.Certificate
+	}{
+		{
+			desc:  "Download CA successfully",
+			token: token,
+			svcresp: certs.Certificate{
+				SerialNumber: serialNum,
+			},
+			sdkCert: cert,
+			svcerr:  nil,
+			err:     nil,
+		},
+		{
+			desc:    "Download CA failure",
+			token:   token,
+			svcresp: certs.Certificate{},
+			svcerr:  certs.ErrViewEntity,
+			err:     errors.NewSDKErrorWithStatus(certs.ErrViewEntity, http.StatusUnprocessableEntity),
+		},
+		{
+			desc:    "Download CA with empty token",
+			token:   "",
+			svcresp: certs.Certificate{},
+			svcerr:  certs.ErrMalformedEntity,
+			err:     errors.NewSDKErrorWithStatus(certs.ErrMalformedEntity, http.StatusBadRequest),
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			svcCall := svc.On("GetSigningCA", mock.Anything, tc.token).Return(tc.svcresp, tc.svcerr)
+
+			_, err := ctsdk.DownloadCA(tc.token)
+			assert.Equal(t, tc.err, err)
+			if tc.err == nil {
+				ok := svcCall.Parent.AssertCalled(t, "GetSigningCA", mock.Anything, tc.token)
+				assert.True(t, ok)
+			}
+			svcCall.Unset()
+		})
+	}
+}
+
+func TestViewCA(t *testing.T) {
+	ts, svc := setupCerts()
+	defer ts.Close()
+
+	sdkConfig := sdk.Config{
+		CertsURL:        ts.URL,
+		MsgContentType:  contentType,
+		TLSVerification: false,
+	}
+
+	ctsdk := sdk.NewSDK(sdkConfig)
+
+	cert := sdk.Certificate{
+		SerialNumber: serialNum,
+		Certificate:  "cert",
+		Key:          "Key",
+	}
+
+	cases := []struct {
+		desc    string
+		token   string
+		svcresp certs.Certificate
+		svcerr  error
+		err     errors.SDKError
+		sdkCert sdk.Certificate
+	}{
+		{
+			desc:  "ViewCA success",
+			token: token,
+			svcresp: certs.Certificate{
+				Certificate: []byte("cert"),
+			},
+			sdkCert: cert,
+			svcerr:  nil,
+			err:     nil,
+		},
+		{
+			desc:    "ViewCA failure",
+			token:   token,
+			svcresp: certs.Certificate{},
+			svcerr:  certs.ErrViewEntity,
+			err:     errors.NewSDKErrorWithStatus(certs.ErrViewEntity, http.StatusUnprocessableEntity),
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			svcCall := svc.On("GetSigningCA", mock.Anything, tc.token).Return(tc.svcresp, tc.svcerr)
+
+			c, err := ctsdk.ViewCA(tc.token)
+			assert.Equal(t, tc.err, err)
+			if tc.err == nil {
+				ok := svcCall.Parent.AssertCalled(t, "GetSigningCA", mock.Anything, tc.token)
+				assert.True(t, ok)
+			}
+			assert.Equal(t, tc.sdkCert.Certificate, c.Certificate, fmt.Sprintf("expected: %v, got: %v", tc.sdkCert.Certificate, c.Certificate))
+			svcCall.Unset()
+		})
+	}
+}
+
+func TestGetCAToken(t *testing.T) {
+	ts, svc := setupCerts()
+	defer ts.Close()
+
+	sdkConfig := sdk.Config{
+		CertsURL:        ts.URL,
+		MsgContentType:  contentType,
+		TLSVerification: false,
+	}
+
+	ctsdk := sdk.NewSDK(sdkConfig)
+
+	token := "valid token"
+
+	cases := []struct {
+		desc    string
+		svcresp string
+		svcerr  error
+		err     errors.SDKError
+	}{
+		{
+			desc:    "RetrieveCertDownloadToken success",
+			svcresp: token,
+			svcerr:  nil,
+			err:     nil,
+		},
+		{
+			desc:    "RetrieveCertDownloadToken failure",
+			svcresp: "",
+			svcerr:  certs.ErrGetToken,
+			err:     errors.NewSDKErrorWithStatus(certs.ErrGetToken, http.StatusUnprocessableEntity),
+		},
+		{
+			desc:    "RetrieveCertDownloadToken with empty serial",
+			svcresp: "",
+			svcerr:  certs.ErrMalformedEntity,
+			err:     errors.NewSDKErrorWithStatus(certs.ErrMalformedEntity, http.StatusBadRequest),
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			svcCall := svc.On("RetrieveCertDownloadToken", mock.Anything).Return(tc.svcresp, tc.svcerr)
+
+			resp, err := ctsdk.GetCAToken()
+			assert.Equal(t, tc.err, err)
+			if tc.err == nil {
+				assert.Equal(t, tc.svcresp, resp.Token)
+				ok := svcCall.Parent.AssertCalled(t, "RetrieveCertDownloadToken", mock.Anything)
+				assert.True(t, ok)
+			}
 			svcCall.Unset()
 		})
 	}

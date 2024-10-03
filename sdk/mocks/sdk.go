@@ -27,6 +27,64 @@ func (_m *MockSDK) EXPECT() *MockSDK_Expecter {
 	return &MockSDK_Expecter{mock: &_m.Mock}
 }
 
+// DownloadCA provides a mock function with given fields: token
+func (_m *MockSDK) DownloadCA(token string) (sdk.CertificateBundle, errors.SDKError) {
+	ret := _m.Called(token)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DownloadCA")
+	}
+
+	var r0 sdk.CertificateBundle
+	var r1 errors.SDKError
+	if rf, ok := ret.Get(0).(func(string) (sdk.CertificateBundle, errors.SDKError)); ok {
+		return rf(token)
+	}
+	if rf, ok := ret.Get(0).(func(string) sdk.CertificateBundle); ok {
+		r0 = rf(token)
+	} else {
+		r0 = ret.Get(0).(sdk.CertificateBundle)
+	}
+
+	if rf, ok := ret.Get(1).(func(string) errors.SDKError); ok {
+		r1 = rf(token)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(errors.SDKError)
+		}
+	}
+
+	return r0, r1
+}
+
+// MockSDK_DownloadCA_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DownloadCA'
+type MockSDK_DownloadCA_Call struct {
+	*mock.Call
+}
+
+// DownloadCA is a helper method to define mock.On call
+//   - token string
+func (_e *MockSDK_Expecter) DownloadCA(token interface{}) *MockSDK_DownloadCA_Call {
+	return &MockSDK_DownloadCA_Call{Call: _e.mock.On("DownloadCA", token)}
+}
+
+func (_c *MockSDK_DownloadCA_Call) Run(run func(token string)) *MockSDK_DownloadCA_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string))
+	})
+	return _c
+}
+
+func (_c *MockSDK_DownloadCA_Call) Return(_a0 sdk.CertificateBundle, _a1 errors.SDKError) *MockSDK_DownloadCA_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSDK_DownloadCA_Call) RunAndReturn(run func(string) (sdk.CertificateBundle, errors.SDKError)) *MockSDK_DownloadCA_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // DownloadCert provides a mock function with given fields: token, serialNumber
 func (_m *MockSDK) DownloadCert(token string, serialNumber string) (sdk.CertificateBundle, errors.SDKError) {
 	ret := _m.Called(token, serialNumber)
@@ -82,6 +140,63 @@ func (_c *MockSDK_DownloadCert_Call) Return(_a0 sdk.CertificateBundle, _a1 error
 }
 
 func (_c *MockSDK_DownloadCert_Call) RunAndReturn(run func(string, string) (sdk.CertificateBundle, errors.SDKError)) *MockSDK_DownloadCert_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetCAToken provides a mock function with given fields:
+func (_m *MockSDK) GetCAToken() (sdk.Token, errors.SDKError) {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetCAToken")
+	}
+
+	var r0 sdk.Token
+	var r1 errors.SDKError
+	if rf, ok := ret.Get(0).(func() (sdk.Token, errors.SDKError)); ok {
+		return rf()
+	}
+	if rf, ok := ret.Get(0).(func() sdk.Token); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(sdk.Token)
+	}
+
+	if rf, ok := ret.Get(1).(func() errors.SDKError); ok {
+		r1 = rf()
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(errors.SDKError)
+		}
+	}
+
+	return r0, r1
+}
+
+// MockSDK_GetCAToken_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetCAToken'
+type MockSDK_GetCAToken_Call struct {
+	*mock.Call
+}
+
+// GetCAToken is a helper method to define mock.On call
+func (_e *MockSDK_Expecter) GetCAToken() *MockSDK_GetCAToken_Call {
+	return &MockSDK_GetCAToken_Call{Call: _e.mock.On("GetCAToken")}
+}
+
+func (_c *MockSDK_GetCAToken_Call) Run(run func()) *MockSDK_GetCAToken_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *MockSDK_GetCAToken_Call) Return(_a0 sdk.Token, _a1 errors.SDKError) *MockSDK_GetCAToken_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSDK_GetCAToken_Call) RunAndReturn(run func() (sdk.Token, errors.SDKError)) *MockSDK_GetCAToken_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -415,6 +530,64 @@ func (_c *MockSDK_RevokeCert_Call) Return(_a0 errors.SDKError) *MockSDK_RevokeCe
 }
 
 func (_c *MockSDK_RevokeCert_Call) RunAndReturn(run func(string) errors.SDKError) *MockSDK_RevokeCert_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ViewCA provides a mock function with given fields: token
+func (_m *MockSDK) ViewCA(token string) (sdk.Certificate, errors.SDKError) {
+	ret := _m.Called(token)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ViewCA")
+	}
+
+	var r0 sdk.Certificate
+	var r1 errors.SDKError
+	if rf, ok := ret.Get(0).(func(string) (sdk.Certificate, errors.SDKError)); ok {
+		return rf(token)
+	}
+	if rf, ok := ret.Get(0).(func(string) sdk.Certificate); ok {
+		r0 = rf(token)
+	} else {
+		r0 = ret.Get(0).(sdk.Certificate)
+	}
+
+	if rf, ok := ret.Get(1).(func(string) errors.SDKError); ok {
+		r1 = rf(token)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(errors.SDKError)
+		}
+	}
+
+	return r0, r1
+}
+
+// MockSDK_ViewCA_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ViewCA'
+type MockSDK_ViewCA_Call struct {
+	*mock.Call
+}
+
+// ViewCA is a helper method to define mock.On call
+//   - token string
+func (_e *MockSDK_Expecter) ViewCA(token interface{}) *MockSDK_ViewCA_Call {
+	return &MockSDK_ViewCA_Call{Call: _e.mock.On("ViewCA", token)}
+}
+
+func (_c *MockSDK_ViewCA_Call) Run(run func(token string)) *MockSDK_ViewCA_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string))
+	})
+	return _c
+}
+
+func (_c *MockSDK_ViewCA_Call) Return(_a0 sdk.Certificate, _a1 errors.SDKError) *MockSDK_ViewCA_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSDK_ViewCA_Call) RunAndReturn(run func(string) (sdk.Certificate, errors.SDKError)) *MockSDK_ViewCA_Call {
 	_c.Call.Return(run)
 	return _c
 }
