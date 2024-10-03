@@ -83,7 +83,7 @@ func (tm *tracingMiddleware) GenerateCRL(ctx context.Context, caType certs.CertT
 	return tm.svc.GenerateCRL(ctx, caType)
 }
 
-func (tm *tracingMiddleware) GetSigningCA(ctx context.Context,token string) (certs.Certificate, error) {
+func (tm *tracingMiddleware) GetSigningCA(ctx context.Context, token string) (certs.Certificate, error) {
 	ctx, span := tm.tracer.Start(ctx, "get_signing_ca")
 	defer span.End()
 	return tm.svc.GetSigningCA(ctx, token)
