@@ -366,7 +366,7 @@ func (sdk mgSDK) DownloadCA(token string) (CertificateBundle, errors.SDKError) {
 		}
 		switch file.Name {
 		case "ca.crt":
-			bundle.CA = fileContent
+			bundle.Certificate = fileContent
 		case "ca.key":
 			bundle.PrivateKey = fileContent
 		}

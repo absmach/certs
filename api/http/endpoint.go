@@ -246,7 +246,7 @@ func generateCRLEndpoint(svc certs.Service) endpoint.Endpoint {
 
 func getDownloadCATokenEndpoint(svc certs.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
-		token, err := svc.RetrieveCertDownloadToken(ctx)
+		token, err := svc.RetrieveCAToken(ctx)
 		if err != nil {
 			return requestCertDownloadTokenRes{}, err
 		}

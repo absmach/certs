@@ -35,6 +35,7 @@ const (
 	certValidityPeriod           = time.Hour * 24 * 90  // 30 days
 	rCertExpiryThreshold         = time.Hour * 24 * 30  // 30 days
 	iCertExpiryThreshold         = time.Hour * 24 * 10  // 10 days
+	downloadTokenExpiry          = time.Minute * 5
 )
 
 type CertType int
@@ -259,27 +260,23 @@ func (s *service) ListCerts(ctx context.Context, pm PageMetadata) (CertificatePa
 	return certPg, nil
 }
 
-func (s *service) ViewCert(ctx context.Context, serialNumber ...string) (Certificate, error) {
-	var cert Certificate
-	var err error
-	switch len(serialNumber) {
-	case 0:
-		cert, err = s.repo.RetrieveCert(ctx, s.intermediateCA.SerialNumber)
-		if err != nil {
-			return Certificate{}, errors.Wrap(ErrViewEntity, err)
-		}
-	case 1:
-		cert, err = s.repo.RetrieveCert(ctx, serialNumber[0])
-		if err != nil {
-			return Certificate{}, errors.Wrap(ErrViewEntity, err)
-		}
-	default:
-		return Certificate{}, errors.Wrap(ErrGetToken, ErrInvalidLength)
+func (s *service) ViewCert(ctx context.Context, serialNumber string) (Certificate, error) {
+	cert, err := s.repo.RetrieveCert(ctx, serialNumber)
+	if err != nil {
+		return Certificate{}, errors.Wrap(ErrViewEntity, err)
 	}
 	return cert, nil
 }
 
-// GetCertDownloadToken generates a download token for a certificate.
+func (s *service) ViewCA(ctx context.Context) (Certificate, error) {
+	cert, err := s.repo.RetrieveCert(ctx, s.intermediateCA.SerialNumber)
+	if err != nil {
+		return Certificate{}, errors.Wrap(ErrViewEntity, err)
+	}
+	return cert, nil
+}
+
+// RetrieveCertDownloadToken generates a download token for a certificate.
 // It verifies the token and serial number, and returns a signed JWT token string.
 // The token is valid for 5 minutes.
 // Parameters:
@@ -289,24 +286,30 @@ func (s *service) ViewCert(ctx context.Context, serialNumber ...string) (Certifi
 // Returns:
 //   - string: the signed JWT token string
 //   - error: an error if the authentication fails or any other error occurs
-func (s *service) RetrieveCertDownloadToken(ctx context.Context, serialNumber ...string) (string, error) {
-	var token string
-	var err error
-	switch len(serialNumber) {
-	case 0:
-		jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{ExpiresAt: time.Now().Add(time.Minute * 5).Unix(), Issuer: Organization, Subject: "certs"})
-		token, err = jwtToken.SignedString([]byte(s.intermediateCA.SerialNumber))
-		if err != nil {
-			return "", errors.Wrap(ErrGetToken, err)
-		}
-	case 1:
-		jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{ExpiresAt: time.Now().Add(time.Minute * 5).Unix(), Issuer: Organization, Subject: "certs"})
-		token, err = jwtToken.SignedString([]byte(serialNumber[0]))
-		if err != nil {
-			return "", errors.Wrap(ErrGetToken, err)
-		}
-	default:
-		return "", errors.Wrap(ErrGetToken, ErrInvalidLength)
+func (s *service) RetrieveCertDownloadToken(ctx context.Context, serialNumber string) (string, error) {
+	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{ExpiresAt: time.Now().Add(downloadTokenExpiry).Unix(), Issuer: Organization, Subject: "certs"})
+	token, err := jwtToken.SignedString([]byte(serialNumber))
+	if err != nil {
+		return "", errors.Wrap(ErrGetToken, err)
+	}
+
+	return token, nil
+}
+
+// RetrieveCAToken generates a download token for a certificate.
+// It verifies the token and serial number, and returns a signed JWT token string.
+// The token is valid for 5 minutes.
+// Parameters:
+//   - ctx: the context.Context object for the request
+//
+// Returns:
+//   - string: the signed JWT token string
+//   - error: an error if the authentication fails or any other error occurs
+func (s *service) RetrieveCAToken(ctx context.Context) (string, error) {
+	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{ExpiresAt: time.Now().Add(downloadTokenExpiry).Unix(), Issuer: Organization, Subject: "certs"})
+	token, err := jwtToken.SignedString([]byte(s.intermediateCA.SerialNumber))
+	if err != nil {
+		return "", errors.Wrap(ErrGetToken, err)
 	}
 
 	return token, nil

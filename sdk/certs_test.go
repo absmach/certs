@@ -570,6 +570,8 @@ func TestDownloadCACert(t *testing.T) {
 			token: token,
 			svcresp: certs.Certificate{
 				SerialNumber: serialNum,
+				Certificate:  []byte("cert"),
+				Key:          []byte("key"),
 			},
 			sdkCert: cert,
 			svcerr:  nil,

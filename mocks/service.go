@@ -440,6 +440,62 @@ func (_c *MockService_RenewCert_Call) RunAndReturn(run func(context.Context, str
 	return _c
 }
 
+// RetrieveCAToken provides a mock function with given fields: ctx
+func (_m *MockService) RetrieveCAToken(ctx context.Context) (string, error) {
+	ret := _m.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RetrieveCAToken")
+	}
+
+	var r0 string
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) (string, error)); ok {
+		return rf(ctx)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context) string); ok {
+		r0 = rf(ctx)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockService_RetrieveCAToken_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RetrieveCAToken'
+type MockService_RetrieveCAToken_Call struct {
+	*mock.Call
+}
+
+// RetrieveCAToken is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockService_Expecter) RetrieveCAToken(ctx interface{}) *MockService_RetrieveCAToken_Call {
+	return &MockService_RetrieveCAToken_Call{Call: _e.mock.On("RetrieveCAToken", ctx)}
+}
+
+func (_c *MockService_RetrieveCAToken_Call) Run(run func(ctx context.Context)) *MockService_RetrieveCAToken_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context))
+	})
+	return _c
+}
+
+func (_c *MockService_RetrieveCAToken_Call) Return(_a0 string, _a1 error) *MockService_RetrieveCAToken_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockService_RetrieveCAToken_Call) RunAndReturn(run func(context.Context) (string, error)) *MockService_RetrieveCAToken_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // RetrieveCert provides a mock function with given fields: ctx, token, serialNumber
 func (_m *MockService) RetrieveCert(ctx context.Context, token string, serialNumber string) (certs.Certificate, []byte, error) {
 	ret := _m.Called(ctx, token, serialNumber)
@@ -508,15 +564,8 @@ func (_c *MockService_RetrieveCert_Call) RunAndReturn(run func(context.Context, 
 }
 
 // RetrieveCertDownloadToken provides a mock function with given fields: ctx, serialNumber
-func (_m *MockService) RetrieveCertDownloadToken(ctx context.Context, serialNumber ...string) (string, error) {
-	_va := make([]interface{}, len(serialNumber))
-	for _i := range serialNumber {
-		_va[_i] = serialNumber[_i]
-	}
-	var _ca []interface{}
-	_ca = append(_ca, ctx)
-	_ca = append(_ca, _va...)
-	ret := _m.Called(_ca...)
+func (_m *MockService) RetrieveCertDownloadToken(ctx context.Context, serialNumber string) (string, error) {
+	ret := _m.Called(ctx, serialNumber)
 
 	if len(ret) == 0 {
 		panic("no return value specified for RetrieveCertDownloadToken")
@@ -524,17 +573,17 @@ func (_m *MockService) RetrieveCertDownloadToken(ctx context.Context, serialNumb
 
 	var r0 string
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, ...string) (string, error)); ok {
-		return rf(ctx, serialNumber...)
+	if rf, ok := ret.Get(0).(func(context.Context, string) (string, error)); ok {
+		return rf(ctx, serialNumber)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, ...string) string); ok {
-		r0 = rf(ctx, serialNumber...)
+	if rf, ok := ret.Get(0).(func(context.Context, string) string); ok {
+		r0 = rf(ctx, serialNumber)
 	} else {
 		r0 = ret.Get(0).(string)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, ...string) error); ok {
-		r1 = rf(ctx, serialNumber...)
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, serialNumber)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -549,21 +598,14 @@ type MockService_RetrieveCertDownloadToken_Call struct {
 
 // RetrieveCertDownloadToken is a helper method to define mock.On call
 //   - ctx context.Context
-//   - serialNumber ...string
-func (_e *MockService_Expecter) RetrieveCertDownloadToken(ctx interface{}, serialNumber ...interface{}) *MockService_RetrieveCertDownloadToken_Call {
-	return &MockService_RetrieveCertDownloadToken_Call{Call: _e.mock.On("RetrieveCertDownloadToken",
-		append([]interface{}{ctx}, serialNumber...)...)}
+//   - serialNumber string
+func (_e *MockService_Expecter) RetrieveCertDownloadToken(ctx interface{}, serialNumber interface{}) *MockService_RetrieveCertDownloadToken_Call {
+	return &MockService_RetrieveCertDownloadToken_Call{Call: _e.mock.On("RetrieveCertDownloadToken", ctx, serialNumber)}
 }
 
-func (_c *MockService_RetrieveCertDownloadToken_Call) Run(run func(ctx context.Context, serialNumber ...string)) *MockService_RetrieveCertDownloadToken_Call {
+func (_c *MockService_RetrieveCertDownloadToken_Call) Run(run func(ctx context.Context, serialNumber string)) *MockService_RetrieveCertDownloadToken_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]string, len(args)-1)
-		for i, a := range args[1:] {
-			if a != nil {
-				variadicArgs[i] = a.(string)
-			}
-		}
-		run(args[0].(context.Context), variadicArgs...)
+		run(args[0].(context.Context), args[1].(string))
 	})
 	return _c
 }
@@ -573,7 +615,7 @@ func (_c *MockService_RetrieveCertDownloadToken_Call) Return(_a0 string, _a1 err
 	return _c
 }
 
-func (_c *MockService_RetrieveCertDownloadToken_Call) RunAndReturn(run func(context.Context, ...string) (string, error)) *MockService_RetrieveCertDownloadToken_Call {
+func (_c *MockService_RetrieveCertDownloadToken_Call) RunAndReturn(run func(context.Context, string) (string, error)) *MockService_RetrieveCertDownloadToken_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -626,15 +668,8 @@ func (_c *MockService_RevokeCert_Call) RunAndReturn(run func(context.Context, st
 }
 
 // ViewCert provides a mock function with given fields: ctx, serialNumber
-func (_m *MockService) ViewCert(ctx context.Context, serialNumber ...string) (certs.Certificate, error) {
-	_va := make([]interface{}, len(serialNumber))
-	for _i := range serialNumber {
-		_va[_i] = serialNumber[_i]
-	}
-	var _ca []interface{}
-	_ca = append(_ca, ctx)
-	_ca = append(_ca, _va...)
-	ret := _m.Called(_ca...)
+func (_m *MockService) ViewCert(ctx context.Context, serialNumber string) (certs.Certificate, error) {
+	ret := _m.Called(ctx, serialNumber)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ViewCert")
@@ -642,17 +677,17 @@ func (_m *MockService) ViewCert(ctx context.Context, serialNumber ...string) (ce
 
 	var r0 certs.Certificate
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, ...string) (certs.Certificate, error)); ok {
-		return rf(ctx, serialNumber...)
+	if rf, ok := ret.Get(0).(func(context.Context, string) (certs.Certificate, error)); ok {
+		return rf(ctx, serialNumber)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, ...string) certs.Certificate); ok {
-		r0 = rf(ctx, serialNumber...)
+	if rf, ok := ret.Get(0).(func(context.Context, string) certs.Certificate); ok {
+		r0 = rf(ctx, serialNumber)
 	} else {
 		r0 = ret.Get(0).(certs.Certificate)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, ...string) error); ok {
-		r1 = rf(ctx, serialNumber...)
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, serialNumber)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -667,21 +702,14 @@ type MockService_ViewCert_Call struct {
 
 // ViewCert is a helper method to define mock.On call
 //   - ctx context.Context
-//   - serialNumber ...string
-func (_e *MockService_Expecter) ViewCert(ctx interface{}, serialNumber ...interface{}) *MockService_ViewCert_Call {
-	return &MockService_ViewCert_Call{Call: _e.mock.On("ViewCert",
-		append([]interface{}{ctx}, serialNumber...)...)}
+//   - serialNumber string
+func (_e *MockService_Expecter) ViewCert(ctx interface{}, serialNumber interface{}) *MockService_ViewCert_Call {
+	return &MockService_ViewCert_Call{Call: _e.mock.On("ViewCert", ctx, serialNumber)}
 }
 
-func (_c *MockService_ViewCert_Call) Run(run func(ctx context.Context, serialNumber ...string)) *MockService_ViewCert_Call {
+func (_c *MockService_ViewCert_Call) Run(run func(ctx context.Context, serialNumber string)) *MockService_ViewCert_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]string, len(args)-1)
-		for i, a := range args[1:] {
-			if a != nil {
-				variadicArgs[i] = a.(string)
-			}
-		}
-		run(args[0].(context.Context), variadicArgs...)
+		run(args[0].(context.Context), args[1].(string))
 	})
 	return _c
 }
@@ -691,7 +719,7 @@ func (_c *MockService_ViewCert_Call) Return(_a0 certs.Certificate, _a1 error) *M
 	return _c
 }
 
-func (_c *MockService_ViewCert_Call) RunAndReturn(run func(context.Context, ...string) (certs.Certificate, error)) *MockService_ViewCert_Call {
+func (_c *MockService_ViewCert_Call) RunAndReturn(run func(context.Context, string) (certs.Certificate, error)) *MockService_ViewCert_Call {
 	_c.Call.Return(run)
 	return _c
 }

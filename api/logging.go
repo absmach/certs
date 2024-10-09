@@ -61,7 +61,7 @@ func (lm *loggingMiddleware) RevokeCert(ctx context.Context, serialNumber string
 	return lm.svc.RevokeCert(ctx, serialNumber)
 }
 
-func (lm *loggingMiddleware) RetrieveCertDownloadToken(ctx context.Context, serialNumber ...string) (tokenString string, err error) {
+func (lm *loggingMiddleware) RetrieveCertDownloadToken(ctx context.Context, serialNumber string) (tokenString string, err error) {
 	defer func(begin time.Time) {
 		message := fmt.Sprintf("Method get_cert_download_token for cert took %s to complete", time.Since(begin))
 		if err != nil {
@@ -70,7 +70,19 @@ func (lm *loggingMiddleware) RetrieveCertDownloadToken(ctx context.Context, seri
 		}
 		lm.logger.Info(message)
 	}(time.Now())
-	return lm.svc.RetrieveCertDownloadToken(ctx, serialNumber...)
+	return lm.svc.RetrieveCertDownloadToken(ctx, serialNumber)
+}
+
+func (lm *loggingMiddleware) RetrieveCAToken(ctx context.Context) (tokenString string, err error) {
+	defer func(begin time.Time) {
+		message := fmt.Sprintf("Method get_cert_download_token for cert took %s to complete", time.Since(begin))
+		if err != nil {
+			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
+			return
+		}
+		lm.logger.Info(message)
+	}(time.Now())
+	return lm.svc.RetrieveCAToken(ctx)
 }
 
 func (lm *loggingMiddleware) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options certs.SubjectOptions) (cert certs.Certificate, err error) {
@@ -97,7 +109,7 @@ func (lm *loggingMiddleware) ListCerts(ctx context.Context, pm certs.PageMetadat
 	return lm.svc.ListCerts(ctx, pm)
 }
 
-func (lm *loggingMiddleware) ViewCert(ctx context.Context, serialNumber ...string) (cert certs.Certificate, err error) {
+func (lm *loggingMiddleware) ViewCert(ctx context.Context, serialNumber string) (cert certs.Certificate, err error) {
 	defer func(begin time.Time) {
 		message := fmt.Sprintf("Method view_cert for serial number %s took %s to complete", serialNumber, time.Since(begin))
 		if err != nil {
@@ -106,7 +118,7 @@ func (lm *loggingMiddleware) ViewCert(ctx context.Context, serialNumber ...strin
 		}
 		lm.logger.Info(message)
 	}(time.Now())
-	return lm.svc.ViewCert(ctx, serialNumber...)
+	return lm.svc.ViewCert(ctx, serialNumber)
 }
 
 func (lm *loggingMiddleware) OCSP(ctx context.Context, serialNumber string) (cert *certs.Certificate, ocspStatus int, rootCACert *x509.Certificate, err error) {

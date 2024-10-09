@@ -53,13 +53,22 @@ func (mm *metricsMiddleware) RevokeCert(ctx context.Context, serialNumber string
 	return mm.svc.RevokeCert(ctx, serialNumber)
 }
 
-func (mm *metricsMiddleware) RetrieveCertDownloadToken(ctx context.Context, serialNumber ...string) (string, error) {
+func (mm *metricsMiddleware) RetrieveCertDownloadToken(ctx context.Context, serialNumber string) (string, error) {
 	defer func(begin time.Time) {
 		mm.counter.With("method", "get_certificate_download_token").Add(1)
 		mm.latency.With("method", "get_certificate_download_token").Observe(time.Since(begin).Seconds())
 	}(time.Now())
 
-	return mm.svc.RetrieveCertDownloadToken(ctx, serialNumber...)
+	return mm.svc.RetrieveCertDownloadToken(ctx, serialNumber)
+}
+
+func (mm *metricsMiddleware) RetrieveCAToken(ctx context.Context) (string, error) {
+	defer func(begin time.Time) {
+		mm.counter.With("method", "get_CA_token").Add(1)
+		mm.latency.With("method", "get_CA_token").Observe(time.Since(begin).Seconds())
+	}(time.Now())
+
+	return mm.svc.RetrieveCAToken(ctx)
 }
 
 func (mm *metricsMiddleware) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options certs.SubjectOptions) (certs.Certificate, error) {
@@ -78,13 +87,13 @@ func (mm *metricsMiddleware) ListCerts(ctx context.Context, pm certs.PageMetadat
 	return mm.svc.ListCerts(ctx, pm)
 }
 
-func (mm *metricsMiddleware) ViewCert(ctx context.Context, serialNumber ...string) (certs.Certificate, error) {
+func (mm *metricsMiddleware) ViewCert(ctx context.Context, serialNumber string) (certs.Certificate, error) {
 	defer func(begin time.Time) {
 		mm.counter.With("method", "view_certificate").Add(1)
 		mm.latency.With("method", "view_certificate").Observe(time.Since(begin).Seconds())
 	}(time.Now())
 
-	return mm.svc.ViewCert(ctx, serialNumber...)
+	return mm.svc.ViewCert(ctx, serialNumber)
 }
 
 func (mm *metricsMiddleware) OCSP(ctx context.Context, serialNumber string) (*certs.Certificate, int, *x509.Certificate, error) {
