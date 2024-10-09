@@ -35,6 +35,7 @@ const (
 	certValidityPeriod           = time.Hour * 24 * 90  // 30 days
 	rCertExpiryThreshold         = time.Hour * 24 * 30  // 30 days
 	iCertExpiryThreshold         = time.Hour * 24 * 10  // 10 days
+	downloadTokenExpiry          = time.Minute * 5
 )
 
 type CertType int
@@ -99,6 +100,7 @@ var (
 	ErrCertExpired            = errors.New("certificate expired before renewal")
 	ErrCertRevoked            = errors.New("certificate has been revoked and cannot be renewed")
 	ErrCertInvalidType        = errors.New("invalid cert type")
+	ErrInvalidLength          = errors.New("invalid length of serial numbers")
 )
 
 type SubjectOptions struct {
@@ -266,7 +268,15 @@ func (s *service) ViewCert(ctx context.Context, serialNumber string) (Certificat
 	return cert, nil
 }
 
-// GetCertDownloadToken generates a download token for a certificate.
+func (s *service) ViewCA(ctx context.Context) (Certificate, error) {
+	cert, err := s.repo.RetrieveCert(ctx, s.intermediateCA.SerialNumber)
+	if err != nil {
+		return Certificate{}, errors.Wrap(ErrViewEntity, err)
+	}
+	return cert, nil
+}
+
+// RetrieveCertDownloadToken generates a download token for a certificate.
 // It verifies the token and serial number, and returns a signed JWT token string.
 // The token is valid for 5 minutes.
 // Parameters:
@@ -277,11 +287,31 @@ func (s *service) ViewCert(ctx context.Context, serialNumber string) (Certificat
 //   - string: the signed JWT token string
 //   - error: an error if the authentication fails or any other error occurs
 func (s *service) RetrieveCertDownloadToken(ctx context.Context, serialNumber string) (string, error) {
-	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{ExpiresAt: time.Now().Add(time.Minute * 5).Unix(), Issuer: Organization, Subject: "certs"})
+	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{ExpiresAt: time.Now().Add(downloadTokenExpiry).Unix(), Issuer: Organization, Subject: "certs"})
 	token, err := jwtToken.SignedString([]byte(serialNumber))
 	if err != nil {
 		return "", errors.Wrap(ErrGetToken, err)
 	}
+
+	return token, nil
+}
+
+// RetrieveCAToken generates a download token for a certificate.
+// It verifies the token and serial number, and returns a signed JWT token string.
+// The token is valid for 5 minutes.
+// Parameters:
+//   - ctx: the context.Context object for the request
+//
+// Returns:
+//   - string: the signed JWT token string
+//   - error: an error if the authentication fails or any other error occurs
+func (s *service) RetrieveCAToken(ctx context.Context) (string, error) {
+	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{ExpiresAt: time.Now().Add(downloadTokenExpiry).Unix(), Issuer: Organization, Subject: "certs"})
+	token, err := jwtToken.SignedString([]byte(s.intermediateCA.SerialNumber))
+	if err != nil {
+		return "", errors.Wrap(ErrGetToken, err)
+	}
+
 	return token, nil
 }
 
@@ -412,6 +442,20 @@ func (s *service) GenerateCRL(ctx context.Context, caType CertType) ([]byte, err
 	pemBytes := pem.EncodeToMemory(pemBlock)
 
 	return pemBytes, nil
+}
+
+func (s *service) GetSigningCA(ctx context.Context, token string) (Certificate, error) {
+	if _, err := jwt.ParseWithClaims(token, &jwt.StandardClaims{Issuer: Organization, Subject: "certs"}, func(token *jwt.Token) (interface{}, error) {
+		return []byte(s.intermediateCA.SerialNumber), nil
+	}); err != nil {
+		return Certificate{}, errors.Wrap(err, ErrMalformedEntity)
+	}
+
+	cert, err := s.repo.RetrieveCert(ctx, s.intermediateCA.SerialNumber)
+	if err != nil {
+		return Certificate{}, errors.Wrap(ErrViewEntity, err)
+	}
+	return cert, nil
 }
 
 func (s *service) generateRootCA(ctx context.Context) (*CA, error) {

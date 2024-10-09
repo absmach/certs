@@ -67,7 +67,7 @@ func downloadCertEndpoint(svc certs.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(downloadReq)
 		if err := req.validate(); err != nil {
-			return downloadCertRes{}, err
+			return fileDownloadRes{}, err
 		}
 		cert, ca, err := svc.RetrieveCert(ctx, req.token, req.id)
 		if err != nil {
@@ -240,6 +240,57 @@ func generateCRLEndpoint(svc certs.Service) endpoint.Endpoint {
 
 		return crlRes{
 			CrlBytes: crlBytes,
+		}, nil
+	}
+}
+
+func getDownloadCATokenEndpoint(svc certs.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		token, err := svc.RetrieveCAToken(ctx)
+		if err != nil {
+			return requestCertDownloadTokenRes{}, err
+		}
+
+		return requestCertDownloadTokenRes{Token: token}, nil
+	}
+}
+
+func downloadCAEndpoint(svc certs.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req := request.(downloadReq)
+		if err := req.validate(); err != nil {
+			return fileDownloadRes{}, err
+		}
+
+		cert, err := svc.GetSigningCA(ctx, req.token)
+		if err != nil {
+			return fileDownloadRes{}, err
+		}
+
+		return fileDownloadRes{
+			Certificate: cert.Certificate,
+			PrivateKey:  cert.Key,
+			Filename:    "ca.zip",
+			ContentType: "application/zip",
+		}, nil
+	}
+}
+
+func viewCAEndpoint(svc certs.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req := request.(downloadReq)
+		if err := req.validate(); err != nil {
+			return viewCertRes{}, err
+		}
+
+		cert, err := svc.GetSigningCA(ctx, req.token)
+		if err != nil {
+			return viewCertRes{}, err
+		}
+
+		return viewCertRes{
+			Certificate: string(cert.Certificate),
+			Key:         string(cert.Key),
 		}, nil
 	}
 }

@@ -47,6 +47,12 @@ func (tm *tracingMiddleware) RetrieveCertDownloadToken(ctx context.Context, seri
 	return tm.svc.RetrieveCertDownloadToken(ctx, serialNumber)
 }
 
+func (tm *tracingMiddleware) RetrieveCAToken(ctx context.Context) (string, error) {
+	ctx, span := tm.tracer.Start(ctx, "get_CA_download_token")
+	defer span.End()
+	return tm.svc.RetrieveCAToken(ctx)
+}
+
 func (tm *tracingMiddleware) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options certs.SubjectOptions) (certs.Certificate, error) {
 	ctx, span := tm.tracer.Start(ctx, "issue_cert")
 	defer span.End()
@@ -81,4 +87,10 @@ func (tm *tracingMiddleware) GenerateCRL(ctx context.Context, caType certs.CertT
 	ctx, span := tm.tracer.Start(ctx, "generate_crl")
 	defer span.End()
 	return tm.svc.GenerateCRL(ctx, caType)
+}
+
+func (tm *tracingMiddleware) GetSigningCA(ctx context.Context, token string) (certs.Certificate, error) {
+	ctx, span := tm.tracer.Start(ctx, "get_signing_ca")
+	defer span.End()
+	return tm.svc.GetSigningCA(ctx, token)
 }

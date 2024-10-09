@@ -15,9 +15,6 @@ type downloadReq struct {
 }
 
 func (req downloadReq) validate() error {
-	if req.id == "" {
-		return errors.Wrap(certs.ErrMalformedEntity, ErrEmptySerialNo)
-	}
 	if req.token == "" {
 		return errors.Wrap(certs.ErrMalformedEntity, ErrEmptyToken)
 	}

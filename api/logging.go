@@ -63,7 +63,7 @@ func (lm *loggingMiddleware) RevokeCert(ctx context.Context, serialNumber string
 
 func (lm *loggingMiddleware) RetrieveCertDownloadToken(ctx context.Context, serialNumber string) (tokenString string, err error) {
 	defer func(begin time.Time) {
-		message := fmt.Sprintf("Method get_cert_download_token for cert %s took %s to complete", serialNumber, time.Since(begin))
+		message := fmt.Sprintf("Method get_cert_download_token for cert took %s to complete", time.Since(begin))
 		if err != nil {
 			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
 			return
@@ -71,6 +71,18 @@ func (lm *loggingMiddleware) RetrieveCertDownloadToken(ctx context.Context, seri
 		lm.logger.Info(message)
 	}(time.Now())
 	return lm.svc.RetrieveCertDownloadToken(ctx, serialNumber)
+}
+
+func (lm *loggingMiddleware) RetrieveCAToken(ctx context.Context) (tokenString string, err error) {
+	defer func(begin time.Time) {
+		message := fmt.Sprintf("Method get_cert_download_token for cert took %s to complete", time.Since(begin))
+		if err != nil {
+			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
+			return
+		}
+		lm.logger.Info(message)
+	}(time.Now())
+	return lm.svc.RetrieveCAToken(ctx)
 }
 
 func (lm *loggingMiddleware) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options certs.SubjectOptions) (cert certs.Certificate, err error) {
@@ -143,4 +155,16 @@ func (lm *loggingMiddleware) GenerateCRL(ctx context.Context, caType certs.CertT
 		lm.logger.Info(message)
 	}(time.Now())
 	return lm.svc.GenerateCRL(ctx, caType)
+}
+
+func (lm *loggingMiddleware) GetSigningCA(ctx context.Context, token string) (cert certs.Certificate, err error) {
+	defer func(begin time.Time) {
+		message := fmt.Sprintf("Method get_signing_ca took %s to complete", time.Since(begin))
+		if err != nil {
+			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
+			return
+		}
+		lm.logger.Info(message)
+	}(time.Now())
+	return lm.svc.GetSigningCA(ctx, token)
 }

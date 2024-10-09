@@ -139,7 +139,7 @@ var cmdCerts = []cobra.Command{
 		},
 	},
 	{
-		Use:   "view <serial_number> ",
+		Use:   "view <serial_number>",
 		Short: "View certificate",
 		Long:  `Views a certificate for a given serial number.`,
 		Run: func(cmd *cobra.Command, args []string) {
@@ -153,6 +153,57 @@ var cmdCerts = []cobra.Command{
 				return
 			}
 			logJSONCmd(*cmd, cert)
+		},
+	},
+	{
+		Use:   "view-ca <token>",
+		Short: "View-ca certificate",
+		Long:  `Views ca certificate key with a given token.`,
+		Run: func(cmd *cobra.Command, args []string) {
+			if len(args) != 1 {
+				logUsageCmd(*cmd, cmd.Use)
+				return
+			}
+			cert, err := sdk.ViewCA(args[0])
+			if err != nil {
+				logErrorCmd(*cmd, err)
+				return
+			}
+			logJSONCmd(*cmd, cert)
+		},
+	},
+	{
+		Use:   "download-ca <token>",
+		Short: "Download signing CA",
+		Long:  `Download intermediate cert and ca with a given token.`,
+		Run: func(cmd *cobra.Command, args []string) {
+			if len(args) != 1 {
+				logUsageCmd(*cmd, cmd.Use)
+				return
+			}
+			bundle, err := sdk.DownloadCA(args[0])
+			if err != nil {
+				logErrorCmd(*cmd, err)
+				return
+			}
+			logSaveCAFiles(*cmd, bundle)
+		},
+	},
+	{
+		Use:   "token-ca",
+		Short: "Get CA token",
+		Long:  `Gets a download token for CA.`,
+		Run: func(cmd *cobra.Command, args []string) {
+			if len(args) != 0 {
+				logUsageCmd(*cmd, cmd.Use)
+				return
+			}
+			token, err := sdk.GetCAToken()
+			if err != nil {
+				logErrorCmd(*cmd, err)
+				return
+			}
+			logJSONCmd(*cmd, token)
 		},
 	},
 }

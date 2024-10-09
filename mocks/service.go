@@ -144,6 +144,63 @@ func (_c *MockService_GetEntityID_Call) RunAndReturn(run func(context.Context, s
 	return _c
 }
 
+// GetSigningCA provides a mock function with given fields: ctx, token
+func (_m *MockService) GetSigningCA(ctx context.Context, token string) (certs.Certificate, error) {
+	ret := _m.Called(ctx, token)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetSigningCA")
+	}
+
+	var r0 certs.Certificate
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) (certs.Certificate, error)); ok {
+		return rf(ctx, token)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string) certs.Certificate); ok {
+		r0 = rf(ctx, token)
+	} else {
+		r0 = ret.Get(0).(certs.Certificate)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, token)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockService_GetSigningCA_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetSigningCA'
+type MockService_GetSigningCA_Call struct {
+	*mock.Call
+}
+
+// GetSigningCA is a helper method to define mock.On call
+//   - ctx context.Context
+//   - token string
+func (_e *MockService_Expecter) GetSigningCA(ctx interface{}, token interface{}) *MockService_GetSigningCA_Call {
+	return &MockService_GetSigningCA_Call{Call: _e.mock.On("GetSigningCA", ctx, token)}
+}
+
+func (_c *MockService_GetSigningCA_Call) Run(run func(ctx context.Context, token string)) *MockService_GetSigningCA_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *MockService_GetSigningCA_Call) Return(_a0 certs.Certificate, _a1 error) *MockService_GetSigningCA_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockService_GetSigningCA_Call) RunAndReturn(run func(context.Context, string) (certs.Certificate, error)) *MockService_GetSigningCA_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // IssueCert provides a mock function with given fields: ctx, entityID, ttl, ipAddrs, option
 func (_m *MockService) IssueCert(ctx context.Context, entityID string, ttl string, ipAddrs []string, option certs.SubjectOptions) (certs.Certificate, error) {
 	ret := _m.Called(ctx, entityID, ttl, ipAddrs, option)
@@ -379,6 +436,62 @@ func (_c *MockService_RenewCert_Call) Return(_a0 error) *MockService_RenewCert_C
 }
 
 func (_c *MockService_RenewCert_Call) RunAndReturn(run func(context.Context, string) error) *MockService_RenewCert_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RetrieveCAToken provides a mock function with given fields: ctx
+func (_m *MockService) RetrieveCAToken(ctx context.Context) (string, error) {
+	ret := _m.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RetrieveCAToken")
+	}
+
+	var r0 string
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) (string, error)); ok {
+		return rf(ctx)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context) string); ok {
+		r0 = rf(ctx)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockService_RetrieveCAToken_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RetrieveCAToken'
+type MockService_RetrieveCAToken_Call struct {
+	*mock.Call
+}
+
+// RetrieveCAToken is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockService_Expecter) RetrieveCAToken(ctx interface{}) *MockService_RetrieveCAToken_Call {
+	return &MockService_RetrieveCAToken_Call{Call: _e.mock.On("RetrieveCAToken", ctx)}
+}
+
+func (_c *MockService_RetrieveCAToken_Call) Run(run func(ctx context.Context)) *MockService_RetrieveCAToken_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context))
+	})
+	return _c
+}
+
+func (_c *MockService_RetrieveCAToken_Call) Return(_a0 string, _a1 error) *MockService_RetrieveCAToken_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockService_RetrieveCAToken_Call) RunAndReturn(run func(context.Context) (string, error)) *MockService_RetrieveCAToken_Call {
 	_c.Call.Return(run)
 	return _c
 }

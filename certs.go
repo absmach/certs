@@ -40,7 +40,7 @@ type Service interface {
 	RevokeCert(ctx context.Context, serialNumber string) error
 
 	// RetrieveCert retrieves a certificate record from the database.
-	RetrieveCert(ctx context.Context, token string, serialNumber string) (Certificate, []byte, error)
+	RetrieveCert(ctx context.Context, token, serialNumber string) (Certificate, []byte, error)
 
 	// ViewCert retrieves a certificate record from the database.
 	ViewCert(ctx context.Context, serialNumber string) (Certificate, error)
@@ -48,8 +48,13 @@ type Service interface {
 	// ListCerts retrieves the certificates from the database while applying filters.
 	ListCerts(ctx context.Context, pm PageMetadata) (CertificatePage, error)
 
-	// RetrieveCertDownloadToken retrieves a certificate download token.
+	// RetrieveCertDownloadToken generates a certificate download token.
+	// The token is needed to download the client certificate.
 	RetrieveCertDownloadToken(ctx context.Context, serialNumber string) (string, error)
+
+	// RetrieveCAToken generates a CA download and view token.
+	// The token is needed to view and download the CA certificate.
+	RetrieveCAToken(ctx context.Context) (string, error)
 
 	// IssueCert issues a certificate from the database.
 	IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, option SubjectOptions) (Certificate, error)
@@ -60,8 +65,11 @@ type Service interface {
 	// GetEntityID retrieves the entity ID for a certificate.
 	GetEntityID(ctx context.Context, serialNumber string) (string, error)
 
-	// GenerateCRL creates
+	// GenerateCRL creates cert revocation list.
 	GenerateCRL(ctx context.Context, caType CertType) ([]byte, error)
+
+	// Retrieves the signing CA.
+	GetSigningCA(ctx context.Context, token string) (Certificate, error)
 }
 
 type Repository interface {

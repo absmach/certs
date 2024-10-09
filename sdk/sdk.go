@@ -65,12 +65,12 @@ type Token struct {
 }
 
 type Certificate struct {
-	SerialNumber string    `json:"serial_number"`
+	SerialNumber string    `json:"serial_number,omitempty"`
 	Certificate  string    `json:"certificate,omitempty"`
 	Key          string    `json:"key,omitempty"`
-	Revoked      bool      `json:"revoked"`
-	ExpiryTime   time.Time `json:"expiry_time"`
-	EntityID     string    `json:"entity_id"`
+	Revoked      bool      `json:"revoked,omitempty"`
+	ExpiryTime   time.Time `json:"expiry_time,omitempty"`
+	EntityID     string    `json:"entity_id,omitempty"`
 	DownloadUrl  string    `json:"-"`
 }
 
@@ -161,6 +161,27 @@ type SDK interface {
 	//  response, _ := sdk.OCSP("serialNumber")
 	//  fmt.Println(response)
 	OCSP(serialNumber string) (*ocsp.Response, errors.SDKError)
+
+	// ViewCA views the signing certificate
+	//
+	// example:
+	//  response, _ := sdk.ViewCA(token)
+	//  fmt.Println(response)
+	ViewCA(token string) (Certificate, errors.SDKError)
+
+	// DownloadCA downloads the signing certificate
+	//
+	// example:
+	//  response, _ := sdk.DownloadCA(token)
+	//  fmt.Println(response)
+	DownloadCA(token string) (CertificateBundle, errors.SDKError)
+
+	// GetCAToken get token for viewing and downloading CA
+	//
+	// example:
+	//  response, _ := sdk.GetCAToken()
+	//  fmt.Println(response)
+	GetCAToken() (Token, errors.SDKError)
 }
 
 func (sdk mgSDK) IssueCert(entityID, ttl string, ipAddrs []string, opts Options) (Certificate, errors.SDKError) {
@@ -296,6 +317,76 @@ func (sdk mgSDK) OCSP(serialNumber string) (*ocsp.Response, errors.SDKError) {
 		return &ocsp.Response{}, errors.NewSDKError(err)
 	}
 	return ocspResp, nil
+}
+
+func (sdk mgSDK) ViewCA(token string) (Certificate, errors.SDKError) {
+	pm := PageMetadata{
+		Token: token,
+	}
+	url, err := sdk.withQueryParams(sdk.certsURL, fmt.Sprintf("%s/view-ca", certsEndpoint), pm)
+	if err != nil {
+		return Certificate{}, errors.NewSDKError(err)
+	}
+
+	_, body, sdkerr := sdk.processRequest(http.MethodGet, url, nil, nil, http.StatusOK)
+	if sdkerr != nil {
+		return Certificate{}, sdkerr
+	}
+
+	var cert Certificate
+	if err := json.Unmarshal(body, &cert); err != nil {
+		return Certificate{}, errors.NewSDKError(err)
+	}
+	return cert, nil
+}
+
+func (sdk mgSDK) DownloadCA(token string) (CertificateBundle, errors.SDKError) {
+	pm := PageMetadata{
+		Token: token,
+	}
+	url, err := sdk.withQueryParams(sdk.certsURL, fmt.Sprintf("%s/download-ca", certsEndpoint), pm)
+	if err != nil {
+		return CertificateBundle{}, errors.NewSDKError(err)
+	}
+	_, body, sdkerr := sdk.processRequest(http.MethodGet, url, nil, nil, http.StatusOK)
+	if sdkerr != nil {
+		return CertificateBundle{}, sdkerr
+	}
+
+	zipReader, err := zip.NewReader(bytes.NewReader(body), int64(len(body)))
+	if err != nil {
+		return CertificateBundle{}, errors.NewSDKError(err)
+	}
+
+	var bundle CertificateBundle
+	for _, file := range zipReader.File {
+		fileContent, err := readZipFile(file)
+		if err != nil {
+			return CertificateBundle{}, errors.NewSDKError(err)
+		}
+		switch file.Name {
+		case "ca.crt":
+			bundle.Certificate = fileContent
+		case "ca.key":
+			bundle.PrivateKey = fileContent
+		}
+	}
+
+	return bundle, nil
+}
+
+func (sdk mgSDK) GetCAToken() (Token, errors.SDKError) {
+	url := fmt.Sprintf("%s/%s/get-ca/token", sdk.certsURL, certsEndpoint)
+	_, body, sdkerr := sdk.processRequest(http.MethodGet, url, nil, nil, http.StatusOK)
+	if sdkerr != nil {
+		return Token{}, sdkerr
+	}
+
+	var tk Token
+	if err := json.Unmarshal(body, &tk); err != nil {
+		return Token{}, errors.NewSDKError(err)
+	}
+	return tk, nil
 }
 
 func NewSDK(conf Config) SDK {
