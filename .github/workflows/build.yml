@@ -29,8 +29,8 @@ jobs:
           with:
             filters: |
                 certs:
-                    - "certs/**"
-                    - "cmd/certs/**"
+                    - "/**"
+                    - "cmd/**"
                     - "docker/Dockerfile"
 
                 dependencies:
