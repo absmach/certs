@@ -29,7 +29,7 @@ jobs:
           with:
             filters: |
                 certs:
-                    - "/**"
+                    - "*/**"
                     - "cmd/**"
                     - "docker/Dockerfile"
 
