@@ -28,9 +28,7 @@ const serialNumber = "serial number"
 var (
 	invalidToken = "123"
 	config       = certs.Config{
-		CA: certs.CAConfig{
-			CommonName: "test",
-		},
+		CommonName: "test",
 	}
 )
 

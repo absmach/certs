@@ -19,6 +19,5 @@ postal_code:
 dns_names:
   - "localhost"
 ip_addresses:
-  - "192.168.100.4"
-  - "164.90.178.85"
+  - "localhost"
 validity_period: "8760h"
