@@ -9,13 +9,13 @@ organizational_unit:
 country:
   - "France"
 province:
-  - "Sirbea"
+  - "Paris"
 locality:
-  - "Sirbea"
+  - "Quai de Valmy"
 street_address:
-  - "Sirbea"
+  - "141 Quai de Valmy 10"
 postal_code:
-  - "Sirbea"
+  - "75010 Paris"
 dns_names:
   - "localhost"
 ip_addresses:
