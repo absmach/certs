@@ -13,13 +13,11 @@ import (
 	"encoding/pem"
 	"math/big"
 	"net"
-	"os"
 	"time"
 
 	"github.com/absmach/certs/errors"
 	"github.com/golang-jwt/jwt"
 	"golang.org/x/crypto/ocsp"
-	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -32,7 +30,6 @@ const (
 	rCertExpiryThreshold         = time.Hour * 24 * 30  // 30 days
 	iCertExpiryThreshold         = time.Hour * 24 * 10  // 10 days
 	downloadTokenExpiry          = time.Minute * 5
-	configFile                   = "/config/config.yml"
 )
 
 type CertType int
@@ -137,13 +134,8 @@ type service struct {
 
 var _ Service = (*service)(nil)
 
-func NewService(ctx context.Context, repo Repository) (Service, error) {
+func NewService(ctx context.Context, repo Repository, config *Config) (Service, error) {
 	var svc service
-
-	config, err := LoadConfig(configFile)
-	if err != nil {
-		return &svc, err
-	}
 
 	svc.repo = repo
 	if err := svc.loadCACerts(ctx); err != nil {
@@ -477,21 +469,6 @@ func (s *service) GetSigningCA(ctx context.Context, token string) (Certificate, 
 		return Certificate{}, errors.Wrap(ErrViewEntity, err)
 	}
 	return cert, nil
-}
-
-func LoadConfig(filename string) (*Config, error) {
-	file, err := os.Open(filename)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	var config Config
-	decoder := yaml.NewDecoder(file)
-	if err := decoder.Decode(&config); err != nil {
-		return nil, err
-	}
-	return &config, nil
 }
 
 func (s *service) generateRootCA(ctx context.Context, config CAConfig) (*CA, error) {

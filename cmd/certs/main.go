@@ -32,6 +32,7 @@ import (
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
+	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -43,6 +44,7 @@ const (
 	defDB          = "certs"
 	defSvcHTTPPort = "9010"
 	defSvcGRPCPort = "7012"
+	configFile     = "/config/config.yml"
 )
 
 type config struct {
@@ -99,7 +101,13 @@ func main() {
 		logger.Error(fmt.Sprintf("failed to load %s gRPC server configuration : %s", svcName, err))
 	}
 
-	svc, err := newService(ctx, db, tracer, logger, dbConfig)
+	config, err := LoadConfig(configFile)
+	if err != nil {
+		logger.Error(fmt.Sprintf("failed to load CA config file : %s", err))
+		return
+	}
+
+	svc, err := newService(ctx, db, tracer, logger, dbConfig, config)
 	if err != nil {
 		logger.Error(fmt.Sprintf("failed to create %s service: %s", svcName, err))
 		return
@@ -136,10 +144,10 @@ func main() {
 	}
 }
 
-func newService(ctx context.Context, db *sqlx.DB, tracer trace.Tracer, logger *slog.Logger, dbConfig pgClient.Config) (certs.Service, error) {
+func newService(ctx context.Context, db *sqlx.DB, tracer trace.Tracer, logger *slog.Logger, dbConfig pgClient.Config, config *certs.Config) (certs.Service, error) {
 	database := postgres.NewDatabase(db, dbConfig, tracer)
 	repo := cpostgres.NewRepository(database)
-	svc, err := certs.NewService(ctx, repo)
+	svc, err := certs.NewService(ctx, repo, config)
 	if err != nil {
 		return nil, err
 	}
@@ -162,4 +170,19 @@ func initLogger(levelText string) (*slog.Logger, error) {
 	})
 
 	return slog.New(logHandler), nil
+}
+
+func LoadConfig(filename string) (*certs.Config, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	var config certs.Config
+	decoder := yaml.NewDecoder(file)
+	if err := decoder.Decode(&config); err != nil {
+		return nil, err
+	}
+	return &config, nil
 }
