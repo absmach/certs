@@ -34,6 +34,8 @@ services:
     ports:
       - ${AM_CERTS_HTTP_PORT}:${AM_CERTS_HTTP_PORT}
       - ${AM_CERTS_GRPC_PORT}:${AM_CERTS_GRPC_PORT}
+    volumes:
+     - ./config.yml:/config/config.yml
 
   certs-db:
     image: postgres:16.2-alpine

@@ -12,6 +12,7 @@ import (
 	"encoding/asn1"
 	"encoding/pem"
 	"math/big"
+	"net"
 	"time"
 
 	"github.com/absmach/certs/errors"
@@ -20,14 +21,7 @@ import (
 )
 
 const (
-	CommonName                   = "AbstractMachines_Selfsigned_ca"
 	Organization                 = "AbstractMacines"
-	OrganizationalUnit           = "AbstractMachines_ca"
-	Country                      = "Sirbea"
-	Province                     = "Sirbea"
-	Locality                     = "Sirbea"
-	StreetAddress                = "Sirbea"
-	PostalCode                   = "Sirbea"
 	emailAddress                 = "info@abstractmachines.rs"
 	PrivateKeyBytes              = 2048
 	RootCAValidityPeriod         = time.Hour * 24 * 365 // 365 days
@@ -86,6 +80,20 @@ type CA struct {
 	SerialNumber string
 }
 
+type Config struct {
+	CommonName         string   `yaml:"common_name"`
+	Organization       []string `yaml:"organization"`
+	OrganizationalUnit []string `yaml:"organizational_unit"`
+	Country            []string `yaml:"country"`
+	Province           []string `yaml:"province"`
+	Locality           []string `yaml:"locality"`
+	StreetAddress      []string `yaml:"street_address"`
+	PostalCode         []string `yaml:"postal_code"`
+	DNSNames           []string `yaml:"dns_names"`
+	IPAddresses        []net.IP `yaml:"ip_addresses"`
+	ValidityPeriod     string   `yaml:"validity_period"`
+}
+
 var (
 	serialNumberLimit         = new(big.Int).Lsh(big.NewInt(1), 128)
 	ErrNotFound               = errors.New("entity not found")
@@ -122,24 +130,23 @@ type service struct {
 
 var _ Service = (*service)(nil)
 
-func NewService(ctx context.Context, repo Repository) (Service, error) {
+func NewService(ctx context.Context, repo Repository, config *Config) (Service, error) {
 	var svc service
+
 	svc.repo = repo
 	if err := svc.loadCACerts(ctx); err != nil {
 		return &svc, err
 	}
 
 	// check if root ca should be rotated
-	rotateRoot := svc.shouldRotateCA(RootCA)
-	if rotateRoot {
-		if err := svc.rotateCA(ctx, RootCA); err != nil {
+	if svc.shouldRotate(RootCA) {
+		if err := svc.rotateCA(ctx, RootCA, config); err != nil {
 			return &svc, err
 		}
 	}
 
-	rotateIntermediate := svc.shouldRotateCA(IntermediateCA)
-	if rotateIntermediate {
-		if err := svc.rotateCA(ctx, IntermediateCA); err != nil {
+	if svc.shouldRotate(IntermediateCA) {
+		if err := svc.rotateCA(ctx, IntermediateCA, config); err != nil {
 			return &svc, err
 		}
 	}
@@ -458,7 +465,7 @@ func (s *service) GetSigningCA(ctx context.Context, token string) (Certificate, 
 	return cert, nil
 }
 
-func (s *service) generateRootCA(ctx context.Context) (*CA, error) {
+func (s *service) generateRootCA(ctx context.Context, config Config) (*CA, error) {
 	rootKey, err := rsa.GenerateKey(rand.Reader, PrivateKeyBytes)
 	if err != nil {
 		return nil, err
@@ -472,14 +479,14 @@ func (s *service) generateRootCA(ctx context.Context) (*CA, error) {
 	certTemplate := &x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
-			Organization:       []string{Organization},
-			OrganizationalUnit: []string{OrganizationalUnit},
-			Country:            []string{Country},
-			Province:           []string{Province},
-			Locality:           []string{Locality},
-			StreetAddress:      []string{StreetAddress},
-			PostalCode:         []string{PostalCode},
-			CommonName:         CommonName,
+			CommonName:         config.CommonName,
+			Organization:       config.Organization,
+			OrganizationalUnit: config.OrganizationalUnit,
+			Country:            config.Country,
+			Province:           config.Province,
+			Locality:           config.Locality,
+			StreetAddress:      config.StreetAddress,
+			PostalCode:         config.PostalCode,
 			SerialNumber:       serialNumber.String(),
 			ExtraNames: []pkix.AttributeTypeAndValue{
 				{
@@ -490,9 +497,12 @@ func (s *service) generateRootCA(ctx context.Context) (*CA, error) {
 		},
 		NotBefore:             time.Now(),
 		NotAfter:              time.Now().Add(RootCAValidityPeriod),
-		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageCRLSign,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
 		BasicConstraintsValid: true,
 		IsCA:                  true,
+		DNSNames:              config.DNSNames,
+		IPAddresses:           config.IPAddresses,
 	}
 
 	certBytes, err := x509.CreateCertificate(rand.Reader, certTemplate, certTemplate, &rootKey.PublicKey, rootKey)
@@ -505,7 +515,7 @@ func (s *service) generateRootCA(ctx context.Context) (*CA, error) {
 		return nil, err
 	}
 
-	if err != s.saveCA(ctx, cert, rootKey, RootCA) {
+	if err := s.saveCA(ctx, cert, rootKey, RootCA); err != nil {
 		return nil, err
 	}
 
@@ -531,7 +541,7 @@ func (s *service) saveCA(ctx context.Context, cert *x509.Certificate, privateKey
 	return nil
 }
 
-func (s *service) createIntermediateCA(ctx context.Context, rootCA *CA) (*CA, error) {
+func (s *service) createIntermediateCA(ctx context.Context, rootCA *CA, config Config) (*CA, error) {
 	intermediateKey, err := rsa.GenerateKey(rand.Reader, PrivateKeyBytes)
 	if err != nil {
 		return nil, err
@@ -545,14 +555,14 @@ func (s *service) createIntermediateCA(ctx context.Context, rootCA *CA) (*CA, er
 	template := x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
-			CommonName:         CommonName,
-			Organization:       []string{Organization},
-			OrganizationalUnit: []string{OrganizationalUnit},
-			Country:            []string{Country},
-			Province:           []string{Province},
-			Locality:           []string{Locality},
-			StreetAddress:      []string{StreetAddress},
-			PostalCode:         []string{PostalCode},
+			CommonName:         config.CommonName,
+			Organization:       config.Organization,
+			OrganizationalUnit: config.OrganizationalUnit,
+			Country:            config.Country,
+			Province:           config.Province,
+			Locality:           config.Locality,
+			StreetAddress:      config.StreetAddress,
+			PostalCode:         config.PostalCode,
 			SerialNumber:       serialNumber.String(),
 			ExtraNames: []pkix.AttributeTypeAndValue{
 				{
@@ -563,10 +573,12 @@ func (s *service) createIntermediateCA(ctx context.Context, rootCA *CA) (*CA, er
 		},
 		NotBefore:             time.Now(),
 		NotAfter:              time.Now().Add(IntermediateCAVAlidityPeriod),
-		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageCRLSign,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
 		BasicConstraintsValid: true,
 		IsCA:                  true,
+		DNSNames:              config.DNSNames,
+		IPAddresses:           config.IPAddresses,
 	}
 
 	certBytes, err := x509.CreateCertificate(rand.Reader, &template, rootCA.Certificate, &intermediateKey.PublicKey, rootCA.PrivateKey)
@@ -623,7 +635,7 @@ func (s *service) getSubject(options SubjectOptions) pkix.Name {
 	return subject
 }
 
-func (s *service) rotateCA(ctx context.Context, ctype CertType) error {
+func (s *service) rotateCA(ctx context.Context, ctype CertType, config *Config) error {
 	switch ctype {
 	case RootCA:
 		certificates, err := s.repo.GetCAs(ctx)
@@ -635,12 +647,12 @@ func (s *service) rotateCA(ctx context.Context, ctype CertType) error {
 				return err
 			}
 		}
-		newRootCA, err := s.generateRootCA(ctx)
+		newRootCA, err := s.generateRootCA(ctx, *config)
 		if err != nil {
 			return err
 		}
 		s.rootCA = newRootCA
-		newIntermediateCA, err := s.createIntermediateCA(ctx, newRootCA)
+		newIntermediateCA, err := s.createIntermediateCA(ctx, newRootCA, *config)
 		if err != nil {
 			return err
 		}
@@ -656,7 +668,7 @@ func (s *service) rotateCA(ctx context.Context, ctype CertType) error {
 				return err
 			}
 		}
-		newIntermediateCA, err := s.createIntermediateCA(ctx, s.rootCA)
+		newIntermediateCA, err := s.createIntermediateCA(ctx, s.rootCA, *config)
 		if err != nil {
 			return err
 		}
@@ -669,7 +681,7 @@ func (s *service) rotateCA(ctx context.Context, ctype CertType) error {
 	return nil
 }
 
-func (s *service) shouldRotateCA(ctype CertType) bool {
+func (s *service) shouldRotate(ctype CertType) bool {
 	switch ctype {
 	case RootCA:
 		if s.rootCA == nil {

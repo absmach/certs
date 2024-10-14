@@ -25,14 +25,19 @@ import (
 
 const serialNumber = "serial number"
 
-var invalidToken = "123"
+var (
+	invalidToken = "123"
+	config       = certs.Config{
+		CommonName: "test",
+	}
+)
 
 func TestIssueCert(t *testing.T) {
 	cRepo := new(mocks.MockRepository)
 
 	repoCall := cRepo.On("GetCAs", mock.Anything).Return([]certs.Certificate{}, nil)
 	repoCall1 := cRepo.On("CreateCert", mock.Anything, mock.Anything).Return(nil)
-	svc, err := certs.NewService(context.Background(), cRepo)
+	svc, err := certs.NewService(context.Background(), cRepo, &config)
 	require.NoError(t, err)
 	repoCall.Unset()
 	repoCall1.Unset()
@@ -76,7 +81,7 @@ func TestRevokeCert(t *testing.T) {
 
 	repoCall := cRepo.On("GetCAs", mock.Anything).Return([]certs.Certificate{}, nil)
 	repoCall1 := cRepo.On("CreateCert", mock.Anything, mock.Anything).Return(nil)
-	svc, err := certs.NewService(context.Background(), cRepo)
+	svc, err := certs.NewService(context.Background(), cRepo, &config)
 	require.NoError(t, err)
 	repoCall.Unset()
 	repoCall1.Unset()
@@ -128,7 +133,7 @@ func TestGetCertDownloadToken(t *testing.T) {
 
 	repoCall := cRepo.On("GetCAs", mock.Anything).Return([]certs.Certificate{}, nil)
 	repoCall1 := cRepo.On("CreateCert", mock.Anything, mock.Anything).Return(nil)
-	svc, err := certs.NewService(context.Background(), cRepo)
+	svc, err := certs.NewService(context.Background(), cRepo, &config)
 	require.NoError(t, err)
 	repoCall.Unset()
 	repoCall1.Unset()
@@ -162,7 +167,7 @@ func TestGetCert(t *testing.T) {
 
 	repoCall := cRepo.On("GetCAs", mock.Anything).Return([]certs.Certificate{}, nil)
 	repoCall1 := cRepo.On("CreateCert", mock.Anything, mock.Anything).Return(nil)
-	svc, err := certs.NewService(context.Background(), cRepo)
+	svc, err := certs.NewService(context.Background(), cRepo, &config)
 	require.NoError(t, err)
 	repoCall.Unset()
 	repoCall1.Unset()
@@ -257,7 +262,7 @@ func TestRenewCert(t *testing.T) {
 
 	repoCall := cRepo.On("GetCAs", mock.Anything).Return([]certs.Certificate{}, nil)
 	repoCall1 := cRepo.On("CreateCert", mock.Anything, mock.Anything).Return(nil)
-	svc, err := certs.NewService(context.Background(), cRepo)
+	svc, err := certs.NewService(context.Background(), cRepo, &config)
 	require.NoError(t, err)
 	repoCall.Unset()
 	repoCall1.Unset()
@@ -349,7 +354,7 @@ func TestGetEntityID(t *testing.T) {
 
 	repoCall := cRepo.On("GetCAs", mock.Anything).Return([]certs.Certificate{}, nil)
 	repoCall1 := cRepo.On("CreateCert", mock.Anything, mock.Anything).Return(nil)
-	svc, err := certs.NewService(context.Background(), cRepo)
+	svc, err := certs.NewService(context.Background(), cRepo, &config)
 	require.NoError(t, err)
 	repoCall.Unset()
 	repoCall1.Unset()
@@ -380,7 +385,7 @@ func TestListCerts(t *testing.T) {
 
 	repoCall := cRepo.On("GetCAs", mock.Anything).Return([]certs.Certificate{}, nil)
 	repoCall1 := cRepo.On("CreateCert", mock.Anything, mock.Anything).Return(nil)
-	svc, err := certs.NewService(context.Background(), cRepo)
+	svc, err := certs.NewService(context.Background(), cRepo, &config)
 	require.NoError(t, err)
 	repoCall.Unset()
 	repoCall1.Unset()
@@ -435,7 +440,7 @@ func TestGenerateCRL(t *testing.T) {
 		{Type: certs.IntermediateCA, Certificate: pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER}), Key: pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(privateKey)})},
 	}, nil)
 	repoCall1 := cRepo.On("CreateCert", mock.Anything, mock.Anything).Return(nil)
-	svc, err := certs.NewService(context.Background(), cRepo)
+	svc, err := certs.NewService(context.Background(), cRepo, &config)
 	require.NoError(t, err)
 	repoCall.Unset()
 	repoCall1.Unset()
