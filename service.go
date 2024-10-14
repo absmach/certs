@@ -12,6 +12,7 @@ import (
 	"encoding/asn1"
 	"encoding/pem"
 	"math/big"
+	"net"
 	"time"
 
 	"github.com/absmach/certs/errors"
@@ -36,6 +37,15 @@ const (
 	rCertExpiryThreshold         = time.Hour * 24 * 30  // 30 days
 	iCertExpiryThreshold         = time.Hour * 24 * 10  // 10 days
 	downloadTokenExpiry          = time.Minute * 5
+)
+
+// SAN configuration variables.
+var (
+	sanDNSNames    = []string{"localhost"}
+	sanIPAddresses = []net.IP{
+		net.ParseIP("192.168.100.4"),
+		net.ParseIP("164.90.178.85"),
+	}
 )
 
 type CertType int
@@ -490,9 +500,12 @@ func (s *service) generateRootCA(ctx context.Context) (*CA, error) {
 		},
 		NotBefore:             time.Now(),
 		NotAfter:              time.Now().Add(RootCAValidityPeriod),
-		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageCRLSign,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
 		BasicConstraintsValid: true,
 		IsCA:                  true,
+		DNSNames:              sanDNSNames,
+		IPAddresses:           sanIPAddresses,
 	}
 
 	certBytes, err := x509.CreateCertificate(rand.Reader, certTemplate, certTemplate, &rootKey.PublicKey, rootKey)
@@ -505,7 +518,7 @@ func (s *service) generateRootCA(ctx context.Context) (*CA, error) {
 		return nil, err
 	}
 
-	if err != s.saveCA(ctx, cert, rootKey, RootCA) {
+	if err := s.saveCA(ctx, cert, rootKey, RootCA); err != nil {
 		return nil, err
 	}
 
@@ -563,10 +576,12 @@ func (s *service) createIntermediateCA(ctx context.Context, rootCA *CA) (*CA, er
 		},
 		NotBefore:             time.Now(),
 		NotAfter:              time.Now().Add(IntermediateCAVAlidityPeriod),
-		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageCRLSign,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
 		BasicConstraintsValid: true,
 		IsCA:                  true,
+		DNSNames:              sanDNSNames,
+		IPAddresses:           sanIPAddresses,
 	}
 
 	certBytes, err := x509.CreateCertificate(rand.Reader, &template, rootCA.Certificate, &intermediateKey.PublicKey, rootCA.PrivateKey)
