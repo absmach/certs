@@ -139,13 +139,13 @@ func NewService(ctx context.Context, repo Repository, config *Config) (Service, 
 	}
 
 	// check if root ca should be rotated
-	if svc.shouldRotateCA(RootCA) {
+	if svc.shouldRotate(RootCA) {
 		if err := svc.rotateCA(ctx, RootCA, config); err != nil {
 			return &svc, err
 		}
 	}
 
-	if svc.shouldRotateCA(IntermediateCA) {
+	if svc.shouldRotate(IntermediateCA) {
 		if err := svc.rotateCA(ctx, IntermediateCA, config); err != nil {
 			return &svc, err
 		}
@@ -681,7 +681,7 @@ func (s *service) rotateCA(ctx context.Context, ctype CertType, config *Config) 
 	return nil
 }
 
-func (s *service) shouldRotateCA(ctype CertType) bool {
+func (s *service) shouldRotate(ctype CertType) bool {
 	switch ctype {
 	case RootCA:
 		if s.rootCA == nil {
