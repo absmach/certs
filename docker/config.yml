@@ -1,0 +1,25 @@
+# Copyright (c) Abstract Machines
+# SPDX-License-Identifier: Apache-2.0
+
+ca:
+  common_name: "AbstractMachines_Selfsigned_ca"
+  organization:
+    - "AbstractMacines"
+  organizational_unit:
+    - "AbstractMachines_ca"
+  country:
+    - "Sirbea"
+  province:
+    - "Sirbea"
+  locality:
+    - "Sirbea"
+  street_address:
+    - "Sirbea"
+  postal_code:
+    - "Sirbea"
+  dns_names:
+    - "localhost"
+  ip_addresses:
+    - "192.168.100.4"
+    - "164.90.178.85"
+  validity_period: "8760h"
