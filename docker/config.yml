@@ -12,8 +12,6 @@ province:
   - "Paris"
 locality:
   - "Quai de Valmy"
-street_address:
-  - "141 Quai de Valmy 10"
 postal_code:
   - "75010 Paris"
 dns_names:
