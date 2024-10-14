@@ -80,7 +80,7 @@ type CA struct {
 	SerialNumber string
 }
 
-type CAConfig struct {
+type Config struct {
 	CommonName         string   `yaml:"common_name"`
 	Organization       []string `yaml:"organization"`
 	OrganizationalUnit []string `yaml:"organizational_unit"`
@@ -90,12 +90,8 @@ type CAConfig struct {
 	StreetAddress      []string `yaml:"street_address"`
 	PostalCode         []string `yaml:"postal_code"`
 	DNSNames           []string `yaml:"dns_names"`
-	IPAddresses        []string `yaml:"ip_addresses"`
+	IPAddresses        []net.IP `yaml:"ip_addresses"`
 	ValidityPeriod     string   `yaml:"validity_period"`
-}
-
-type Config struct {
-	CA CAConfig `yaml:"ca"`
 }
 
 var (
@@ -143,15 +139,13 @@ func NewService(ctx context.Context, repo Repository, config *Config) (Service, 
 	}
 
 	// check if root ca should be rotated
-	rotateRoot := svc.shouldRotateCA(RootCA)
-	if rotateRoot {
+	if svc.shouldRotateCA(RootCA) {
 		if err := svc.rotateCA(ctx, RootCA, config); err != nil {
 			return &svc, err
 		}
 	}
 
-	rotateIntermediate := svc.shouldRotateCA(IntermediateCA)
-	if rotateIntermediate {
+	if svc.shouldRotateCA(IntermediateCA) {
 		if err := svc.rotateCA(ctx, IntermediateCA, config); err != nil {
 			return &svc, err
 		}
@@ -471,7 +465,7 @@ func (s *service) GetSigningCA(ctx context.Context, token string) (Certificate, 
 	return cert, nil
 }
 
-func (s *service) generateRootCA(ctx context.Context, config CAConfig) (*CA, error) {
+func (s *service) generateRootCA(ctx context.Context, config Config) (*CA, error) {
 	rootKey, err := rsa.GenerateKey(rand.Reader, PrivateKeyBytes)
 	if err != nil {
 		return nil, err
@@ -508,7 +502,7 @@ func (s *service) generateRootCA(ctx context.Context, config CAConfig) (*CA, err
 		BasicConstraintsValid: true,
 		IsCA:                  true,
 		DNSNames:              config.DNSNames,
-		IPAddresses:           parseIPs(config.IPAddresses),
+		IPAddresses:           config.IPAddresses,
 	}
 
 	certBytes, err := x509.CreateCertificate(rand.Reader, certTemplate, certTemplate, &rootKey.PublicKey, rootKey)
@@ -547,7 +541,7 @@ func (s *service) saveCA(ctx context.Context, cert *x509.Certificate, privateKey
 	return nil
 }
 
-func (s *service) createIntermediateCA(ctx context.Context, rootCA *CA, config CAConfig) (*CA, error) {
+func (s *service) createIntermediateCA(ctx context.Context, rootCA *CA, config Config) (*CA, error) {
 	intermediateKey, err := rsa.GenerateKey(rand.Reader, PrivateKeyBytes)
 	if err != nil {
 		return nil, err
@@ -584,7 +578,7 @@ func (s *service) createIntermediateCA(ctx context.Context, rootCA *CA, config C
 		BasicConstraintsValid: true,
 		IsCA:                  true,
 		DNSNames:              config.DNSNames,
-		IPAddresses:           parseIPs(config.IPAddresses),
+		IPAddresses:           config.IPAddresses,
 	}
 
 	certBytes, err := x509.CreateCertificate(rand.Reader, &template, rootCA.Certificate, &intermediateKey.PublicKey, rootCA.PrivateKey)
@@ -653,12 +647,12 @@ func (s *service) rotateCA(ctx context.Context, ctype CertType, config *Config) 
 				return err
 			}
 		}
-		newRootCA, err := s.generateRootCA(ctx, config.CA)
+		newRootCA, err := s.generateRootCA(ctx, *config)
 		if err != nil {
 			return err
 		}
 		s.rootCA = newRootCA
-		newIntermediateCA, err := s.createIntermediateCA(ctx, newRootCA, config.CA)
+		newIntermediateCA, err := s.createIntermediateCA(ctx, newRootCA, *config)
 		if err != nil {
 			return err
 		}
@@ -674,7 +668,7 @@ func (s *service) rotateCA(ctx context.Context, ctype CertType, config *Config) 
 				return err
 			}
 		}
-		newIntermediateCA, err := s.createIntermediateCA(ctx, s.rootCA, config.CA)
+		newIntermediateCA, err := s.createIntermediateCA(ctx, s.rootCA, *config)
 		if err != nil {
 			return err
 		}
@@ -773,14 +767,4 @@ func (s *service) loadCACerts(ctx context.Context) error {
 		}
 	}
 	return nil
-}
-
-func parseIPs(ipStrings []string) []net.IP {
-	var ips []net.IP
-	for _, ipString := range ipStrings {
-		if ip := net.ParseIP(ipString); ip != nil {
-			ips = append(ips, ip)
-		}
-	}
-	return ips
 }

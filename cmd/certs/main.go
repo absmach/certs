@@ -32,7 +32,6 @@ import (
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
-	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -101,7 +100,7 @@ func main() {
 		logger.Error(fmt.Sprintf("failed to load %s gRPC server configuration : %s", svcName, err))
 	}
 
-	config, err := LoadConfig(configFile)
+	config, err := certs.LoadConfig(configFile)
 	if err != nil {
 		logger.Error(fmt.Sprintf("failed to load CA config file : %s", err))
 		return
@@ -170,19 +169,4 @@ func initLogger(levelText string) (*slog.Logger, error) {
 	})
 
 	return slog.New(logHandler), nil
-}
-
-func LoadConfig(filename string) (*certs.Config, error) {
-	file, err := os.Open(filename)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	var config certs.Config
-	decoder := yaml.NewDecoder(file)
-	if err := decoder.Decode(&config); err != nil {
-		return nil, err
-	}
-	return &config, nil
 }
