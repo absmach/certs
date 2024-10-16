@@ -6,7 +6,6 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
 
@@ -16,7 +15,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const fileMode = fs.FileMode(600)
+const fileMode = 0o644
 
 var (
 	// Limit query parameter.
@@ -106,8 +105,7 @@ func saveToFile(filename string, content []byte) error {
 	}
 
 	filePath := filepath.Join(cwd, filename)
-	err = os.WriteFile(filePath, content, fileMode)
-	if err != nil {
+	if err := os.WriteFile(filePath, content, fileMode); err != nil {
 		return fmt.Errorf("failed to write file %s: %w", filename, err)
 	}
 

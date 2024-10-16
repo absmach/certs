@@ -254,7 +254,12 @@ func (s *service) RetrieveCert(ctx context.Context, token, serialNumber string) 
 	if err != nil {
 		return Certificate{}, []byte{}, errors.Wrap(ErrViewEntity, err)
 	}
-	return cert, pem.EncodeToMemory(&pem.Block{Bytes: s.intermediateCA.Certificate.Raw, Type: "CERTIFICATE"}), nil
+	concat, err := s.getConcatCAs(ctx)
+	if err != nil {
+		return Certificate{}, []byte{}, errors.Wrap(ErrViewEntity, err)
+	}
+
+	return cert, concat.Certificate, nil
 }
 
 func (s *service) ListCerts(ctx context.Context, pm PageMetadata) (CertificatePage, error) {
@@ -450,18 +455,33 @@ func (s *service) GenerateCRL(ctx context.Context, caType CertType) ([]byte, err
 	return pemBytes, nil
 }
 
-func (s *service) GetSigningCA(ctx context.Context, token string) (Certificate, error) {
+func (s *service) GetChainCA(ctx context.Context, token string) (Certificate, error) {
 	if _, err := jwt.ParseWithClaims(token, &jwt.StandardClaims{Issuer: Organization, Subject: "certs"}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(s.intermediateCA.SerialNumber), nil
 	}); err != nil {
 		return Certificate{}, errors.Wrap(err, ErrMalformedEntity)
 	}
 
-	cert, err := s.repo.RetrieveCert(ctx, s.intermediateCA.SerialNumber)
+	return s.getConcatCAs(ctx)
+}
+
+func (s *service) getConcatCAs(ctx context.Context) (Certificate, error) {
+	intermediateCert, err := s.repo.RetrieveCert(ctx, s.intermediateCA.SerialNumber)
 	if err != nil {
 		return Certificate{}, errors.Wrap(ErrViewEntity, err)
 	}
-	return cert, nil
+
+	rootCert, err := s.repo.RetrieveCert(ctx, s.rootCA.SerialNumber)
+	if err != nil {
+		return Certificate{}, errors.Wrap(ErrViewEntity, err)
+	}
+
+	concat := string(intermediateCert.Certificate) + string(rootCert.Certificate)
+	return Certificate{
+		Certificate: []byte(concat),
+		Key:         intermediateCert.Key,
+		ExpiryTime:  intermediateCert.ExpiryTime,
+	}, nil
 }
 
 func (s *service) generateRootCA(ctx context.Context, config Config) (*CA, error) {
