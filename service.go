@@ -175,14 +175,12 @@ func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs [
 	}
 
 	// Parse the TTL if provided, otherwise use the default certValidityPeriod.
-	var validity time.Duration
+	validity := certValidityPeriod
 	if ttl != "" {
 		validity, err = time.ParseDuration(ttl)
 		if err != nil {
 			return Certificate{}, errors.Wrap(ErrMalformedEntity, err)
 		}
-	} else {
-		validity = certValidityPeriod
 	}
 
 	subject := s.getSubject(options)
@@ -193,8 +191,9 @@ func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs [
 		NotBefore:             time.Now(),
 		NotAfter:              time.Now().Add(validity),
 		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
 		BasicConstraintsValid: true,
+		IsCA:                  false,
 		DNSNames:              append(s.intermediateCA.Certificate.DNSNames, ipAddrs...),
 	}
 
