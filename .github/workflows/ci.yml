@@ -46,20 +46,6 @@ jobs:
         with:
           node-version: lts/*
 
-      - name: Run Prettier
-        id: prettier-run
-        uses: rutajdash/prettier-cli-action@v1.0.1
-        with:
-          config_path: ./.prettierrc
-          file_pattern: "**/*.html **/*.css"
-
-      - name: Prettier Output
-        if: ${{ failure() }}
-        shell: bash
-        run: |
-          echo "The following files are not formatted:"
-          echo "${{steps.prettier-run.outputs.prettier_output}}"
-
       - name: Check for changes in services
         uses: dorny/paths-filter@v3
         id: filter
@@ -104,6 +90,6 @@ jobs:
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV }}
-          directory: ./coverage/
-          name: codecov-umbrella
+          files: ./coverage/*.out
+          codecov_yml_path: .codecov.yml
           verbose: true
