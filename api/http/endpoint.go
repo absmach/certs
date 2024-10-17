@@ -262,7 +262,7 @@ func downloadCAEndpoint(svc certs.Service) endpoint.Endpoint {
 			return fileDownloadRes{}, err
 		}
 
-		cert, err := svc.GetSigningCA(ctx, req.token)
+		cert, err := svc.GetChainCA(ctx, req.token)
 		if err != nil {
 			return fileDownloadRes{}, err
 		}
@@ -283,7 +283,7 @@ func viewCAEndpoint(svc certs.Service) endpoint.Endpoint {
 			return viewCertRes{}, err
 		}
 
-		cert, err := svc.GetSigningCA(ctx, req.token)
+		cert, err := svc.GetChainCA(ctx, req.token)
 		if err != nil {
 			return viewCertRes{}, err
 		}

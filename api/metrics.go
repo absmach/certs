@@ -120,10 +120,10 @@ func (mm *metricsMiddleware) GenerateCRL(ctx context.Context, caType certs.CertT
 	return mm.svc.GenerateCRL(ctx, caType)
 }
 
-func (mm *metricsMiddleware) GetSigningCA(ctx context.Context, token string) (certs.Certificate, error) {
+func (mm *metricsMiddleware) GetChainCA(ctx context.Context, token string) (certs.Certificate, error) {
 	defer func(begin time.Time) {
-		mm.counter.With("method", "get_signing_ca").Add(1)
-		mm.latency.With("method", "get_signing_ca").Observe(time.Since(begin).Seconds())
+		mm.counter.With("method", "get_chain_ca").Add(1)
+		mm.latency.With("method", "get_chain_ca").Observe(time.Since(begin).Seconds())
 	}(time.Now())
-	return mm.svc.GetSigningCA(ctx, token)
+	return mm.svc.GetChainCA(ctx, token)
 }

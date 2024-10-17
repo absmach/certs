@@ -157,14 +157,14 @@ func (lm *loggingMiddleware) GenerateCRL(ctx context.Context, caType certs.CertT
 	return lm.svc.GenerateCRL(ctx, caType)
 }
 
-func (lm *loggingMiddleware) GetSigningCA(ctx context.Context, token string) (cert certs.Certificate, err error) {
+func (lm *loggingMiddleware) GetChainCA(ctx context.Context, token string) (cert certs.Certificate, err error) {
 	defer func(begin time.Time) {
-		message := fmt.Sprintf("Method get_signing_ca took %s to complete", time.Since(begin))
+		message := fmt.Sprintf("Method get_chain_ca took %s to complete", time.Since(begin))
 		if err != nil {
 			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
 			return
 		}
 		lm.logger.Info(message)
 	}(time.Now())
-	return lm.svc.GetSigningCA(ctx, token)
+	return lm.svc.GetChainCA(ctx, token)
 }

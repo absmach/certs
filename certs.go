@@ -68,8 +68,8 @@ type Service interface {
 	// GenerateCRL creates cert revocation list.
 	GenerateCRL(ctx context.Context, caType CertType) ([]byte, error)
 
-	// Retrieves the signing CA.
-	GetSigningCA(ctx context.Context, token string) (Certificate, error)
+	// GetChainCA retrieves the chain of CA i.e. root and intermediate cert concat together.
+	GetChainCA(ctx context.Context, token string) (Certificate, error)
 }
 
 type Repository interface {
