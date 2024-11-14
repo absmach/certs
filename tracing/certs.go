@@ -65,6 +65,12 @@ func (tm *tracingMiddleware) ListCerts(ctx context.Context, pm certs.PageMetadat
 	return tm.svc.ListCerts(ctx, pm)
 }
 
+func (tm *tracingMiddleware) RemoveCerts(ctx context.Context, entityId string) (err error) {
+	ctx, span := tm.tracer.Start(ctx, "remove_certs")
+	defer span.End()
+	return tm.svc.RemoveCerts(ctx, entityId)
+}
+
 func (s *tracingMiddleware) ViewCert(ctx context.Context, serialNumber string) (certs.Certificate, error) {
 	ctx, span := s.tracer.Start(ctx, "view_cert")
 	defer span.End()

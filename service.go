@@ -271,6 +271,10 @@ func (s *service) ListCerts(ctx context.Context, pm PageMetadata) (CertificatePa
 	return certPg, nil
 }
 
+func (s *service) RemoveCerts(ctx context.Context, entityId string) error {
+	return s.repo.RemoveCerts(ctx, entityId)
+}
+
 func (s *service) ViewCert(ctx context.Context, serialNumber string) (Certificate, error) {
 	cert, err := s.repo.RetrieveCert(ctx, serialNumber)
 	if err != nil {

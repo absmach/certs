@@ -22,6 +22,7 @@ import (
 
 const (
 	revokeCmd     = "revoke"
+	deleteCmd     = "delete"
 	issueCmd      = "issue"
 	renewCmd      = "renew"
 	listCmd       = "get"
@@ -162,6 +163,62 @@ func TestRevokeCertCmd(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			sdkCall := sdkMock.On("RevokeCert", mock.Anything).Return(tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{revokeCmd}, tc.args...)...)
+			switch tc.logType {
+			case okLog:
+				assert.True(t, strings.Contains(out, "ok"), fmt.Sprintf("%s unexpected response: expected success message, got: %v", tc.desc, out))
+			case errLog:
+				assert.Equal(t, tc.errLogMessage, out, fmt.Sprintf("%s unexpected error response: expected %s got errLogMessage:%s", tc.desc, tc.errLogMessage, out))
+			case usageLog:
+				assert.False(t, strings.Contains(out, rootCmd.Use), fmt.Sprintf("%s invalid usage: %s", tc.desc, out))
+			}
+			sdkCall.Unset()
+		})
+	}
+}
+
+func TestDeleteCertCmd(t *testing.T) {
+	sdkMock := new(sdkmocks.MockSDK)
+	cli.SetSDK(sdkMock)
+	certCmd := cli.NewCertsCmd()
+	rootCmd := setFlags(certCmd)
+
+	cases := []struct {
+		desc          string
+		args          []string
+		sdkErr        errors.SDKError
+		errLogMessage string
+		logType       outputLog
+	}{
+		{
+			desc: "delete certs successfully",
+			args: []string{
+				id,
+			},
+			logType: okLog,
+		},
+		{
+			desc: "delete certs with invalid args",
+			args: []string{
+				id,
+				extraArg,
+			},
+			logType: usageLog,
+		},
+		{
+			desc: "delete certs failed",
+			args: []string{
+				id,
+			},
+			sdkErr:        errors.NewSDKErrorWithStatus(certs.ErrUpdateEntity, http.StatusUnprocessableEntity),
+			errLogMessage: fmt.Sprintf("\nerror: %s\n\n", errors.NewSDKErrorWithStatus(certs.ErrUpdateEntity, http.StatusUnprocessableEntity)),
+			logType:       errLog,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			sdkCall := sdkMock.On("DeleteCerts", mock.Anything).Return(tc.sdkErr)
+			out := executeCommand(t, rootCmd, append([]string{deleteCmd}, tc.args...)...)
 			switch tc.logType {
 			case okLog:
 				assert.True(t, strings.Contains(out, "ok"), fmt.Sprintf("%s unexpected response: expected success message, got: %v", tc.desc, out))

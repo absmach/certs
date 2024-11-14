@@ -36,14 +36,29 @@ func revokeCertEndpoint(svc certs.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(viewReq)
 		if err := req.validate(); err != nil {
-			return revokeCertRes{}, err
+			return revokeCertRes{revoked: false}, err
 		}
 
 		if err = svc.RevokeCert(ctx, req.id); err != nil {
-			return revokeCertRes{}, err
+			return revokeCertRes{revoked: false}, err
 		}
 
 		return revokeCertRes{revoked: true}, nil
+	}
+}
+
+func deleteCertEndpoint(svc certs.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req := request.(deleteReq)
+		if err := req.validate(); err != nil {
+			return deleteCertRes{deleted: false}, err
+		}
+
+		if err = svc.RemoveCerts(ctx, req.entityID); err != nil {
+			return deleteCertRes{deleted: false}, err
+		}
+
+		return deleteCertRes{deleted: true}, nil
 	}
 }
 
