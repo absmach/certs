@@ -33,7 +33,14 @@ Developing absmach certs will also require:
 
 ## Install
 
-Once the prerequisites are installed, execute the following commands from the project's root:
+Once the prerequisites are installed, clone the repo
+
+```bash
+git clone https://github.com/absmach/certs.git
+cd certs
+```
+
+Execute the following commands from the project's root:
 
 ```bash
 docker compose -f docker/docker-compose.yml --env-file docker/.env -p absmach up
