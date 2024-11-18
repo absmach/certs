@@ -4,7 +4,7 @@ go 1.23.0
 
 require (
 	github.com/caarlos0/env/v10 v10.0.0
-	github.com/fatih/color v1.17.0
+	github.com/fatih/color v1.18.0
 	github.com/go-chi/chi v4.1.2+incompatible
 	github.com/go-kit/kit v0.13.0
 	github.com/gofrs/uuid v4.4.0+incompatible
