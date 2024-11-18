@@ -261,12 +261,12 @@ func (_c *MockRepository_ListRevokedCerts_Call) RunAndReturn(run func(context.Co
 	return _c
 }
 
-// RemoveCerts provides a mock function with given fields: ctx, entityId
-func (_m *MockRepository) RemoveCerts(ctx context.Context, entityId string) error {
+// RemoveCert provides a mock function with given fields: ctx, entityId
+func (_m *MockRepository) RemoveCert(ctx context.Context, entityId string) error {
 	ret := _m.Called(ctx, entityId)
 
 	if len(ret) == 0 {
-		panic("no return value specified for RemoveCerts")
+		panic("no return value specified for RemoveCert")
 	}
 
 	var r0 error
@@ -279,31 +279,31 @@ func (_m *MockRepository) RemoveCerts(ctx context.Context, entityId string) erro
 	return r0
 }
 
-// MockRepository_RemoveCerts_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RemoveCerts'
-type MockRepository_RemoveCerts_Call struct {
+// MockRepository_RemoveCert_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RemoveCert'
+type MockRepository_RemoveCert_Call struct {
 	*mock.Call
 }
 
-// RemoveCerts is a helper method to define mock.On call
+// RemoveCert is a helper method to define mock.On call
 //   - ctx context.Context
 //   - entityId string
-func (_e *MockRepository_Expecter) RemoveCerts(ctx interface{}, entityId interface{}) *MockRepository_RemoveCerts_Call {
-	return &MockRepository_RemoveCerts_Call{Call: _e.mock.On("RemoveCerts", ctx, entityId)}
+func (_e *MockRepository_Expecter) RemoveCert(ctx interface{}, entityId interface{}) *MockRepository_RemoveCert_Call {
+	return &MockRepository_RemoveCert_Call{Call: _e.mock.On("RemoveCert", ctx, entityId)}
 }
 
-func (_c *MockRepository_RemoveCerts_Call) Run(run func(ctx context.Context, entityId string)) *MockRepository_RemoveCerts_Call {
+func (_c *MockRepository_RemoveCert_Call) Run(run func(ctx context.Context, entityId string)) *MockRepository_RemoveCert_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(context.Context), args[1].(string))
 	})
 	return _c
 }
 
-func (_c *MockRepository_RemoveCerts_Call) Return(_a0 error) *MockRepository_RemoveCerts_Call {
+func (_c *MockRepository_RemoveCert_Call) Return(_a0 error) *MockRepository_RemoveCert_Call {
 	_c.Call.Return(_a0)
 	return _c
 }
 
-func (_c *MockRepository_RemoveCerts_Call) RunAndReturn(run func(context.Context, string) error) *MockRepository_RemoveCerts_Call {
+func (_c *MockRepository_RemoveCert_Call) RunAndReturn(run func(context.Context, string) error) *MockRepository_RemoveCert_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -54,7 +54,7 @@ func deleteCertEndpoint(svc certs.Service) endpoint.Endpoint {
 			return deleteCertRes{deleted: false}, err
 		}
 
-		if err = svc.RemoveCerts(ctx, req.entityID); err != nil {
+		if err = svc.RemoveCert(ctx, req.entityID); err != nil {
 			return deleteCertRes{deleted: false}, err
 		}
 

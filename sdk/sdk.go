@@ -141,12 +141,12 @@ type SDK interface {
 	//  fmt.Println(page)
 	ListCerts(pm PageMetadata) (CertificatePage, errors.SDKError)
 
-	// DeleteCerts deletes certificates for a given entityID.
+	// DeleteCert deletes certificates for a given entityID.
 	//
 	// example:
-	//  err := sdk.DeleteCerts("entityID")
+	//  err := sdk.DeleteCert("entityID")
 	//  fmt.Println(err)
-	DeleteCerts(entityID string) errors.SDKError
+	DeleteCert(entityID string) errors.SDKError
 
 	// ViewCert retrieves a certificate record from the database.
 	//
@@ -298,7 +298,7 @@ func (sdk mgSDK) ListCerts(pm PageMetadata) (CertificatePage, errors.SDKError) {
 	return cp, nil
 }
 
-func (sdk mgSDK) DeleteCerts(entityID string) errors.SDKError {
+func (sdk mgSDK) DeleteCert(entityID string) errors.SDKError {
 	url := fmt.Sprintf("%s/%s/%s/delete", sdk.certsURL, certsEndpoint, entityID)
 	_, _, sdkerr := sdk.processRequest(http.MethodDelete, url, nil, nil, http.StatusNoContent)
 	return sdkerr

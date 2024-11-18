@@ -79,7 +79,7 @@ var cmdCerts = []cobra.Command{
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			err := sdk.DeleteCerts(args[0])
+			err := sdk.DeleteCert(args[0])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return

@@ -109,16 +109,16 @@ func (lm *loggingMiddleware) ListCerts(ctx context.Context, pm certs.PageMetadat
 	return lm.svc.ListCerts(ctx, pm)
 }
 
-func (lm *loggingMiddleware) RemoveCerts(ctx context.Context, entityId string) (err error) {
+func (lm *loggingMiddleware) RemoveCert(ctx context.Context, entityId string) (err error) {
 	defer func(begin time.Time) {
-		message := fmt.Sprintf("Method remove_certs took %s to complete", time.Since(begin))
+		message := fmt.Sprintf("Method remove_cert took %s to complete", time.Since(begin))
 		if err != nil {
 			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
 			return
 		}
 		lm.logger.Info(message)
 	}(time.Now())
-	return lm.svc.RemoveCerts(ctx, entityId)
+	return lm.svc.RemoveCert(ctx, entityId)
 }
 
 func (lm *loggingMiddleware) ViewCert(ctx context.Context, serialNumber string) (cert certs.Certificate, err error) {

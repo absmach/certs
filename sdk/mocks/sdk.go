@@ -27,12 +27,12 @@ func (_m *MockSDK) EXPECT() *MockSDK_Expecter {
 	return &MockSDK_Expecter{mock: &_m.Mock}
 }
 
-// DeleteCerts provides a mock function with given fields: entityID
-func (_m *MockSDK) DeleteCerts(entityID string) errors.SDKError {
+// DeleteCert provides a mock function with given fields: entityID
+func (_m *MockSDK) DeleteCert(entityID string) errors.SDKError {
 	ret := _m.Called(entityID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for DeleteCerts")
+		panic("no return value specified for DeleteCert")
 	}
 
 	var r0 errors.SDKError
@@ -47,30 +47,30 @@ func (_m *MockSDK) DeleteCerts(entityID string) errors.SDKError {
 	return r0
 }
 
-// MockSDK_DeleteCerts_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteCerts'
-type MockSDK_DeleteCerts_Call struct {
+// MockSDK_DeleteCert_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteCert'
+type MockSDK_DeleteCert_Call struct {
 	*mock.Call
 }
 
-// DeleteCerts is a helper method to define mock.On call
+// DeleteCert is a helper method to define mock.On call
 //   - entityID string
-func (_e *MockSDK_Expecter) DeleteCerts(entityID interface{}) *MockSDK_DeleteCerts_Call {
-	return &MockSDK_DeleteCerts_Call{Call: _e.mock.On("DeleteCerts", entityID)}
+func (_e *MockSDK_Expecter) DeleteCert(entityID interface{}) *MockSDK_DeleteCert_Call {
+	return &MockSDK_DeleteCert_Call{Call: _e.mock.On("DeleteCert", entityID)}
 }
 
-func (_c *MockSDK_DeleteCerts_Call) Run(run func(entityID string)) *MockSDK_DeleteCerts_Call {
+func (_c *MockSDK_DeleteCert_Call) Run(run func(entityID string)) *MockSDK_DeleteCert_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(string))
 	})
 	return _c
 }
 
-func (_c *MockSDK_DeleteCerts_Call) Return(_a0 errors.SDKError) *MockSDK_DeleteCerts_Call {
+func (_c *MockSDK_DeleteCert_Call) Return(_a0 errors.SDKError) *MockSDK_DeleteCert_Call {
 	_c.Call.Return(_a0)
 	return _c
 }
 
-func (_c *MockSDK_DeleteCerts_Call) RunAndReturn(run func(string) errors.SDKError) *MockSDK_DeleteCerts_Call {
+func (_c *MockSDK_DeleteCert_Call) RunAndReturn(run func(string) errors.SDKError) *MockSDK_DeleteCert_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -199,7 +199,7 @@ func (repo certsRepo) ListRevokedCerts(ctx context.Context) ([]certs.Certificate
 	return revokedCerts, nil
 }
 
-func (repo certsRepo) RemoveCerts(ctx context.Context, backendId string) error {
+func (repo certsRepo) RemoveCert(ctx context.Context, backendId string) error {
 	q := `DELETE FROM certs WHERE entity_id = $1`
 
 	result, err := repo.db.ExecContext(ctx, q, backendId)

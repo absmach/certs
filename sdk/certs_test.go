@@ -244,12 +244,12 @@ func TestDeleteCert(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			svcCall := svc.On("RemoveCerts", mock.Anything, tc.entityID).Return(tc.svcerr)
+			svcCall := svc.On("RemoveCert", mock.Anything, tc.entityID).Return(tc.svcerr)
 
-			err := ctsdk.DeleteCerts(tc.entityID)
+			err := ctsdk.DeleteCert(tc.entityID)
 			assert.Equal(t, tc.err, err)
 			if tc.desc != "DeleteCert with empty entity id" {
-				ok := svcCall.Parent.AssertCalled(t, "RemoveCerts", mock.Anything, tc.entityID)
+				ok := svcCall.Parent.AssertCalled(t, "RemoveCert", mock.Anything, tc.entityID)
 				assert.True(t, ok)
 			}
 			svcCall.Unset()
