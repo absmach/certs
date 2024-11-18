@@ -87,6 +87,14 @@ func (mm *metricsMiddleware) ListCerts(ctx context.Context, pm certs.PageMetadat
 	return mm.svc.ListCerts(ctx, pm)
 }
 
+func (mm *metricsMiddleware) RemoveCert(ctx context.Context, entityId string) error {
+	defer func(begin time.Time) {
+		mm.counter.With("method", "remove_certificate").Add(1)
+		mm.latency.With("method", "remove_certificate").Observe(time.Since(begin).Seconds())
+	}(time.Now())
+	return mm.svc.RemoveCert(ctx, entityId)
+}
+
 func (mm *metricsMiddleware) ViewCert(ctx context.Context, serialNumber string) (certs.Certificate, error) {
 	defer func(begin time.Time) {
 		mm.counter.With("method", "view_certificate").Add(1)

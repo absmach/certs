@@ -70,6 +70,9 @@ type Service interface {
 
 	// GetChainCA retrieves the chain of CA i.e. root and intermediate cert concat together.
 	GetChainCA(ctx context.Context, token string) (Certificate, error)
+
+	// RemoveCert deletes a cert for a provided  entityID.
+	RemoveCert(ctx context.Context, entityId string) error
 }
 
 type Repository interface {
@@ -90,4 +93,7 @@ type Repository interface {
 
 	// ListRevokedCerts retrieves revoked lists from database.
 	ListRevokedCerts(ctx context.Context) ([]Certificate, error)
+
+	// RemoveCert deletes cert from database.
+	RemoveCert(ctx context.Context, entityId string) error
 }

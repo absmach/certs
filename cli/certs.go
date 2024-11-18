@@ -71,6 +71,23 @@ var cmdCerts = []cobra.Command{
 		},
 	},
 	{
+		Use:   "delete <entity_id> ",
+		Short: "Delete certificate",
+		Long:  `Deletes certificates for a given entity id.`,
+		Run: func(cmd *cobra.Command, args []string) {
+			if len(args) != 1 {
+				logUsageCmd(*cmd, cmd.Use)
+				return
+			}
+			err := sdk.DeleteCert(args[0])
+			if err != nil {
+				logErrorCmd(*cmd, err)
+				return
+			}
+			logOKCmd(*cmd)
+		},
+	},
+	{
 		Use:   "renew <serial_number> ",
 		Short: "Renew certificate",
 		Long:  `Renews a certificate for a given serial number.`,

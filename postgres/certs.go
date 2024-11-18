@@ -199,6 +199,21 @@ func (repo certsRepo) ListRevokedCerts(ctx context.Context) ([]certs.Certificate
 	return revokedCerts, nil
 }
 
+func (repo certsRepo) RemoveCert(ctx context.Context, backendId string) error {
+	q := `DELETE FROM certs WHERE entity_id = $1`
+
+	result, err := repo.db.ExecContext(ctx, q, backendId)
+	if err != nil {
+		return errors.Wrap(certs.ErrViewEntity, err)
+	}
+
+	if rows, _ := result.RowsAffected(); rows == 0 {
+		return certs.ErrNotFound
+	}
+
+	return nil
+}
+
 func (repo certsRepo) total(ctx context.Context, query string, params interface{}) (uint64, error) {
 	rows, err := repo.db.NamedQueryContext(ctx, query, params)
 	if err != nil {

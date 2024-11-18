@@ -32,6 +32,17 @@ func (req viewReq) validate() error {
 	return nil
 }
 
+type deleteReq struct {
+	entityID string
+}
+
+func (req deleteReq) validate() error {
+	if req.entityID == "" {
+		return errors.Wrap(certs.ErrMalformedEntity, ErrEmptyEntityID)
+	}
+	return nil
+}
+
 type crlReq struct {
 	certtype certs.CertType
 }

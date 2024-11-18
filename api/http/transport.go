@@ -64,6 +64,12 @@ func MakeHandler(svc certs.Service, logger *slog.Logger, instanceID string) http
 			EncodeResponse,
 			opts...,
 		), "revoke_cert").ServeHTTP)
+		r.Delete("/{entityID}/delete", otelhttp.NewHandler(kithttp.NewServer(
+			deleteCertEndpoint(svc),
+			decodeDelete,
+			EncodeResponse,
+			opts...,
+		), "delete_cert").ServeHTTP)
 		r.Get("/{id}/download/token", otelhttp.NewHandler(kithttp.NewServer(
 			requestCertDownloadTokenEndpoint(svc),
 			decodeView,
@@ -129,6 +135,13 @@ func MakeHandler(svc certs.Service, logger *slog.Logger, instanceID string) http
 func decodeView(_ context.Context, r *http.Request) (interface{}, error) {
 	req := viewReq{
 		id: chi.URLParam(r, "id"),
+	}
+	return req, nil
+}
+
+func decodeDelete(_ context.Context, r *http.Request) (interface{}, error) {
+	req := deleteReq{
+		entityID: chi.URLParam(r, "entityID"),
 	}
 	return req, nil
 }

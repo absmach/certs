@@ -23,7 +23,7 @@ const (
 	instanceID  = "5de9b29a-feb9-11ed-be56-0242ac120002"
 	contentType = "application/senml+json"
 	serialNum   = "8e7a30c-bc9f-22de-ae67-1342bc139507"
-	id          = "c333e6f1-59bb-4c39-9e13-3a2766af8ba5"
+	id          = "c333e6f-59bb-4c39-9e13-3a2766af8ba5"
 	ttl         = "10h"
 	commonName  = "test"
 	token       = "token"
@@ -196,6 +196,60 @@ func TestRevokeCert(t *testing.T) {
 			assert.Equal(t, tc.err, err)
 			if tc.desc != "RevokeCert with empty serial" {
 				ok := svcCall.Parent.AssertCalled(t, "RevokeCert", mock.Anything, tc.serial)
+				assert.True(t, ok)
+			}
+			svcCall.Unset()
+		})
+	}
+}
+
+func TestDeleteCert(t *testing.T) {
+	ts, svc := setupCerts()
+	defer ts.Close()
+
+	sdkConfig := sdk.Config{
+		CertsURL:        ts.URL,
+		MsgContentType:  contentType,
+		TLSVerification: false,
+	}
+
+	ctsdk := sdk.NewSDK(sdkConfig)
+
+	cases := []struct {
+		desc     string
+		entityID string
+		svcresp  string
+		svcerr   error
+		err      errors.SDKError
+	}{
+		{
+			desc:     "DeleteCert success",
+			entityID: id,
+			svcerr:   nil,
+			err:      nil,
+		},
+		{
+			desc:     "DeleteCert failure",
+			entityID: id,
+			svcerr:   certs.ErrUpdateEntity,
+			err:      errors.NewSDKErrorWithStatus(certs.ErrUpdateEntity, http.StatusUnprocessableEntity),
+		},
+		{
+			desc:     "DeleteCert with empty entity id",
+			entityID: "",
+			svcerr:   certs.ErrMalformedEntity,
+			err:      errors.NewSDKErrorWithStatus(certs.ErrMalformedEntity, http.StatusBadRequest),
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			svcCall := svc.On("RemoveCert", mock.Anything, tc.entityID).Return(tc.svcerr)
+
+			err := ctsdk.DeleteCert(tc.entityID)
+			assert.Equal(t, tc.err, err)
+			if tc.desc != "DeleteCert with empty entity id" {
+				ok := svcCall.Parent.AssertCalled(t, "RemoveCert", mock.Anything, tc.entityID)
 				assert.True(t, ok)
 			}
 			svcCall.Unset()

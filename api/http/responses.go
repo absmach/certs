@@ -45,10 +45,10 @@ type revokeCertRes struct {
 
 func (res revokeCertRes) Code() int {
 	if res.revoked {
-		return http.StatusOK
+		return http.StatusNoContent
 	}
 
-	return http.StatusBadRequest
+	return http.StatusUnprocessableEntity
 }
 
 func (res revokeCertRes) Headers() map[string]string {
@@ -56,6 +56,26 @@ func (res revokeCertRes) Headers() map[string]string {
 }
 
 func (res revokeCertRes) Empty() bool {
+	return true
+}
+
+type deleteCertRes struct {
+	deleted bool
+}
+
+func (res deleteCertRes) Code() int {
+	if res.deleted {
+		return http.StatusNoContent
+	}
+
+	return http.StatusUnprocessableEntity
+}
+
+func (res deleteCertRes) Headers() map[string]string {
+	return map[string]string{}
+}
+
+func (res deleteCertRes) Empty() bool {
 	return true
 }
 
