@@ -6,11 +6,15 @@ package sdk
 import (
 	"archive/zip"
 	"bytes"
+	"crypto"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"io"
 	"log"
+	"math/big"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -24,6 +28,7 @@ import (
 const (
 	certsEndpoint     = "certs"
 	issueCertEndpoint = "certs/issue"
+	emptyOCSPbody     = 22
 )
 
 const (
@@ -39,6 +44,35 @@ const (
 
 // ContentType represents all possible content types.
 type ContentType string
+
+type CertStatus int
+
+const (
+	Good CertStatus = iota
+	Revoked
+	Unknown
+)
+
+const (
+	good    = "Good"
+	revoked = "Revoked"
+	unknown = "Unknown"
+)
+
+func (c CertStatus) String() string {
+	switch c {
+	case Good:
+		return good
+	case Revoked:
+		return revoked
+	default:
+		return unknown
+	}
+}
+
+func (c CertStatus) MarshalJSON() ([]byte, error) {
+	return json.Marshal(c.String())
+}
 
 type PageMetadata struct {
 	Total      uint64 `json:"total,omitempty"`
@@ -105,6 +139,15 @@ type CertificateBundle struct {
 	PrivateKey  []byte `json:"private_key"`
 }
 
+type OCSPResponse struct {
+	Status       CertStatus `json:"status"`
+	SerialNumber *big.Int   `json:"serial_number"`
+	RevokedAt    *time.Time `json:"revoked_at,omitempty"`
+	ProducedAt   *time.Time `json:"produced_at,omitempty"`
+	Certificate  []byte     `json:"certificate,omitempty"`
+	IssuerHash   string     `json:"issuer_hash,omitempty"`
+}
+
 type SDK interface {
 	// IssueCert issues a certificate for a thing required for mTLS.
 	//
@@ -165,9 +208,9 @@ type SDK interface {
 	// OCSP checks the revocation status of a certificate
 	//
 	// example:
-	//  response, _ := sdk.OCSP("serialNumber")
+	//  response, _ := sdk.OCSP("serialNumber", "")
 	//  fmt.Println(response)
-	OCSP(serialNumber string) (*ocsp.Response, errors.SDKError)
+	OCSP(serialNumber, cert string) (OCSPResponse, errors.SDKError)
 
 	// ViewCA views the signing certificate
 	//
@@ -318,18 +361,77 @@ func (sdk mgSDK) RetrieveCertDownloadToken(serialNumber string) (Token, errors.S
 	return tk, nil
 }
 
-func (sdk mgSDK) OCSP(serialNumber string) (*ocsp.Response, errors.SDKError) {
+func (sdk mgSDK) OCSP(serialNumber, cert string) (OCSPResponse, errors.SDKError) {
+	var sn *big.Int
+	var ok bool
+
+	if serialNumber == "" && cert == "" {
+		return OCSPResponse{}, errors.NewSDKError(errors.New("either serial number or certificate must be provided"))
+	}
+
+	if serialNumber != "" {
+		sn, ok = new(big.Int).SetString(serialNumber, 10)
+		if !ok {
+			return OCSPResponse{}, errors.NewSDKError(errors.New("invalid serial number"))
+		}
+	}
+
+	if cert != "" {
+		block, _ := pem.Decode([]byte(cert))
+		if block == nil {
+			return OCSPResponse{}, errors.NewSDKError(errors.New("failed to decode PEM block"))
+		}
+
+		parsedCert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return OCSPResponse{}, errors.NewSDKError(err)
+		}
+		sn = parsedCert.SerialNumber
+	}
+
+	req := ocsp.Request{
+		SerialNumber:   sn,
+		HashAlgorithm:  crypto.SHA256,
+		IssuerNameHash: nil,
+		IssuerKeyHash:  nil,
+	}
+
+	requestBody, err := req.Marshal()
+	if err != nil {
+		return OCSPResponse{}, errors.NewSDKError(err)
+	}
+
 	url := fmt.Sprintf("%s/%s/ocsp", sdk.certsURL, certsEndpoint)
-	requestBody := []byte(serialNumber)
 	_, body, sdkerr := sdk.processRequest(http.MethodPost, url, requestBody, nil, http.StatusOK)
 	if sdkerr != nil {
-		return &ocsp.Response{}, sdkerr
+		return OCSPResponse{}, sdkerr
 	}
-	ocspResp, err := ocsp.ParseResponse(body, nil)
-	if err != nil {
-		return &ocsp.Response{}, errors.NewSDKError(err)
+
+	var ocspResp *ocsp.Response
+
+	if len(body) != emptyOCSPbody {
+		ocspResp, err = ocsp.ParseResponse(body, nil)
+		if err != nil {
+			return OCSPResponse{}, errors.NewSDKError(err)
+		}
+	} else {
+		return OCSPResponse{
+			Status:       CertStatus(Unknown),
+			SerialNumber: sn,
+			Certificate:  nil,
+		}, nil
 	}
-	return ocspResp, nil
+
+	resp := OCSPResponse{
+		Status:       CertStatus(ocspResp.Status),
+		SerialNumber: ocspResp.SerialNumber,
+		Certificate:  ocspResp.Certificate.Raw,
+		RevokedAt:    &ocspResp.RevokedAt,
+		IssuerHash:   ocspResp.IssuerHash.String(),
+		ProducedAt:   &ocspResp.ProducedAt,
+	}
+
+	return resp, nil
 }
 
 func (sdk mgSDK) ViewCA(token string) (Certificate, errors.SDKError) {

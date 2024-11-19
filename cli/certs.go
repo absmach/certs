@@ -5,6 +5,7 @@ package cli
 
 import (
 	"encoding/json"
+	"os"
 
 	ctxsdk "github.com/absmach/certs/sdk"
 	"github.com/spf13/cobra"
@@ -105,15 +106,29 @@ var cmdCerts = []cobra.Command{
 		},
 	},
 	{
-		Use:   "ocsp <serial_number> ",
+		Use:   "ocsp <serial_number_or_certificate_path>",
 		Short: "OCSP",
-		Long:  `OCSP for a given serial number.`,
+		Long:  `OCSP for a given serial number or certificate.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 1 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			response, err := sdk.OCSP(args[0])
+
+			var serialNumber, certContent string
+
+			if _, statErr := os.Stat(args[0]); statErr == nil {
+				certBytes, err := os.ReadFile(args[0])
+				if err != nil {
+					logErrorCmd(*cmd, err)
+					return
+				}
+				certContent = string(certBytes)
+			} else {
+				serialNumber = args[0]
+			}
+
+			response, err := sdk.OCSP(serialNumber, certContent)
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
