@@ -12,21 +12,21 @@ func Migration() *migrate.MemoryMigrationSource {
 	return &migrate.MemoryMigrationSource{
 		Migrations: []*migrate.Migration{
 			{
-				Id: "certs_1",
+				Id: "csr_1",
 				Up: []string{
-					`CREATE TABLE IF NOT EXISTS certs (
-						serial_number VARCHAR(40) UNIQUE NOT NULL,
-                        certificate    TEXT,
-                    	key            TEXT,
-                    	revoked        BOOLEAN,
-                        expiry_time    TIMESTAMP,
-						entity_id      VARCHAR(36),
-						type 		   TEXT CHECK (type IN ('RootCA', 'IntermediateCA', 'ClientCert')),
-                        PRIMARY KEY (serial_number)
+					`CREATE TABLE IF NOT EXISTS csr (
+						serial_number VARCHAR(40),
+						csr 		  TEXT,
+                        private_key   TEXT,
+						entity_id     VARCHAR(36),
+                    	status        BOOLEAN,
+                        submitted_at  TIMESTAMP,
+						processed_at  TIMESTAMP,
+                        PRIMARY KEY (entity_id)
                     )`,
 				},
 				Down: []string{
-					"DROP TABLE certs",
+					"DROP TABLE csr",
 				},
 			},
 		},

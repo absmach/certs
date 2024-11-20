@@ -47,13 +47,18 @@ type CSRMetadata struct {
 }
 
 type CSR struct {
-	CSR          []byte    `json:"csr"`
-	PrivateKey   []byte    `json:"private_key"`
-	EntityID     string    `json:"entity_id"`
-	Status       string    `json:"status"`
-	SubmittedAt  time.Time `json:"submitted_at"`
-	ProcessedAt  time.Time `json:"processed_at"`
-	SerialNumber string    `json:"serial_number"`
+	CSR          []byte    `json:"csr" db:"csr"`
+	PrivateKey   []byte    `json:"private_key" db:"private_key"`
+	EntityID     string    `json:"entity_id" db:"entity_id"`
+	Status       string    `json:"status" db:"status"`
+	SubmittedAt  time.Time `json:"submitted_at" db:"submitted_at"`
+	ProcessedAt  time.Time `json:"processed_at" db:"processed_at"`
+	SerialNumber string    `json:"serial_number" db:"serial_number"`
+}
+
+type CSRPage struct {
+	PageMetadata
+	CSRs []CSR
 }
 
 type Service interface {
@@ -132,4 +137,11 @@ type Repository interface {
 
 	// RemoveCert deletes cert from database.
 	RemoveCert(ctx context.Context, entityId string) error
+}
+
+type CSRRepository interface {
+	CreateCSR(context.Context, CSR) error
+	UpdateCSR(context.Context, CSR) error
+	ListCSRs(context.Context, PageMetadata) (CSRPage, error)
+	RetrieveCSR(context.Context, string) (CSR, error)
 }

@@ -24,7 +24,8 @@ import (
 	grpcserver "github.com/absmach/certs/internal/server/grpc"
 	httpserver "github.com/absmach/certs/internal/server/http"
 	"github.com/absmach/certs/internal/uuid"
-	cpostgres "github.com/absmach/certs/postgres"
+	cpostgres "github.com/absmach/certs/postgres/certs"
+	csrpostgres "github.com/absmach/certs/postgres/csr"
 	"github.com/absmach/certs/tracing"
 	"github.com/caarlos0/env/v10"
 	"github.com/jmoiron/sqlx"
@@ -146,7 +147,8 @@ func main() {
 func newService(ctx context.Context, db *sqlx.DB, tracer trace.Tracer, logger *slog.Logger, dbConfig pgClient.Config, config *certs.Config) (certs.Service, error) {
 	database := postgres.NewDatabase(db, dbConfig, tracer)
 	repo := cpostgres.NewRepository(database)
-	svc, err := certs.NewService(ctx, repo, config)
+	csrRepo := csrpostgres.NewRepository(database)
+	svc, err := certs.NewService(ctx, repo, csrRepo, config)
 	if err != nil {
 		return nil, err
 	}
