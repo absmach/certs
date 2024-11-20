@@ -32,6 +32,30 @@ type PageMetadata struct {
 	EntityID string `json:"entity_id,omitempty" db:"entity_id"`
 }
 
+type CSRMetadata struct {
+	CommonName         string   `json:"common_name"`
+	Organization       []string `json:"organization"`
+	OrganizationalUnit []string `json:"organizational_unit"`
+	Country            []string `json:"country"`
+	Province           []string `json:"province"`
+	Locality           []string `json:"locality"`
+	StreetAddress      []string `json:"street_address"`
+	PostalCode         []string `json:"postal_code"`
+	EmailAddress       string   `json:"email_address"`
+	DNSNames           []string `json:"dns_names"`
+	IPAddresses        []string `json:"ip_addresses"`
+}
+
+type CSR struct {
+	CSR          []byte    `json:"csr"`
+	PrivateKey   []byte    `json:"private_key"`
+	EntityID     string    `json:"entity_id"`
+	Status       string    `json:"status"`
+	SubmittedAt  time.Time `json:"submitted_at"`
+	ProcessedAt  time.Time `json:"processed_at"`
+	SerialNumber string    `json:"serial_number"`
+}
+
 type Service interface {
 	// RenewCert renews a certificate from the database.
 	RenewCert(ctx context.Context, serialNumber string) error
@@ -73,6 +97,18 @@ type Service interface {
 
 	// RemoveCert deletes a cert for a provided  entityID.
 	RemoveCert(ctx context.Context, entityId string) error
+
+	// CreateCSR creates a new Certificate Signing Request
+	CreateCSR(ctx context.Context, metadata CSRMetadata, entityID string) (CSR, error)
+
+	// ProcessCSR processes a pending CSR and either approves or rejects it
+	ProcessCSR(ctx context.Context, csrID string, approve bool) error
+
+	// ListCSRs returns a list of CSRs based on filter criteria
+	ListCSRs(ctx context.Context, entityID string, status string) ([]CSR, error)
+
+	// RetrieveCSR retrieves a specific CSR by ID
+	RetrieveCSR(ctx context.Context, csrID string) (CSR, error)
 }
 
 type Repository interface {
