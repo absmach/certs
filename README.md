@@ -101,7 +101,6 @@ Also, explore our [contrib][contrib] repository for extra services such as Cassa
 
 ## Community
 
-- [Google group][forum]
 - [Gitter][gitter]
 - [Twitter][twitter]
 
@@ -110,7 +109,6 @@ Also, explore our [contrib][contrib] repository for extra services such as Cassa
 [Apache-2.0](LICENSE)
 
 [contrib]: https://www.github.com/absmach/mg-contrib
-[forum]: https://groups.google.com/forum/#!forum/mainflux
 [gitter]: https://gitter.im/absmach/magistrala?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
 [license]: https://img.shields.io/badge/license-Apache%20v2.0-blue.svg
 [twitter]: https://twitter.com/absmach
