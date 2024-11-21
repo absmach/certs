@@ -79,7 +79,10 @@ func main() {
 	if err := env.ParseWithOptions(&dbConfig, env.Options{Prefix: envPrefix}); err != nil {
 		logger.Error(err.Error())
 	}
-	db, err := pgClient.Setup(dbConfig, *cpostgres.Migration())
+	cm := cpostgres.Migration()
+	sm := csrpostgres.Migration()
+	cm.Migrations = append(cm.Migrations, sm.Migrations...)
+	db, err := pgClient.Setup(dbConfig, *cm)
 	if err != nil {
 		log.Fatalf(fmt.Sprintf("Failed to connect to %s database: %s", svcName, err))
 	}
@@ -148,7 +151,8 @@ func newService(ctx context.Context, db *sqlx.DB, tracer trace.Tracer, logger *s
 	database := postgres.NewDatabase(db, dbConfig, tracer)
 	repo := cpostgres.NewRepository(database)
 	csrRepo := csrpostgres.NewRepository(database)
-	svc, err := certs.NewService(ctx, repo, csrRepo, config)
+	idp := uuid.New()
+	svc, err := certs.NewService(ctx, repo, csrRepo, config, idp)
 	if err != nil {
 		return nil, err
 	}

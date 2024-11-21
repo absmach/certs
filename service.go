@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/absmach/certs/errors"
+	"github.com/absmach/certs/internal/uuid"
 	"github.com/golang-jwt/jwt"
 	"golang.org/x/crypto/ocsp"
 )
@@ -31,68 +32,6 @@ const (
 	iCertExpiryThreshold         = time.Hour * 24 * 10  // 10 days
 	downloadTokenExpiry          = time.Minute * 5
 )
-
-type CertType int
-
-const (
-	RootCA CertType = iota
-	IntermediateCA
-	ClientCert
-)
-
-const (
-	Root    = "RootCA"
-	Inter   = "IntermediateCA"
-	Client  = "ClientCert"
-	Unknown = "Unknown"
-)
-
-func (c CertType) String() string {
-	switch c {
-	case RootCA:
-		return Root
-	case IntermediateCA:
-		return Inter
-	case ClientCert:
-		return Client
-	default:
-		return Unknown
-	}
-}
-
-func CertTypeFromString(s string) (CertType, error) {
-	switch s {
-	case Root:
-		return RootCA, nil
-	case Inter:
-		return IntermediateCA, nil
-	case Client:
-		return ClientCert, nil
-	default:
-		return -1, errors.New("unknown cert type")
-	}
-}
-
-type CA struct {
-	Type         CertType
-	Certificate  *x509.Certificate
-	PrivateKey   *rsa.PrivateKey
-	SerialNumber string
-}
-
-type Config struct {
-	CommonName         string   `yaml:"common_name"`
-	Organization       []string `yaml:"organization"`
-	OrganizationalUnit []string `yaml:"organizational_unit"`
-	Country            []string `yaml:"country"`
-	Province           []string `yaml:"province"`
-	Locality           []string `yaml:"locality"`
-	StreetAddress      []string `yaml:"street_address"`
-	PostalCode         []string `yaml:"postal_code"`
-	DNSNames           []string `yaml:"dns_names"`
-	IPAddresses        []net.IP `yaml:"ip_addresses"`
-	ValidityPeriod     string   `yaml:"validity_period"`
-}
 
 var (
 	serialNumberLimit         = new(big.Int).Lsh(big.NewInt(1), 128)
@@ -111,31 +50,22 @@ var (
 	ErrInvalidLength          = errors.New("invalid length of serial numbers")
 )
 
-type SubjectOptions struct {
-	CommonName         string
-	Organization       []string `json:"organization"`
-	OrganizationalUnit []string `json:"organizational_unit"`
-	Country            []string `json:"country"`
-	Province           []string `json:"province"`
-	Locality           []string `json:"locality"`
-	StreetAddress      []string `json:"street_address"`
-	PostalCode         []string `json:"postal_code"`
-}
-
 type service struct {
 	repo           Repository
 	csrRepo        CSRRepository
 	rootCA         *CA
 	intermediateCA *CA
+	idProvider     uuid.IDProvider
 }
 
 var _ Service = (*service)(nil)
 
-func NewService(ctx context.Context, repo Repository, csrRepo CSRRepository, config *Config) (Service, error) {
+func NewService(ctx context.Context, repo Repository, csrRepo CSRRepository, config *Config, idp uuid.IDProvider) (Service, error) {
 	var svc service
 
 	svc.repo = repo
 	svc.csrRepo = csrRepo
+	svc.idProvider = idp
 	if err := svc.loadCACerts(ctx); err != nil {
 		return &svc, err
 	}
@@ -476,10 +406,23 @@ func (s *service) GetChainCA(ctx context.Context, token string) (Certificate, er
 	return s.getConcatCAs(ctx)
 }
 
-func (s *service) CreateCSR(ctx context.Context, metadata CSRMetadata, entityID string) (CSR, error) {
-	privKey, err := rsa.GenerateKey(rand.Reader, PrivateKeyBytes)
+func (s *service) CreateCSR(ctx context.Context, metadata CSRMetadata, entityID string, privateKey ...*rsa.PrivateKey) (CSR, error) {
+	var privKey *rsa.PrivateKey
+	var err error
+
+	// Check if a private key is provided else generate a new private key.
+	if len(privateKey) > 0 && privateKey[0] != nil {
+		privKey = privateKey[0]
+	} else {
+		privKey, err = rsa.GenerateKey(rand.Reader, PrivateKeyBytes)
+		if err != nil {
+			return CSR{}, errors.Wrap(ErrCreateEntity, err)
+		}
+	}
+
+	csrID, err := s.idProvider.ID()
 	if err != nil {
-		return CSR{}, errors.Wrap(ErrCreateEntity, err)
+		return CSR{}, err
 	}
 
 	template := &x509.CertificateRequest{
@@ -493,7 +436,8 @@ func (s *service) CreateCSR(ctx context.Context, metadata CSRMetadata, entityID 
 			StreetAddress:      metadata.StreetAddress,
 			PostalCode:         metadata.PostalCode,
 		},
-		DNSNames: metadata.DNSNames,
+		EmailAddresses: metadata.EmailAddresses,
+		DNSNames:       metadata.DNSNames,
 	}
 
 	for _, ip := range metadata.IPAddresses {
@@ -519,6 +463,7 @@ func (s *service) CreateCSR(ctx context.Context, metadata CSRMetadata, entityID 
 	})
 
 	csr := CSR{
+		ID:          csrID,
 		CSR:         csrPEM,
 		PrivateKey:  privKeyPEM,
 		EntityID:    entityID,
@@ -583,6 +528,18 @@ func (s *service) ProcessCSR(ctx context.Context, csrID string, approve bool) er
 	csr.SerialNumber = cert.SerialNumber
 
 	return s.csrRepo.UpdateCSR(ctx, csr)
+}
+
+func (s *service) ListCSRs(ctx context.Context, entityID string, status string) (CSRPage, error) {
+	pm := PageMetadata{
+		EntityID: entityID,
+		Status:   status,
+	}
+	return s.csrRepo.ListCSRs(ctx, pm)
+}
+
+func (s *service) RetrieveCSR(ctx context.Context, csrID string) (CSR, error) {
+	return s.csrRepo.RetrieveCSR(ctx, csrID)
 }
 
 func (s *service) getConcatCAs(ctx context.Context) (Certificate, error) {

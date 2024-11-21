@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/absmach/certs"
 	"golang.org/x/crypto/ocsp"
 )
 
@@ -200,4 +201,73 @@ type fileDownloadRes struct {
 	CA          []byte `json:"ca"`
 	Filename    string
 	ContentType string
+}
+
+type createCSRRes struct {
+	certs.CSR
+	created bool
+}
+
+func (res createCSRRes) Code() int {
+	if res.created {
+		return http.StatusCreated
+	}
+
+	return http.StatusOK
+}
+
+func (res createCSRRes) Headers() map[string]string {
+	return map[string]string{}
+}
+
+func (res createCSRRes) Empty() bool {
+	return false
+}
+
+type processCSRRes struct {
+	processed bool
+}
+
+func (res processCSRRes) Code() int {
+	return http.StatusOK
+}
+
+func (res processCSRRes) Headers() map[string]string {
+	return map[string]string{}
+}
+
+func (res processCSRRes) Empty() bool {
+	return true
+}
+
+type listCSRsRes struct {
+	certs.CSRPage
+}
+
+func (res listCSRsRes) Code() int {
+	return http.StatusOK
+}
+
+func (res listCSRsRes) Headers() map[string]string {
+	return map[string]string{}
+}
+
+func (res listCSRsRes) Empty() bool {
+	return false
+}
+
+type retrieveCSRRes struct {
+	certs.CSR
+}
+
+func (res retrieveCSRRes) Code() int {
+	return http.StatusOK
+}
+
+func (res retrieveCSRRes) Headers() map[string]string {
+	return map[string]string{}
+}
+
+func (res retrieveCSRRes) Empty() bool {
+	return false
 }

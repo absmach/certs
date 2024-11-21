@@ -43,8 +43,8 @@ func NewRepository(db postgres.Database) certs.CSRRepository {
 
 func (repo CSRRepo) CreateCSR(ctx context.Context, cert certs.CSR) error {
 	q := `
-	INSERT INTO certs (serial_number, csr, private_key, entity_id, status, submitted_at, processed_at)
-	VALUES (:serial_number, :csr, :private_key, :entity_id, :status, :submitted_at, :processed_at)`
+	INSERT INTO certs (id, serial_number, csr, private_key, entity_id, status, submitted_at, processed_at)
+	VALUES (:id, :serial_number, :csr, :private_key, :entity_id, :status, :submitted_at, :processed_at)`
 	_, err := repo.db.NamedExecContext(ctx, q, cert)
 	if err != nil {
 		return handleError(certs.ErrCreateEntity, err)
@@ -69,7 +69,7 @@ func (repo CSRRepo) UpdateCSR(ctx context.Context, cert certs.CSR) error {
 }
 
 func (repo CSRRepo) RetrieveCSR(ctx context.Context,id string) (certs.CSR, error) {
-	q := `SELECT serial_number, certificate, key, entity_id, revoked, expiry_time FROM certs WHERE serial_number = $1`
+	q := `SELECT serial_number, certificate, key, entity_id, revoked, expiry_time FROM certs WHERE id = $1`
 	var csr certs.CSR
 	if err := repo.db.QueryRowxContext(ctx, q, id).StructScan(&csr); err != nil {
 		if err == sql.ErrNoRows {

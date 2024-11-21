@@ -5,6 +5,7 @@ package api
 
 import (
 	"context"
+	"crypto/rsa"
 	"crypto/x509"
 	"fmt"
 	"log/slog"
@@ -85,7 +86,7 @@ func (lm *loggingMiddleware) RetrieveCAToken(ctx context.Context) (tokenString s
 	return lm.svc.RetrieveCAToken(ctx)
 }
 
-func (lm *loggingMiddleware) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options certs.SubjectOptions) (cert certs.Certificate, err error) {
+func (lm *loggingMiddleware) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options certs.SubjectOptions, privKey ...*rsa.PrivateKey) (cert certs.Certificate, err error) {
 	defer func(begin time.Time) {
 		message := fmt.Sprintf("Method issue_cert for took %s to complete", time.Since(begin))
 		if err != nil {
@@ -94,7 +95,7 @@ func (lm *loggingMiddleware) IssueCert(ctx context.Context, entityID, ttl string
 		}
 		lm.logger.Info(message)
 	}(time.Now())
-	return lm.svc.IssueCert(ctx, entityID, ttl, ipAddrs, options)
+	return lm.svc.IssueCert(ctx, entityID, ttl, ipAddrs, options, privKey...)
 }
 
 func (lm *loggingMiddleware) ListCerts(ctx context.Context, pm certs.PageMetadata) (cp certs.CertificatePage, err error) {
@@ -179,4 +180,52 @@ func (lm *loggingMiddleware) GetChainCA(ctx context.Context, token string) (cert
 		lm.logger.Info(message)
 	}(time.Now())
 	return lm.svc.GetChainCA(ctx, token)
+}
+
+func (lm *loggingMiddleware) CreateCSR(ctx context.Context, meta certs.CSRMetadata, entityID string, key ...*rsa.PrivateKey) (csr certs.CSR, err error) {
+	defer func(begin time.Time) {
+		message := fmt.Sprintf("Method create_csr took %s to complete", time.Since(begin))
+		if err != nil {
+			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
+			return
+		}
+		lm.logger.Info(message)
+	}(time.Now())
+	return lm.svc.CreateCSR(ctx, meta, entityID, key...)
+}
+
+func (lm *loggingMiddleware) ProcessCSR(ctx context.Context, csrID string, approve bool) (err error) {
+	defer func(begin time.Time) {
+		message := fmt.Sprintf("Method process_csr took %s to complete", time.Since(begin))
+		if err != nil {
+			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
+			return
+		}
+		lm.logger.Info(message)
+	}(time.Now())
+	return lm.svc.ProcessCSR(ctx, csrID, approve)
+}
+
+func (lm *loggingMiddleware) ListCSRs(ctx context.Context, entityID string, status string) (cp certs.CSRPage, err error) {
+	defer func(begin time.Time) {
+		message := fmt.Sprintf("Method list_csrs took %s to complete", time.Since(begin))
+		if err != nil {
+			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
+			return
+		}
+		lm.logger.Info(message)
+	}(time.Now())
+	return lm.svc.ListCSRs(ctx, entityID, status)
+}
+
+func (lm *loggingMiddleware) RetrieveCSR(ctx context.Context, csrID string) (csr certs.CSR, err error) {
+	defer func(begin time.Time) {
+		message := fmt.Sprintf("Method retrieve_csr took %s to complete", time.Since(begin))
+		if err != nil {
+			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
+			return
+		}
+		lm.logger.Info(message)
+	}(time.Now())
+	return lm.svc.RetrieveCSR(ctx, csrID)
 }

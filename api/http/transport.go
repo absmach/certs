@@ -137,6 +137,32 @@ func MakeHandler(svc certs.Service, logger *slog.Logger, instanceID string) http
 			encodeCADownloadResponse,
 			opts...,
 		), "download_ca").ServeHTTP)
+		r.Route("/csr", func(r chi.Router) {
+			r.Post("/", otelhttp.NewHandler(kithttp.NewServer(
+				createCSREndpoint(svc),
+				decodeDownloadCA,
+				encodeCADownloadResponse,
+				opts...,
+			), "").ServeHTTP)
+			r.Patch("/", otelhttp.NewHandler(kithttp.NewServer(
+				processCSREndpoint(svc),
+				decodeDownloadCA,
+				encodeCADownloadResponse,
+				opts...,
+			), "").ServeHTTP)
+			r.Get("/retrieve/{id}", otelhttp.NewHandler(kithttp.NewServer(
+				retrieveCSREndpoint(svc),
+				decodeDownloadCA,
+				encodeCADownloadResponse,
+				opts...,
+			), "").ServeHTTP)
+			r.Get("/list", otelhttp.NewHandler(kithttp.NewServer(
+				listCSRsEndpoint(svc),
+				decodeDownloadCA,
+				encodeCADownloadResponse,
+				opts...,
+			), "").ServeHTTP)
+		})
 	})
 
 	r.Get("/health", certs.Health("certs", instanceID))

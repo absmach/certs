@@ -4,6 +4,8 @@
 package http
 
 import (
+	"crypto/rsa"
+
 	"github.com/absmach/certs"
 	"github.com/absmach/certs/errors"
 	"golang.org/x/crypto/ocsp"
@@ -38,7 +40,7 @@ type deleteReq struct {
 
 func (req deleteReq) validate() error {
 	if req.entityID == "" {
-		return errors.Wrap(certs.ErrMalformedEntity, ErrEmptyEntityID)
+		return errors.Wrap(certs.ErrMalformedEntity, ErrMissingEntityID)
 	}
 	return nil
 }
@@ -84,6 +86,54 @@ type ocspReq struct {
 func (req ocspReq) validate() error {
 	if req.req == nil {
 		return certs.ErrMalformedEntity
+	}
+	return nil
+}
+
+type createCSRReq struct {
+	metadata certs.CSRMetadata
+	entityID string
+	privKey *rsa.PrivateKey
+}
+
+func (req createCSRReq) validate() error {
+	if req.entityID == "" {
+		return errors.Wrap(certs.ErrMalformedEntity, ErrMissingEntityID)
+	}
+	return nil
+}
+
+type processCSRReq struct {
+	csrID string
+	approve bool
+}
+
+func (req processCSRReq) validate() error {
+	if req.csrID == "" {
+		return errors.Wrap(certs.ErrMalformedEntity, ErrMissingEntityID)
+	}
+	return nil
+}
+
+type listCSRsReq struct {
+	entityID string
+	status string
+}
+
+func (req listCSRsReq) validate() error {
+	if req.entityID == "" {
+		return errors.Wrap(certs.ErrMalformedEntity, ErrMissingEntityID)
+	}
+	return nil
+}
+
+type retrieveCSRReq struct {
+	csrID string
+}
+
+func (req retrieveCSRReq) validate() error {
+	if req.csrID == "" {
+		return errors.Wrap(certs.ErrMalformedEntity, ErrMissingEntityID)
 	}
 	return nil
 }

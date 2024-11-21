@@ -5,6 +5,7 @@ package api
 
 import (
 	"context"
+	"crypto/rsa"
 	"crypto/x509"
 	"time"
 
@@ -71,12 +72,12 @@ func (mm *metricsMiddleware) RetrieveCAToken(ctx context.Context) (string, error
 	return mm.svc.RetrieveCAToken(ctx)
 }
 
-func (mm *metricsMiddleware) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options certs.SubjectOptions) (certs.Certificate, error) {
+func (mm *metricsMiddleware) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options certs.SubjectOptions, privKey ...*rsa.PrivateKey) (certs.Certificate, error) {
 	defer func(begin time.Time) {
 		mm.counter.With("method", "issue_certificate").Add(1)
 		mm.latency.With("method", "issue_certificate").Observe(time.Since(begin).Seconds())
 	}(time.Now())
-	return mm.svc.IssueCert(ctx, entityID, ttl, ipAddrs, options)
+	return mm.svc.IssueCert(ctx, entityID, ttl, ipAddrs, options, privKey...)
 }
 
 func (mm *metricsMiddleware) ListCerts(ctx context.Context, pm certs.PageMetadata) (certs.CertificatePage, error) {
@@ -134,4 +135,36 @@ func (mm *metricsMiddleware) GetChainCA(ctx context.Context, token string) (cert
 		mm.latency.With("method", "get_chain_ca").Observe(time.Since(begin).Seconds())
 	}(time.Now())
 	return mm.svc.GetChainCA(ctx, token)
+}
+
+func (mm *metricsMiddleware) CreateCSR(ctx context.Context, meta certs.CSRMetadata, entityID string, key ...*rsa.PrivateKey) (certs.CSR, error) {
+	defer func(begin time.Time) {
+		mm.counter.With("method", "create_csr").Add(1)
+		mm.latency.With("method", "create_csr").Observe(time.Since(begin).Seconds())
+	}(time.Now())
+	return mm.svc.CreateCSR(ctx, meta, entityID, key...)
+}
+
+func (mm *metricsMiddleware) ProcessCSR(ctx context.Context, csrID string, approve bool) error {
+	defer func(begin time.Time) {
+		mm.counter.With("method", "process_csr").Add(1)
+		mm.latency.With("method", "process_csr").Observe(time.Since(begin).Seconds())
+	}(time.Now())
+	return mm.svc.ProcessCSR(ctx, csrID, approve)
+}
+
+func (mm *metricsMiddleware) ListCSRs(ctx context.Context, entityID string, status string) (certs.CSRPage, error) {
+	defer func(begin time.Time) {
+		mm.counter.With("method", "list_csrs").Add(1)
+		mm.latency.With("method", "list_csrs").Observe(time.Since(begin).Seconds())
+	}(time.Now())
+	return mm.svc.ListCSRs(ctx, entityID, status)
+}
+
+func (mm *metricsMiddleware) RetrieveCSR(ctx context.Context, csrID string) (certs.CSR, error) {
+	defer func(begin time.Time) {
+		mm.counter.With("method", "retrieve_csr").Add(1)
+		mm.latency.With("method", "retrieve_csr").Observe(time.Since(begin).Seconds())
+	}(time.Now())
+	return mm.svc.RetrieveCSR(ctx, csrID)
 }

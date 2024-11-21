@@ -32,7 +32,4 @@ var (
 
 	// ErrMissingCN indicates missing common name.
 	ErrMissingCN = errors.New("missing common name")
-
-	// ErrEmptyEntityID indicates that the entity id is empty.
-	ErrEmptyEntityID = errors.New("missing entity id")
 )

@@ -15,14 +15,14 @@ func Migration() *migrate.MemoryMigrationSource {
 				Id: "csr_1",
 				Up: []string{
 					`CREATE TABLE IF NOT EXISTS csr (
+						id            VARCHAR(36) PRIMARY KEY,
 						serial_number VARCHAR(40),
 						csr 		  TEXT,
                         private_key   TEXT,
 						entity_id     VARCHAR(36),
                     	status        BOOLEAN,
                         submitted_at  TIMESTAMP,
-						processed_at  TIMESTAMP,
-                        PRIMARY KEY (entity_id)
+						processed_at  TIMESTAMP
                     )`,
 				},
 				Down: []string{

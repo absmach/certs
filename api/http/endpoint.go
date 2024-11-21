@@ -309,3 +309,76 @@ func viewCAEndpoint(svc certs.Service) endpoint.Endpoint {
 		}, nil
 	}
 }
+
+func createCSREndpoint(svc certs.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req := request.(createCSRReq)
+		if err := req.validate(); err != nil {
+			return createCSRRes{created: false}, err
+		}
+
+		csr, err := svc.CreateCSR(ctx, req.metadata, req.entityID, req.privKey)
+		if err != nil {
+			return createCSRRes{created: false}, err
+		}
+
+		return createCSRRes{
+			created: true,
+			CSR:     csr,
+		}, nil
+	}
+}
+
+func processCSREndpoint(svc certs.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req := request.(processCSRReq)
+		if err := req.validate(); err != nil {
+			return processCSRRes{processed: false}, err
+		}
+
+		err = svc.ProcessCSR(ctx, req.csrID, req.approve)
+		if err != nil {
+			return processCSRRes{processed: false}, err
+		}
+
+		return processCSRRes{
+			processed: true,
+		}, nil
+	}
+}
+
+func listCSRsEndpoint(svc certs.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req := request.(listCSRsReq)
+		if err := req.validate(); err != nil {
+			return listCSRsRes{}, err
+		}
+
+		cp, err := svc.ListCSRs(ctx, req.entityID, req.status)
+		if err != nil {
+			return listCSRsRes{}, err
+		}
+
+		return listCSRsRes{
+			cp,
+		}, nil
+	}
+}
+
+func retrieveCSREndpoint(svc certs.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req := request.(retrieveCSRReq)
+		if err := req.validate(); err != nil {
+			return retrieveCSRRes{}, err
+		}
+
+		csr, err := svc.RetrieveCSR(ctx, req.csrID)
+		if err != nil {
+			return retrieveCSRRes{}, err
+		}
+
+		return retrieveCSRRes{
+			CSR: csr,
+		}, nil
+	}
+}
