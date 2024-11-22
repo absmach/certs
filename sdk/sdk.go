@@ -48,21 +48,21 @@ type ContentType string
 type CertStatus int
 
 const (
-	Good CertStatus = iota
+	Valid CertStatus = iota
 	Revoked
 	Unknown
 )
 
 const (
-	good    = "Good"
+	valid   = "Valid"
 	revoked = "Revoked"
 	unknown = "Unknown"
 )
 
 func (c CertStatus) String() string {
 	switch c {
-	case Good:
-		return good
+	case Valid:
+		return valid
 	case Revoked:
 		return revoked
 	default:
@@ -407,28 +407,24 @@ func (sdk mgSDK) OCSP(serialNumber, cert string) (OCSPResponse, errors.SDKError)
 		return OCSPResponse{}, sdkerr
 	}
 
-	var ocspResp *ocsp.Response
-
-	if len(body) != emptyOCSPbody {
-		ocspResp, err = ocsp.ParseResponse(body, nil)
-		if err != nil {
-			return OCSPResponse{}, errors.NewSDKError(err)
-		}
-	} else {
+	if len(body) == emptyOCSPbody {
 		return OCSPResponse{
 			Status:       CertStatus(Unknown),
 			SerialNumber: sn,
-			Certificate:  nil,
 		}, nil
+	}
+	res, err := ocsp.ParseResponse(body, nil)
+	if err != nil {
+		return OCSPResponse{}, errors.NewSDKError(err)
 	}
 
 	resp := OCSPResponse{
-		Status:       CertStatus(ocspResp.Status),
-		SerialNumber: ocspResp.SerialNumber,
-		Certificate:  ocspResp.Certificate.Raw,
-		RevokedAt:    &ocspResp.RevokedAt,
-		IssuerHash:   ocspResp.IssuerHash.String(),
-		ProducedAt:   &ocspResp.ProducedAt,
+		Status:       CertStatus(res.Status),
+		SerialNumber: res.SerialNumber,
+		Certificate:  res.Certificate.Raw,
+		RevokedAt:    &res.RevokedAt,
+		IssuerHash:   res.IssuerHash.String(),
+		ProducedAt:   &res.ProducedAt,
 	}
 
 	return resp, nil
