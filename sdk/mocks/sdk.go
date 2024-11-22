@@ -9,8 +9,6 @@ import (
 	errors "github.com/absmach/certs/errors"
 	mock "github.com/stretchr/testify/mock"
 
-	ocsp "golang.org/x/crypto/ocsp"
-
 	sdk "github.com/absmach/certs/sdk"
 )
 
@@ -368,29 +366,27 @@ func (_c *MockSDK_ListCerts_Call) RunAndReturn(run func(sdk.PageMetadata) (sdk.C
 	return _c
 }
 
-// OCSP provides a mock function with given fields: serialNumber
-func (_m *MockSDK) OCSP(serialNumber string) (*ocsp.Response, errors.SDKError) {
-	ret := _m.Called(serialNumber)
+// OCSP provides a mock function with given fields: serialNumber, cert
+func (_m *MockSDK) OCSP(serialNumber string, cert string) (sdk.OCSPResponse, errors.SDKError) {
+	ret := _m.Called(serialNumber, cert)
 
 	if len(ret) == 0 {
 		panic("no return value specified for OCSP")
 	}
 
-	var r0 *ocsp.Response
+	var r0 sdk.OCSPResponse
 	var r1 errors.SDKError
-	if rf, ok := ret.Get(0).(func(string) (*ocsp.Response, errors.SDKError)); ok {
-		return rf(serialNumber)
+	if rf, ok := ret.Get(0).(func(string, string) (sdk.OCSPResponse, errors.SDKError)); ok {
+		return rf(serialNumber, cert)
 	}
-	if rf, ok := ret.Get(0).(func(string) *ocsp.Response); ok {
-		r0 = rf(serialNumber)
+	if rf, ok := ret.Get(0).(func(string, string) sdk.OCSPResponse); ok {
+		r0 = rf(serialNumber, cert)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*ocsp.Response)
-		}
+		r0 = ret.Get(0).(sdk.OCSPResponse)
 	}
 
-	if rf, ok := ret.Get(1).(func(string) errors.SDKError); ok {
-		r1 = rf(serialNumber)
+	if rf, ok := ret.Get(1).(func(string, string) errors.SDKError); ok {
+		r1 = rf(serialNumber, cert)
 	} else {
 		if ret.Get(1) != nil {
 			r1 = ret.Get(1).(errors.SDKError)
@@ -407,23 +403,24 @@ type MockSDK_OCSP_Call struct {
 
 // OCSP is a helper method to define mock.On call
 //   - serialNumber string
-func (_e *MockSDK_Expecter) OCSP(serialNumber interface{}) *MockSDK_OCSP_Call {
-	return &MockSDK_OCSP_Call{Call: _e.mock.On("OCSP", serialNumber)}
+//   - cert string
+func (_e *MockSDK_Expecter) OCSP(serialNumber interface{}, cert interface{}) *MockSDK_OCSP_Call {
+	return &MockSDK_OCSP_Call{Call: _e.mock.On("OCSP", serialNumber, cert)}
 }
 
-func (_c *MockSDK_OCSP_Call) Run(run func(serialNumber string)) *MockSDK_OCSP_Call {
+func (_c *MockSDK_OCSP_Call) Run(run func(serialNumber string, cert string)) *MockSDK_OCSP_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string))
+		run(args[0].(string), args[1].(string))
 	})
 	return _c
 }
 
-func (_c *MockSDK_OCSP_Call) Return(_a0 *ocsp.Response, _a1 errors.SDKError) *MockSDK_OCSP_Call {
+func (_c *MockSDK_OCSP_Call) Return(_a0 sdk.OCSPResponse, _a1 errors.SDKError) *MockSDK_OCSP_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockSDK_OCSP_Call) RunAndReturn(run func(string) (*ocsp.Response, errors.SDKError)) *MockSDK_OCSP_Call {
+func (_c *MockSDK_OCSP_Call) RunAndReturn(run func(string, string) (sdk.OCSPResponse, errors.SDKError)) *MockSDK_OCSP_Call {
 	_c.Call.Return(run)
 	return _c
 }

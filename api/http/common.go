@@ -15,6 +15,7 @@ import (
 const (
 	// ContentType represents JSON content type.
 	ContentType = "application/json"
+	OCSPType    = "application/ocsp-response"
 )
 
 // Response contains HTTP response specific methods.

@@ -7,6 +7,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"encoding/asn1"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -24,6 +25,8 @@ import (
 	"golang.org/x/crypto/ocsp"
 )
 
+var idPKIXOCSPBasic = asn1.ObjectIdentifier([]int{1, 3, 6, 1, 5, 5, 7, 48, 1, 1})
+
 const (
 	offsetKey       = "offset"
 	limitKey        = "limit"
@@ -36,6 +39,16 @@ const (
 	defLimit        = 10
 	defType         = 1
 )
+
+type responseASN1 struct {
+	Status   asn1.Enumerated
+	Response responseBytes `asn1:"explicit,tag:0,optional"`
+}
+
+type responseBytes struct {
+	ResponseType asn1.ObjectIdentifier
+	Response     []byte
+}
 
 // MakeHandler returns a HTTP handler for API endpoints.
 func MakeHandler(svc certs.Service, logger *slog.Logger, instanceID string) http.Handler {
@@ -267,12 +280,30 @@ func EncodeResponse(_ context.Context, w http.ResponseWriter, response interface
 
 func encodeOSCPResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
 	res := response.(ocspRes)
+	if res.template.Certificate == nil {
+		ocspRes, err := asn1.Marshal(responseASN1{
+			Status: asn1.Enumerated(ocsp.Malformed),
+			Response: responseBytes{
+				ResponseType: idPKIXOCSPBasic,
+			},
+		})
+		if err != nil {
+			return err
+		}
+
+		w.Header().Set("Content-Type", OCSPType)
+		if _, err := w.Write(ocspRes); err != nil {
+			return err
+		}
+
+		return err
+	}
 
 	ocspRes, err := ocsp.CreateResponse(res.issuerCert, res.template.Certificate, res.template, res.signer)
 	if err != nil {
 		return err
 	}
-	w.Header().Set("Content-Type", "application/ocsp-response")
+	w.Header().Set("Content-Type", OCSPType)
 	if _, err := w.Write(ocspRes); err != nil {
 		return err
 	}
