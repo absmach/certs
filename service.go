@@ -93,13 +93,14 @@ func NewService(ctx context.Context, repo Repository, csrRepo CSRRepository, con
 // If the root CA is not found, it returns an error.
 func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options SubjectOptions, key ...*rsa.PrivateKey) (Certificate, error) {
 	var err error
-	privKey := &rsa.PrivateKey{}
+	privKey := rsa.PrivateKey{}
 	if len(key) == 0 {
-		privKey, err = rsa.GenerateKey(rand.Reader, PrivateKeyBytes)
+		pKey, err := rsa.GenerateKey(rand.Reader, PrivateKeyBytes)
+		privKey = *pKey
 		if err != nil {
 			return Certificate{}, err
 		} else {
-			privKey = key[0]
+			privKey = *key[0]
 		}
 	}
 	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
@@ -139,7 +140,7 @@ func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs [
 		return Certificate{}, err
 	}
 	dbCert := Certificate{
-		Key:          pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(privKey)}),
+		Key:          pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(&privKey)}),
 		Certificate:  pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certBytes}),
 		SerialNumber: template.SerialNumber.String(),
 		EntityID:     entityID,
@@ -478,7 +479,7 @@ func (s *service) CreateCSR(ctx context.Context, metadata CSRMetadata, entityID 
 	return csr, nil
 }
 
-func (s *service) ProcessCSR(ctx context.Context, csrID string, approve bool) error {
+func (s *service) SignCSR(ctx context.Context, csrID string, approve bool) error {
 	csr, err := s.csrRepo.RetrieveCSR(ctx, csrID)
 	if err != nil {
 		return errors.Wrap(ErrViewEntity, err)

@@ -92,6 +92,8 @@ type PageMetadata struct {
 	DNSNames           []string `json:"dns_names,omitempty"`
 	IPAddresses        []string `json:"ip_addresses,omitempty"`
 	EmailAddresses     []string `json:"email_addresses,omitempty"`
+	Status             string   `json:"status,omitempty"`
+	Sign               bool     `json:"sign,omitempty"`
 }
 
 type Options struct {
@@ -280,7 +282,7 @@ type SDK interface {
 	//  pm = sdk.CSRMetadata{CommonName: "common_name", "entity_id" }
 	//	reponse, _ := sdk.CreateCSR(pm, "privKeyPath")
 	//  fmt.Println(response)
-	CreateCSR(metadata CSRMetadata, entityID string, privKeyPath string) (CSR, errors.SDKError)
+	CreateCSR(pm PageMetadata, privKeyPath string) (CSR, errors.SDKError)
 
 	// SignCSR processes a pending CSR and either signs or rejects it
 	//
@@ -291,9 +293,9 @@ type SDK interface {
 
 	// ListCSRs returns a list of CSRs based on filter criteria
 	//
-	//	reponse, _ := sdk.ListCSRs("entity_id", "pending")
+	//	reponse, _ := sdk.ListCSRs(sdk.PageMetadata{EntityID: "entity_id", Status: "pending"})
 	//	fmt.Println(response)
-	ListCSRs(entityID string, status string) (CSRPage, errors.SDKError)
+	ListCSRs(pm PageMetadata) (CSRPage, errors.SDKError)
 
 	// RetrieveCSR retrieves a specific CSR by ID
 	//
@@ -585,9 +587,8 @@ func (sdk mgSDK) CreateCSR(pm PageMetadata, privKeyPath string) (CSR, errors.SDK
 	if err != nil {
 		return CSR{}, errors.NewSDKError(err)
 	}
-	url := fmt.Sprintf("%s/%s", issueCertEndpoint, entityID)
-
-	_, body, sdkerr := sdk.processRequest(http.MethodPost, url, nil, nil, http.StatusOK)
+	url := fmt.Sprintf("%s/%s", sdk.certsURL, csrEndpoint)
+	_, body, sdkerr := sdk.processRequest(http.MethodPost, url, d, nil, http.StatusOK)
 	if sdkerr != nil {
 		return CSR{}, sdkerr
 	}
@@ -600,7 +601,10 @@ func (sdk mgSDK) CreateCSR(pm PageMetadata, privKeyPath string) (CSR, errors.SDK
 }
 
 func (sdk mgSDK) SignCSR(csrID string, sign bool) errors.SDKError {
-	url, err := sdk.withQueryParams(sdk.certsURL, fmt.Sprintf("%s/download-ca", certsEndpoint), pm)
+	pm := PageMetadata{
+		Sign: sign,
+	}
+	url, err := sdk.withQueryParams(sdk.certsURL, fmt.Sprintf("%s/%s", certsEndpoint, csrID), pm)
 	if err != nil {
 		return errors.NewSDKError(err)
 	}
@@ -612,7 +616,7 @@ func (sdk mgSDK) SignCSR(csrID string, sign bool) errors.SDKError {
 	return nil
 }
 
-func (sdk mgSDK) ListCSRs(entityID string, status string) (CSRPage, errors.SDKError) {
+func (sdk mgSDK) ListCSRs(pm PageMetadata) (CSRPage, errors.SDKError) {
 	url, err := sdk.withQueryParams(sdk.certsURL, fmt.Sprintf("%s/list", csrEndpoint), pm)
 	if err != nil {
 		return CSRPage{}, errors.NewSDKError(err)
@@ -730,6 +734,12 @@ func (pm PageMetadata) query() (string, error) {
 	}
 	if pm.CommonName != "" {
 		q.Add("common_name", pm.CommonName)
+	}
+	if pm.Sign {
+		q.Add("status", "true")
+	}
+	if pm.Status != "" {
+		q.Add("status", pm.Status)
 	}
 
 	return q.Encode(), nil

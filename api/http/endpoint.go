@@ -317,7 +317,7 @@ func createCSREndpoint(svc certs.Service) endpoint.Endpoint {
 			return createCSRRes{created: false}, err
 		}
 
-		csr, err := svc.CreateCSR(ctx, req.metadata, req.entityID, req.privKey)
+		csr, err := svc.CreateCSR(ctx, req.Metadata, req.Metadata.EntityID, req.privKey)
 		if err != nil {
 			return createCSRRes{created: false}, err
 		}
@@ -329,19 +329,19 @@ func createCSREndpoint(svc certs.Service) endpoint.Endpoint {
 	}
 }
 
-func processCSREndpoint(svc certs.Service) endpoint.Endpoint {
+func signCSREndpoint(svc certs.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
-		req := request.(processCSRReq)
+		req := request.(SignCSRReq)
 		if err := req.validate(); err != nil {
-			return processCSRRes{processed: false}, err
+			return signCSRRes{processed: false}, err
 		}
 
-		err = svc.ProcessCSR(ctx, req.csrID, req.approve)
+		err = svc.SignCSR(ctx, req.csrID, req.approve)
 		if err != nil {
-			return processCSRRes{processed: false}, err
+			return signCSRRes{processed: false}, err
 		}
 
-		return processCSRRes{
+		return signCSRRes{
 			processed: true,
 		}, nil
 	}

@@ -91,24 +91,23 @@ func (req ocspReq) validate() error {
 }
 
 type createCSRReq struct {
-	metadata certs.CSRMetadata
-	entityID string
-	privKey *rsa.PrivateKey
+	Metadata certs.CSRMetadata `json:"metadata"`
+	privKey  *rsa.PrivateKey
 }
 
 func (req createCSRReq) validate() error {
-	if req.entityID == "" {
+	if req.Metadata.EntityID == "" {
 		return errors.Wrap(certs.ErrMalformedEntity, ErrMissingEntityID)
 	}
 	return nil
 }
 
-type processCSRReq struct {
-	csrID string
+type SignCSRReq struct {
+	csrID   string
 	approve bool
 }
 
-func (req processCSRReq) validate() error {
+func (req SignCSRReq) validate() error {
 	if req.csrID == "" {
 		return errors.Wrap(certs.ErrMalformedEntity, ErrMissingEntityID)
 	}
@@ -117,7 +116,7 @@ func (req processCSRReq) validate() error {
 
 type listCSRsReq struct {
 	entityID string
-	status string
+	status   string
 }
 
 func (req listCSRsReq) validate() error {

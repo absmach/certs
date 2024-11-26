@@ -108,10 +108,10 @@ func (tm *tracingMiddleware) CreateCSR(ctx context.Context, meta certs.CSRMetada
 	return tm.svc.CreateCSR(ctx, meta, entityID, key...)
 }
 
-func (tm *tracingMiddleware) ProcessCSR(ctx context.Context, csrID string, approve bool) error {
+func (tm *tracingMiddleware) SignCSR(ctx context.Context, csrID string, approve bool) error {
 	ctx, span := tm.tracer.Start(ctx, "process_csr")
 	defer span.End()
-	return tm.svc.ProcessCSR(ctx, csrID, approve)
+	return tm.svc.SignCSR(ctx, csrID, approve)
 }
 
 func (tm *tracingMiddleware) ListCSRs(ctx context.Context, entityID string, status string) (certs.CSRPage, error) {

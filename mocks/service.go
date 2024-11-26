@@ -541,54 +541,6 @@ func (_c *MockService_OCSP_Call) RunAndReturn(run func(context.Context, string) 
 	return _c
 }
 
-// ProcessCSR provides a mock function with given fields: ctx, csrID, approve
-func (_m *MockService) ProcessCSR(ctx context.Context, csrID string, approve bool) error {
-	ret := _m.Called(ctx, csrID, approve)
-
-	if len(ret) == 0 {
-		panic("no return value specified for ProcessCSR")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, bool) error); ok {
-		r0 = rf(ctx, csrID, approve)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// MockService_ProcessCSR_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ProcessCSR'
-type MockService_ProcessCSR_Call struct {
-	*mock.Call
-}
-
-// ProcessCSR is a helper method to define mock.On call
-//   - ctx context.Context
-//   - csrID string
-//   - approve bool
-func (_e *MockService_Expecter) ProcessCSR(ctx interface{}, csrID interface{}, approve interface{}) *MockService_ProcessCSR_Call {
-	return &MockService_ProcessCSR_Call{Call: _e.mock.On("ProcessCSR", ctx, csrID, approve)}
-}
-
-func (_c *MockService_ProcessCSR_Call) Run(run func(ctx context.Context, csrID string, approve bool)) *MockService_ProcessCSR_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].(bool))
-	})
-	return _c
-}
-
-func (_c *MockService_ProcessCSR_Call) Return(_a0 error) *MockService_ProcessCSR_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *MockService_ProcessCSR_Call) RunAndReturn(run func(context.Context, string, bool) error) *MockService_ProcessCSR_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // RemoveCert provides a mock function with given fields: ctx, entityId
 func (_m *MockService) RemoveCert(ctx context.Context, entityId string) error {
 	ret := _m.Called(ctx, entityId)
@@ -963,6 +915,54 @@ func (_c *MockService_RevokeCert_Call) Return(_a0 error) *MockService_RevokeCert
 }
 
 func (_c *MockService_RevokeCert_Call) RunAndReturn(run func(context.Context, string) error) *MockService_RevokeCert_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SignCSR provides a mock function with given fields: ctx, csrID, approve
+func (_m *MockService) SignCSR(ctx context.Context, csrID string, approve bool) error {
+	ret := _m.Called(ctx, csrID, approve)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SignCSR")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, bool) error); ok {
+		r0 = rf(ctx, csrID, approve)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockService_SignCSR_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SignCSR'
+type MockService_SignCSR_Call struct {
+	*mock.Call
+}
+
+// SignCSR is a helper method to define mock.On call
+//   - ctx context.Context
+//   - csrID string
+//   - approve bool
+func (_e *MockService_Expecter) SignCSR(ctx interface{}, csrID interface{}, approve interface{}) *MockService_SignCSR_Call {
+	return &MockService_SignCSR_Call{Call: _e.mock.On("SignCSR", ctx, csrID, approve)}
+}
+
+func (_c *MockService_SignCSR_Call) Run(run func(ctx context.Context, csrID string, approve bool)) *MockService_SignCSR_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(bool))
+	})
+	return _c
+}
+
+func (_c *MockService_SignCSR_Call) Return(_a0 error) *MockService_SignCSR_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockService_SignCSR_Call) RunAndReturn(run func(context.Context, string, bool) error) *MockService_SignCSR_Call {
 	_c.Call.Return(run)
 	return _c
 }

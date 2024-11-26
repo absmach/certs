@@ -32,16 +32,6 @@ const (
 	limitKey        = "limit"
 	entityKey       = "entity_id"
 	commonName      = "common_name"
-	organization    = "organization"
-	orgUnit         = "organization_unit"
-	country         = "country"
-	province        = "province"
-	locality        = "locality"
-	streetAddress   = "street_address"
-	postalCode      = "postal_code"
-	emailAddresses  = "email_addresses"
-	dnsNames        = "dns_names"
-	ipAddresses     = "ip_addresses"
 	approve         = "approve"
 	status          = "status"
 	token           = "token"
@@ -157,7 +147,7 @@ func MakeHandler(svc certs.Service, logger *slog.Logger, instanceID string) http
 				opts...,
 			), "").ServeHTTP)
 			r.Patch("/{id}", otelhttp.NewHandler(kithttp.NewServer(
-				processCSREndpoint(svc),
+				signCSREndpoint(svc),
 				decodeUpdateCSR,
 				EncodeResponse,
 				opts...,
@@ -300,82 +290,9 @@ func decodeListCerts(_ context.Context, r *http.Request) (interface{}, error) {
 }
 
 func decodeCreateCSR(_ context.Context, r *http.Request) (interface{}, error) {
-	o, err := readStringQuery(r, organization, "")
-	if err != nil {
+	req := createCSRReq{}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, err
-	}
-
-	ou, err := readStringQuery(r, orgUnit, "")
-	if err != nil {
-		return nil, err
-	}
-
-	c, err := readStringQuery(r, country, "")
-	if err != nil {
-		return nil, err
-	}
-
-	p, err := readStringQuery(r, province, "")
-	if err != nil {
-		return nil, err
-	}
-
-	l, err := readStringQuery(r, locality, "")
-	if err != nil {
-		return nil, err
-	}
-
-	s, err := readStringQuery(r, streetAddress, "")
-	if err != nil {
-		return nil, err
-	}
-
-	po, err := readStringQuery(r, postalCode, "")
-	if err != nil {
-		return nil, err
-	}
-
-	entity, err := readStringQuery(r, entityKey, "")
-	if err != nil {
-		return nil, err
-	}
-
-	cn, err := readStringQuery(r, commonName, "")
-	if err != nil {
-		return nil, err
-	}
-
-	e, err := readStringQuery(r, emailAddresses, "")
-	if err != nil {
-		return nil, err
-	}
-
-	d, err := readStringQuery(r, dnsNames, "")
-	if err != nil {
-		return nil, err
-	}
-
-	i, err := readStringQuery(r, ipAddresses, "")
-	if err != nil {
-		return nil, err
-	}
-
-	req := createCSRReq{
-		metadata: certs.CSRMetadata{
-			CommonName:         cn,
-			Organization:       []string{o},
-			OrganizationalUnit: []string{ou},
-			Country:            []string{c},
-			Province:           []string{p},
-			Locality:           []string{l},
-			StreetAddress:      []string{s},
-			PostalCode:         []string{po},
-			DNSNames:           []string{d},
-			IPAddresses:        []string{i},
-			EmailAddresses:     []string{e},
-		},
-		entityID: entity,
-		// privKey: ,
 	}
 
 	return req, nil
@@ -387,7 +304,7 @@ func decodeUpdateCSR(_ context.Context, r *http.Request) (interface{}, error) {
 		return nil, err
 	}
 
-	req := processCSRReq{
+	req := SignCSRReq{
 		csrID:   chi.URLParam(r, "id"),
 		approve: app,
 	}

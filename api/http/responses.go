@@ -143,7 +143,7 @@ func (res listCertsRes) Empty() bool {
 type viewCertRes struct {
 	SerialNumber string    `json:"serial_number,omitempty"`
 	Certificate  string    `json:"certificate,omitempty"`
-	Key          string    `json:"key,omitempty,omitempty"`
+	Key          string    `json:"key,omitempty"`
 	Revoked      bool      `json:"revoked,omitempty"`
 	ExpiryTime   time.Time `json:"expiry_time,omitempty"`
 	EntityID     string    `json:"entity_id,omitempty"`
@@ -224,19 +224,19 @@ func (res createCSRRes) Empty() bool {
 	return false
 }
 
-type processCSRRes struct {
+type signCSRRes struct {
 	processed bool
 }
 
-func (res processCSRRes) Code() int {
+func (res signCSRRes) Code() int {
 	return http.StatusOK
 }
 
-func (res processCSRRes) Headers() map[string]string {
+func (res signCSRRes) Headers() map[string]string {
 	return map[string]string{}
 }
 
-func (res processCSRRes) Empty() bool {
+func (res signCSRRes) Empty() bool {
 	return true
 }
 

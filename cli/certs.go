@@ -5,8 +5,10 @@ package cli
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 
+	"github.com/absmach/certs/errors"
 	ctxsdk "github.com/absmach/certs/sdk"
 	"github.com/spf13/cobra"
 )
@@ -20,7 +22,7 @@ func SetSDK(s ctxsdk.SDK) {
 
 var cmdCerts = []cobra.Command{
 	{
-		Use:   "get [all | <entity_id> ]",
+		Use:   "get [all | <entity_id>]",
 		Short: "Get certificate",
 		Long:  `Gets a certificate for a given entity ID or all certificates.`,
 		Run: func(cmd *cobra.Command, args []string) {
@@ -236,6 +238,123 @@ var cmdCerts = []cobra.Command{
 				return
 			}
 			logJSONCmd(*cmd, token)
+		},
+	},
+	{
+		Use:   "csr <metadata> <private_key_path>",
+		Short: "Create CSR",
+		Long:  `Creates a CSR.`,
+		Run: func(cmd *cobra.Command, args []string) {
+			if len(args) > 3 || len(args) == 0 {
+				logUsageCmd(*cmd, cmd.Use)
+				return
+			}
+
+			var pm ctxsdk.PageMetadata
+			if err := json.Unmarshal([]byte(args[0]), &pm); err != nil {
+				logErrorCmd(*cmd, err)
+				return
+			}
+			var csr ctxsdk.CSR
+			var err error
+			if len(args) == 1 {
+				csr, err = sdk.CreateCSR(pm, "")
+				if err != nil {
+					logErrorCmd(*cmd, err)
+					return
+				}
+				logJSONCmd(*cmd, csr)
+				return
+			}
+			csr, err = sdk.CreateCSR(pm, args[1])
+			if err != nil {
+				logErrorCmd(*cmd, err)
+				return
+			}
+
+			logJSONCmd(*cmd, csr)
+		},
+	},
+	{
+		Use:   "sign <csr_id> <sign>",
+		Short: "Sign CSR",
+		Long:  `Signs a CSR for a given csr id.`,
+		Run: func(cmd *cobra.Command, args []string) {
+			if len(args) != 2 {
+				logUsageCmd(*cmd, cmd.Use)
+				return
+			}
+			var sign bool
+			switch args[1] {
+			case "true":
+				sign = true
+			case "false":
+				sign = false
+			default:
+				logErrorCmd(*cmd, errors.NewSDKError(fmt.Errorf("unknown type")))
+				return
+			}
+
+			err := sdk.SignCSR(args[0], sign)
+			if err != nil {
+				logErrorCmd(*cmd, err)
+				return
+			}
+			logOKCmd(*cmd)
+		},
+	},
+	{
+		Use:   "get-csr [all | <entity_id>] <status>",
+		Short: "Get csr",
+		Long:  `Gets CSRs for a given entity ID or all CSR.`,
+		Run: func(cmd *cobra.Command, args []string) {
+			if len(args) != 2 {
+				logUsageCmd(*cmd, cmd.Use)
+				return
+			}
+			if args[0] == "all" {
+				pm := ctxsdk.PageMetadata{
+					Limit:  Limit,
+					Offset: Offset,
+					Status: args[1],
+				}
+				page, err := sdk.ListCSRs(pm)
+				if err != nil {
+					logErrorCmd(*cmd, err)
+					return
+				}
+				logJSONCmd(*cmd, page)
+				return
+			}
+			pm := ctxsdk.PageMetadata{
+				EntityID: args[0],
+				Limit:    Limit,
+				Offset:   Offset,
+				Status:   args[1],
+			}
+			page, err := sdk.ListCSRs(pm)
+			if err != nil {
+				logErrorCmd(*cmd, err)
+				return
+			}
+			logJSONCmd(*cmd, page)
+		},
+	},
+	{
+		Use:   "view-csr <csr_id>",
+		Short: "View CSR",
+		Long:  `Views a CSR for a given csr id.`,
+		Run: func(cmd *cobra.Command, args []string) {
+			if len(args) != 1 {
+				logUsageCmd(*cmd, cmd.Use)
+				return
+			}
+			cert, err := sdk.RetrieveCSR(args[0])
+			if err != nil {
+				logErrorCmd(*cmd, err)
+				return
+			}
+			logJSONCmd(*cmd, cert)
 		},
 	},
 }

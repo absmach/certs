@@ -25,6 +25,65 @@ func (_m *MockSDK) EXPECT() *MockSDK_Expecter {
 	return &MockSDK_Expecter{mock: &_m.Mock}
 }
 
+// CreateCSR provides a mock function with given fields: pm, privKeyPath
+func (_m *MockSDK) CreateCSR(pm sdk.PageMetadata, privKeyPath string) (sdk.CSR, errors.SDKError) {
+	ret := _m.Called(pm, privKeyPath)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateCSR")
+	}
+
+	var r0 sdk.CSR
+	var r1 errors.SDKError
+	if rf, ok := ret.Get(0).(func(sdk.PageMetadata, string) (sdk.CSR, errors.SDKError)); ok {
+		return rf(pm, privKeyPath)
+	}
+	if rf, ok := ret.Get(0).(func(sdk.PageMetadata, string) sdk.CSR); ok {
+		r0 = rf(pm, privKeyPath)
+	} else {
+		r0 = ret.Get(0).(sdk.CSR)
+	}
+
+	if rf, ok := ret.Get(1).(func(sdk.PageMetadata, string) errors.SDKError); ok {
+		r1 = rf(pm, privKeyPath)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(errors.SDKError)
+		}
+	}
+
+	return r0, r1
+}
+
+// MockSDK_CreateCSR_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateCSR'
+type MockSDK_CreateCSR_Call struct {
+	*mock.Call
+}
+
+// CreateCSR is a helper method to define mock.On call
+//   - pm sdk.PageMetadata
+//   - privKeyPath string
+func (_e *MockSDK_Expecter) CreateCSR(pm interface{}, privKeyPath interface{}) *MockSDK_CreateCSR_Call {
+	return &MockSDK_CreateCSR_Call{Call: _e.mock.On("CreateCSR", pm, privKeyPath)}
+}
+
+func (_c *MockSDK_CreateCSR_Call) Run(run func(pm sdk.PageMetadata, privKeyPath string)) *MockSDK_CreateCSR_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(sdk.PageMetadata), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *MockSDK_CreateCSR_Call) Return(_a0 sdk.CSR, _a1 errors.SDKError) *MockSDK_CreateCSR_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSDK_CreateCSR_Call) RunAndReturn(run func(sdk.PageMetadata, string) (sdk.CSR, errors.SDKError)) *MockSDK_CreateCSR_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // DeleteCert provides a mock function with given fields: entityID
 func (_m *MockSDK) DeleteCert(entityID string) errors.SDKError {
 	ret := _m.Called(entityID)
@@ -308,6 +367,64 @@ func (_c *MockSDK_IssueCert_Call) RunAndReturn(run func(string, string, []string
 	return _c
 }
 
+// ListCSRs provides a mock function with given fields: pm
+func (_m *MockSDK) ListCSRs(pm sdk.PageMetadata) (sdk.CSRPage, errors.SDKError) {
+	ret := _m.Called(pm)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListCSRs")
+	}
+
+	var r0 sdk.CSRPage
+	var r1 errors.SDKError
+	if rf, ok := ret.Get(0).(func(sdk.PageMetadata) (sdk.CSRPage, errors.SDKError)); ok {
+		return rf(pm)
+	}
+	if rf, ok := ret.Get(0).(func(sdk.PageMetadata) sdk.CSRPage); ok {
+		r0 = rf(pm)
+	} else {
+		r0 = ret.Get(0).(sdk.CSRPage)
+	}
+
+	if rf, ok := ret.Get(1).(func(sdk.PageMetadata) errors.SDKError); ok {
+		r1 = rf(pm)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(errors.SDKError)
+		}
+	}
+
+	return r0, r1
+}
+
+// MockSDK_ListCSRs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListCSRs'
+type MockSDK_ListCSRs_Call struct {
+	*mock.Call
+}
+
+// ListCSRs is a helper method to define mock.On call
+//   - pm sdk.PageMetadata
+func (_e *MockSDK_Expecter) ListCSRs(pm interface{}) *MockSDK_ListCSRs_Call {
+	return &MockSDK_ListCSRs_Call{Call: _e.mock.On("ListCSRs", pm)}
+}
+
+func (_c *MockSDK_ListCSRs_Call) Run(run func(pm sdk.PageMetadata)) *MockSDK_ListCSRs_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(sdk.PageMetadata))
+	})
+	return _c
+}
+
+func (_c *MockSDK_ListCSRs_Call) Return(_a0 sdk.CSRPage, _a1 errors.SDKError) *MockSDK_ListCSRs_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSDK_ListCSRs_Call) RunAndReturn(run func(sdk.PageMetadata) (sdk.CSRPage, errors.SDKError)) *MockSDK_ListCSRs_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListCerts provides a mock function with given fields: pm
 func (_m *MockSDK) ListCerts(pm sdk.PageMetadata) (sdk.CertificatePage, errors.SDKError) {
 	ret := _m.Called(pm)
@@ -473,6 +590,64 @@ func (_c *MockSDK_RenewCert_Call) RunAndReturn(run func(string) errors.SDKError)
 	return _c
 }
 
+// RetrieveCSR provides a mock function with given fields: csrID
+func (_m *MockSDK) RetrieveCSR(csrID string) (sdk.CSR, errors.SDKError) {
+	ret := _m.Called(csrID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RetrieveCSR")
+	}
+
+	var r0 sdk.CSR
+	var r1 errors.SDKError
+	if rf, ok := ret.Get(0).(func(string) (sdk.CSR, errors.SDKError)); ok {
+		return rf(csrID)
+	}
+	if rf, ok := ret.Get(0).(func(string) sdk.CSR); ok {
+		r0 = rf(csrID)
+	} else {
+		r0 = ret.Get(0).(sdk.CSR)
+	}
+
+	if rf, ok := ret.Get(1).(func(string) errors.SDKError); ok {
+		r1 = rf(csrID)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(errors.SDKError)
+		}
+	}
+
+	return r0, r1
+}
+
+// MockSDK_RetrieveCSR_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RetrieveCSR'
+type MockSDK_RetrieveCSR_Call struct {
+	*mock.Call
+}
+
+// RetrieveCSR is a helper method to define mock.On call
+//   - csrID string
+func (_e *MockSDK_Expecter) RetrieveCSR(csrID interface{}) *MockSDK_RetrieveCSR_Call {
+	return &MockSDK_RetrieveCSR_Call{Call: _e.mock.On("RetrieveCSR", csrID)}
+}
+
+func (_c *MockSDK_RetrieveCSR_Call) Run(run func(csrID string)) *MockSDK_RetrieveCSR_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string))
+	})
+	return _c
+}
+
+func (_c *MockSDK_RetrieveCSR_Call) Return(_a0 sdk.CSR, _a1 errors.SDKError) *MockSDK_RetrieveCSR_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSDK_RetrieveCSR_Call) RunAndReturn(run func(string) (sdk.CSR, errors.SDKError)) *MockSDK_RetrieveCSR_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // RetrieveCertDownloadToken provides a mock function with given fields: serialNumber
 func (_m *MockSDK) RetrieveCertDownloadToken(serialNumber string) (sdk.Token, errors.SDKError) {
 	ret := _m.Called(serialNumber)
@@ -575,6 +750,55 @@ func (_c *MockSDK_RevokeCert_Call) Return(_a0 errors.SDKError) *MockSDK_RevokeCe
 }
 
 func (_c *MockSDK_RevokeCert_Call) RunAndReturn(run func(string) errors.SDKError) *MockSDK_RevokeCert_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SignCSR provides a mock function with given fields: csrID, sign
+func (_m *MockSDK) SignCSR(csrID string, sign bool) errors.SDKError {
+	ret := _m.Called(csrID, sign)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SignCSR")
+	}
+
+	var r0 errors.SDKError
+	if rf, ok := ret.Get(0).(func(string, bool) errors.SDKError); ok {
+		r0 = rf(csrID, sign)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(errors.SDKError)
+		}
+	}
+
+	return r0
+}
+
+// MockSDK_SignCSR_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SignCSR'
+type MockSDK_SignCSR_Call struct {
+	*mock.Call
+}
+
+// SignCSR is a helper method to define mock.On call
+//   - csrID string
+//   - sign bool
+func (_e *MockSDK_Expecter) SignCSR(csrID interface{}, sign interface{}) *MockSDK_SignCSR_Call {
+	return &MockSDK_SignCSR_Call{Call: _e.mock.On("SignCSR", csrID, sign)}
+}
+
+func (_c *MockSDK_SignCSR_Call) Run(run func(csrID string, sign bool)) *MockSDK_SignCSR_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string), args[1].(bool))
+	})
+	return _c
+}
+
+func (_c *MockSDK_SignCSR_Call) Return(_a0 errors.SDKError) *MockSDK_SignCSR_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockSDK_SignCSR_Call) RunAndReturn(run func(string, bool) errors.SDKError) *MockSDK_SignCSR_Call {
 	_c.Call.Return(run)
 	return _c
 }

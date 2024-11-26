@@ -87,6 +87,7 @@ type PageMetadata struct {
 
 type CSRMetadata struct {
 	CommonName         string   `json:"common_name"`
+	EntityID           string   `json:"entity_id"`
 	Organization       []string `json:"organization"`
 	OrganizationalUnit []string `json:"organizational_unit"`
 	Country            []string `json:"country"`
@@ -185,8 +186,8 @@ type Service interface {
 	// CreateCSR creates a new Certificate Signing Request
 	CreateCSR(ctx context.Context, metadata CSRMetadata, entityID string, privKey ...*rsa.PrivateKey) (CSR, error)
 
-	// ProcessCSR processes a pending CSR and either approves or rejects it
-	ProcessCSR(ctx context.Context, csrID string, approve bool) error
+	// SignCSR processes a pending CSR and either approves or rejects it
+	SignCSR(ctx context.Context, csrID string, approve bool) error
 
 	// ListCSRs returns a list of CSRs based on filter criteria
 	ListCSRs(ctx context.Context, entityID string, status string) (CSRPage, error)
