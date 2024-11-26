@@ -27,6 +27,7 @@ import (
 
 const (
 	certsEndpoint     = "certs"
+	csrEndpoint       = "csr"
 	issueCertEndpoint = "certs/issue"
 	emptyOCSPbody     = 22
 )
@@ -75,12 +76,22 @@ func (c CertStatus) MarshalJSON() ([]byte, error) {
 }
 
 type PageMetadata struct {
-	Total      uint64 `json:"total,omitempty"`
-	Offset     uint64 `json:"offset,omitempty"`
-	Limit      uint64 `json:"limit,omitempty"`
-	EntityID   string `json:"entity_id,omitempty"`
-	Token      string `json:"token,omitempty"`
-	CommonName string `json:"common_name,omitempty"`
+	Total              uint64   `json:"total,omitempty"`
+	Offset             uint64   `json:"offset,omitempty"`
+	Limit              uint64   `json:"limit,omitempty"`
+	EntityID           string   `json:"entity_id,omitempty"`
+	Token              string   `json:"token,omitempty"`
+	CommonName         string   `json:"common_name,omitempty"`
+	Organization       []string `json:"organization,omitempty"`
+	OrganizationalUnit []string `json:"organizational_unit,omitempty"`
+	Country            []string `json:"country,omitempty"`
+	Province           []string `json:"province,omitempty"`
+	Locality           []string `json:"locality,omitempty"`
+	StreetAddress      []string `json:"street_address,omitempty"`
+	PostalCode         []string `json:"postal_code,omitempty"`
+	DNSNames           []string `json:"dns_names,omitempty"`
+	IPAddresses        []string `json:"ip_addresses,omitempty"`
+	EmailAddresses     []string `json:"email_addresses,omitempty"`
 }
 
 type Options struct {
@@ -146,6 +157,36 @@ type OCSPResponse struct {
 	ProducedAt   *time.Time `json:"produced_at,omitempty"`
 	Certificate  []byte     `json:"certificate,omitempty"`
 	IssuerHash   string     `json:"issuer_hash,omitempty"`
+}
+
+type CSRMetadata struct {
+	CommonName         string   `json:"common_name"`
+	Organization       []string `json:"organization"`
+	OrganizationalUnit []string `json:"organizational_unit"`
+	Country            []string `json:"country"`
+	Province           []string `json:"province"`
+	Locality           []string `json:"locality"`
+	StreetAddress      []string `json:"street_address"`
+	PostalCode         []string `json:"postal_code"`
+	DNSNames           []string `json:"dns_names"`
+	IPAddresses        []string `json:"ip_addresses"`
+	EmailAddresses     []string `json:"email_addresses"`
+}
+
+type CSR struct {
+	ID           string    `json:"id,omitempty"`
+	CSR          []byte    `json:"csr,omitempty"`
+	PrivateKey   []byte    `json:"private_key,omitempty"`
+	EntityID     string    `json:"entity_id,omitempty"`
+	Status       string    `json:"status,omitempty"`
+	SubmittedAt  time.Time `json:"submitted_at,omitempty"`
+	ProcessedAt  time.Time `json:"processed_at,omitempty"`
+	SerialNumber string    `json:"serial_number,omitempty"`
+}
+
+type CSRPage struct {
+	PageMetadata
+	CSRs []CSR
 }
 
 type SDK interface {
@@ -232,6 +273,33 @@ type SDK interface {
 	//  response, _ := sdk.GetCAToken()
 	//  fmt.Println(response)
 	GetCAToken() (Token, errors.SDKError)
+
+	// CreateCSR creates a new Certificate Signing Request
+	//
+	// example:
+	//  pm = sdk.CSRMetadata{CommonName: "common_name", "entity_id" }
+	//	reponse, _ := sdk.CreateCSR(pm, "privKeyPath")
+	//  fmt.Println(response)
+	CreateCSR(metadata CSRMetadata, entityID string, privKeyPath string) (CSR, errors.SDKError)
+
+	// SignCSR processes a pending CSR and either signs or rejects it
+	//
+	// example:
+	//	err := sdk.SignCSR( "csr_id", "privKeyPath")
+	//	fmt.Println(err)
+	SignCSR(csrID string, sign bool) errors.SDKError
+
+	// ListCSRs returns a list of CSRs based on filter criteria
+	//
+	//	reponse, _ := sdk.ListCSRs("entity_id", "pending")
+	//	fmt.Println(response)
+	ListCSRs(entityID string, status string) (CSRPage, errors.SDKError)
+
+	// RetrieveCSR retrieves a specific CSR by ID
+	//
+	//	reponse, _ := sdk.RetrieveCSR("csr_id")
+	//	fmt.Println(response)
+	RetrieveCSR(csrID string) (CSR, errors.SDKError)
 }
 
 func (sdk mgSDK) IssueCert(entityID, ttl string, ipAddrs []string, opts Options) (Certificate, errors.SDKError) {
@@ -500,6 +568,83 @@ func (sdk mgSDK) GetCAToken() (Token, errors.SDKError) {
 	return tk, nil
 }
 
+func (sdk mgSDK) CreateCSR(pm PageMetadata, privKeyPath string) (CSR, errors.SDKError) {
+	r := csrReq{
+		Organization:       pm.Organization,
+		OrganizationalUnit: pm.OrganizationalUnit,
+		Country:            pm.Country,
+		Province:           pm.Province,
+		Locality:           pm.Locality,
+		StreetAddress:      pm.StreetAddress,
+		PostalCode:         pm.PostalCode,
+		DNSNames:           pm.DNSNames,
+		IPAddresses:        pm.IPAddresses,
+		EmailAddresses:     pm.EmailAddresses,
+	}
+	d, err := json.Marshal(r)
+	if err != nil {
+		return CSR{}, errors.NewSDKError(err)
+	}
+	url := fmt.Sprintf("%s/%s", issueCertEndpoint, entityID)
+
+	_, body, sdkerr := sdk.processRequest(http.MethodPost, url, nil, nil, http.StatusOK)
+	if sdkerr != nil {
+		return CSR{}, sdkerr
+	}
+
+	var csr CSR
+	if err := json.Unmarshal(body, &csr); err != nil {
+		return CSR{}, errors.NewSDKError(err)
+	}
+	return csr, nil
+}
+
+func (sdk mgSDK) SignCSR(csrID string, sign bool) errors.SDKError {
+	url, err := sdk.withQueryParams(sdk.certsURL, fmt.Sprintf("%s/download-ca", certsEndpoint), pm)
+	if err != nil {
+		return errors.NewSDKError(err)
+	}
+
+	_, _, sdkerr := sdk.processRequest(http.MethodPatch, url, nil, nil, http.StatusOK)
+	if sdkerr != nil {
+		return sdkerr
+	}
+	return nil
+}
+
+func (sdk mgSDK) ListCSRs(entityID string, status string) (CSRPage, errors.SDKError) {
+	url, err := sdk.withQueryParams(sdk.certsURL, fmt.Sprintf("%s/list", csrEndpoint), pm)
+	if err != nil {
+		return CSRPage{}, errors.NewSDKError(err)
+	}
+
+	_, body, sdkerr := sdk.processRequest(http.MethodGet, url, nil, nil, http.StatusOK)
+	if sdkerr != nil {
+		return CSRPage{}, sdkerr
+	}
+
+	var cp CSRPage
+	if err := json.Unmarshal(body, &cp); err != nil {
+		return CSRPage{}, errors.NewSDKError(err)
+	}
+	return cp, nil
+}
+
+func (sdk mgSDK) RetrieveCSR(csrID string) (CSR, errors.SDKError) {
+	url := fmt.Sprintf("%s/%s/%s", sdk.certsURL, csrEndpoint, csrID)
+
+	_, body, sdkerr := sdk.processRequest(http.MethodGet, url, nil, nil, http.StatusOK)
+	if sdkerr != nil {
+		return CSR{}, sdkerr
+	}
+
+	var csr CSR
+	if err := json.Unmarshal(body, &csr); err != nil {
+		return CSR{}, errors.NewSDKError(err)
+	}
+	return csr, nil
+}
+
 func NewSDK(conf Config) SDK {
 	return &mgSDK{
 		certsURL: conf.CertsURL,
@@ -603,4 +748,17 @@ type certReq struct {
 	IpAddrs []string `json:"ip_addresses"`
 	TTL     string   `json:"ttl"`
 	Options Options  `json:"options"`
+}
+
+type csrReq struct {
+	Organization       []string `json:"organization"`
+	OrganizationalUnit []string `json:"organizational_unit"`
+	Country            []string `json:"country"`
+	Province           []string `json:"province"`
+	Locality           []string `json:"locality"`
+	StreetAddress      []string `json:"street_address"`
+	PostalCode         []string `json:"postal_code"`
+	DNSNames           []string `json:"dns_names"`
+	IPAddresses        []string `json:"ip_addresses"`
+	EmailAddresses     []string `json:"email_addresses"`
 }

@@ -94,7 +94,6 @@ type CSRMetadata struct {
 	Locality           []string `json:"locality"`
 	StreetAddress      []string `json:"street_address"`
 	PostalCode         []string `json:"postal_code"`
-	EmailAddress       string   `json:"email_address"`
 	DNSNames           []string `json:"dns_names"`
 	IPAddresses        []string `json:"ip_addresses"`
 	EmailAddresses     []string `json:"email_addresses"`

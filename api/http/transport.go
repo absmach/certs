@@ -32,6 +32,18 @@ const (
 	limitKey        = "limit"
 	entityKey       = "entity_id"
 	commonName      = "common_name"
+	organization    = "organization"
+	orgUnit         = "organization_unit"
+	country         = "country"
+	province        = "province"
+	locality        = "locality"
+	streetAddress   = "street_address"
+	postalCode      = "postal_code"
+	emailAddresses  = "email_addresses"
+	dnsNames        = "dns_names"
+	ipAddresses     = "ip_addresses"
+	approve         = "approve"
+	status          = "status"
 	token           = "token"
 	ocspStatusParam = "force_status"
 	entityIDParam   = "entityID"
@@ -140,26 +152,26 @@ func MakeHandler(svc certs.Service, logger *slog.Logger, instanceID string) http
 		r.Route("/csr", func(r chi.Router) {
 			r.Post("/", otelhttp.NewHandler(kithttp.NewServer(
 				createCSREndpoint(svc),
-				decodeDownloadCA,
-				encodeCADownloadResponse,
+				decodeCreateCSR,
+				EncodeResponse,
 				opts...,
 			), "").ServeHTTP)
-			r.Patch("/", otelhttp.NewHandler(kithttp.NewServer(
+			r.Patch("/{id}", otelhttp.NewHandler(kithttp.NewServer(
 				processCSREndpoint(svc),
-				decodeDownloadCA,
-				encodeCADownloadResponse,
+				decodeUpdateCSR,
+				EncodeResponse,
 				opts...,
 			), "").ServeHTTP)
-			r.Get("/retrieve/{id}", otelhttp.NewHandler(kithttp.NewServer(
+			r.Get("/{id}", otelhttp.NewHandler(kithttp.NewServer(
 				retrieveCSREndpoint(svc),
-				decodeDownloadCA,
-				encodeCADownloadResponse,
+				decodeRetrieveCSR,
+				EncodeResponse,
 				opts...,
 			), "").ServeHTTP)
 			r.Get("/list", otelhttp.NewHandler(kithttp.NewServer(
 				listCSRsEndpoint(svc),
-				decodeDownloadCA,
-				encodeCADownloadResponse,
+				decodeListCSR,
+				EncodeResponse,
 				opts...,
 			), "").ServeHTTP)
 		})
@@ -284,6 +296,128 @@ func decodeListCerts(_ context.Context, r *http.Request) (interface{}, error) {
 			EntityID: entity,
 		},
 	}
+	return req, nil
+}
+
+func decodeCreateCSR(_ context.Context, r *http.Request) (interface{}, error) {
+	o, err := readStringQuery(r, organization, "")
+	if err != nil {
+		return nil, err
+	}
+
+	ou, err := readStringQuery(r, orgUnit, "")
+	if err != nil {
+		return nil, err
+	}
+
+	c, err := readStringQuery(r, country, "")
+	if err != nil {
+		return nil, err
+	}
+
+	p, err := readStringQuery(r, province, "")
+	if err != nil {
+		return nil, err
+	}
+
+	l, err := readStringQuery(r, locality, "")
+	if err != nil {
+		return nil, err
+	}
+
+	s, err := readStringQuery(r, streetAddress, "")
+	if err != nil {
+		return nil, err
+	}
+
+	po, err := readStringQuery(r, postalCode, "")
+	if err != nil {
+		return nil, err
+	}
+
+	entity, err := readStringQuery(r, entityKey, "")
+	if err != nil {
+		return nil, err
+	}
+
+	cn, err := readStringQuery(r, commonName, "")
+	if err != nil {
+		return nil, err
+	}
+
+	e, err := readStringQuery(r, emailAddresses, "")
+	if err != nil {
+		return nil, err
+	}
+
+	d, err := readStringQuery(r, dnsNames, "")
+	if err != nil {
+		return nil, err
+	}
+
+	i, err := readStringQuery(r, ipAddresses, "")
+	if err != nil {
+		return nil, err
+	}
+
+	req := createCSRReq{
+		metadata: certs.CSRMetadata{
+			CommonName:         cn,
+			Organization:       []string{o},
+			OrganizationalUnit: []string{ou},
+			Country:            []string{c},
+			Province:           []string{p},
+			Locality:           []string{l},
+			StreetAddress:      []string{s},
+			PostalCode:         []string{po},
+			DNSNames:           []string{d},
+			IPAddresses:        []string{i},
+			EmailAddresses:     []string{e},
+		},
+		entityID: entity,
+		// privKey: ,
+	}
+
+	return req, nil
+}
+
+func decodeUpdateCSR(_ context.Context, r *http.Request) (interface{}, error) {
+	app, err := readBoolQuery(r, approve, false)
+	if err != nil {
+		return nil, err
+	}
+
+	req := processCSRReq{
+		csrID:   chi.URLParam(r, "id"),
+		approve: app,
+	}
+
+	return req, nil
+}
+
+func decodeRetrieveCSR(_ context.Context, r *http.Request) (interface{}, error) {
+	req := retrieveCSRReq{
+		csrID: chi.URLParam(r, "id"),
+	}
+
+	return req, nil
+}
+
+func decodeListCSR(_ context.Context, r *http.Request) (interface{}, error) {
+	s, err := readStringQuery(r, status, "all")
+	if err != nil {
+		return nil, err
+	}
+	e, err := readStringQuery(r, entityKey, "")
+	if err != nil {
+		return nil, err
+	}
+
+	req := listCSRsReq{
+		entityID: e,
+		status:   s,
+	}
+
 	return req, nil
 }
 
@@ -455,4 +589,22 @@ func readNumQuery(r *http.Request, key string, def uint64) (uint64, error) {
 		return 0, errors.Wrap(ErrInvalidQueryParams, err)
 	}
 	return v, nil
+}
+
+func readBoolQuery(r *http.Request, key string, def bool) (bool, error) {
+	vals := r.URL.Query()[key]
+	if len(vals) > 1 {
+		return false, ErrInvalidQueryParams
+	}
+
+	if len(vals) == 0 {
+		return def, nil
+	}
+
+	b, err := strconv.ParseBool(vals[0])
+	if err != nil {
+		return false, errors.Wrap(ErrInvalidQueryParams, err)
+	}
+
+	return b, nil
 }
