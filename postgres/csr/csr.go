@@ -41,11 +41,11 @@ func NewRepository(db postgres.Database) certs.CSRRepository {
 	}
 }
 
-func (repo CSRRepo) CreateCSR(ctx context.Context, cert certs.CSR) error {
+func (repo CSRRepo) CreateCSR(ctx context.Context, csr certs.CSR) error {
 	q := `
-	INSERT INTO certs (id, serial_number, csr, private_key, entity_id, status, submitted_at, processed_at)
+	INSERT INTO csr (id, serial_number, csr, private_key, entity_id, status, submitted_at, processed_at)
 	VALUES (:id, :serial_number, :csr, :private_key, :entity_id, :status, :submitted_at, :processed_at)`
-	_, err := repo.db.NamedExecContext(ctx, q, cert)
+	_, err := repo.db.NamedExecContext(ctx, q, csr)
 	if err != nil {
 		return handleError(certs.ErrCreateEntity, err)
 	}
@@ -53,7 +53,7 @@ func (repo CSRRepo) CreateCSR(ctx context.Context, cert certs.CSR) error {
 }
 
 func (repo CSRRepo) UpdateCSR(ctx context.Context, cert certs.CSR) error {
-	q := `UPDATE certs SET certificate = :certificate, key = :key, revoked = :revoked, expiry_time = :expiry_time WHERE serial_number = :serial_number`
+	q := `UPDATE csr SET certificate = :certificate, key = :key, revoked = :revoked, expiry_time = :expiry_time WHERE serial_number = :serial_number`
 	res, err := repo.db.NamedExecContext(ctx, q, cert)
 	if err != nil {
 		return handleError(certs.ErrUpdateEntity, err)
@@ -69,7 +69,7 @@ func (repo CSRRepo) UpdateCSR(ctx context.Context, cert certs.CSR) error {
 }
 
 func (repo CSRRepo) RetrieveCSR(ctx context.Context,id string) (certs.CSR, error) {
-	q := `SELECT serial_number, certificate, key, entity_id, revoked, expiry_time FROM certs WHERE id = $1`
+	q := `SELECT serial_number, certificate, key, entity_id, revoked, expiry_time FROM csr WHERE id = $1`
 	var csr certs.CSR
 	if err := repo.db.QueryRowxContext(ctx, q, id).StructScan(&csr); err != nil {
 		if err == sql.ErrNoRows {
@@ -81,7 +81,7 @@ func (repo CSRRepo) RetrieveCSR(ctx context.Context,id string) (certs.CSR, error
 }
 
 func (repo CSRRepo) ListCSRs(ctx context.Context, pm certs.PageMetadata) (certs.CSRPage, error) {
-	q := `SELECT serial_number, status, submitted_at, processed_at, entity_id FROM certs %s LIMIT :limit OFFSET :offset`
+	q := `SELECT serial_number, status, submitted_at, processed_at, entity_id FROM csr %s LIMIT :limit OFFSET :offset`
 	var condition string
 	if pm.EntityID != "" {
 		condition = `WHERE entity_id = :entity_id`
@@ -111,7 +111,7 @@ func (repo CSRRepo) ListCSRs(ctx context.Context, pm certs.PageMetadata) (certs.
 		csrs = append(csrs, *csr)
 	}
 
-	q = fmt.Sprintf(`SELECT COUNT(*) FROM certs %s LIMIT :limit OFFSET :offset`, condition)
+	q = fmt.Sprintf(`SELECT COUNT(*) FROM csr %s LIMIT :limit OFFSET :offset`, condition)
 	pm.Total, err = repo.total(ctx, q, params)
 	if err != nil {
 		return certs.CSRPage{}, errors.Wrap(certs.ErrViewEntity, err)
