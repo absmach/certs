@@ -213,7 +213,7 @@ func (res createCSRRes) Code() int {
 		return http.StatusCreated
 	}
 
-	return http.StatusOK
+	return http.StatusNoContent
 }
 
 func (res createCSRRes) Headers() map[string]string {
@@ -225,7 +225,7 @@ func (res createCSRRes) Empty() bool {
 }
 
 type signCSRRes struct {
-	processed bool
+	signed bool
 }
 
 func (res signCSRRes) Code() int {

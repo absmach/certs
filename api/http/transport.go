@@ -7,8 +7,10 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"crypto/x509"
 	"encoding/asn1"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"io"
 	"log/slog"
@@ -18,7 +20,7 @@ import (
 
 	"github.com/absmach/certs"
 	"github.com/absmach/certs/errors"
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -140,7 +142,7 @@ func MakeHandler(svc certs.Service, logger *slog.Logger, instanceID string) http
 			opts...,
 		), "download_ca").ServeHTTP)
 		r.Route("/csr", func(r chi.Router) {
-			r.Post("/", otelhttp.NewHandler(kithttp.NewServer(
+			r.Post("/{entityID}", otelhttp.NewHandler(kithttp.NewServer(
 				createCSREndpoint(svc),
 				decodeCreateCSR,
 				EncodeResponse,
@@ -291,8 +293,20 @@ func decodeListCerts(_ context.Context, r *http.Request) (interface{}, error) {
 
 func decodeCreateCSR(_ context.Context, r *http.Request) (interface{}, error) {
 	req := createCSRReq{}
+	req.Metadata.EntityID = chi.URLParam(r, "entityID")
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, err
+	}
+
+	if len(req.PrivateKey) > 0 {
+		block, _ := pem.Decode(req.PrivateKey)
+		if block != nil {
+			privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+			if err != nil {
+				return nil, errors.Wrap(ErrInvalidRequest, err)
+			}
+			req.privKey = privateKey
+		}
 	}
 
 	return req, nil
@@ -321,7 +335,17 @@ func decodeRetrieveCSR(_ context.Context, r *http.Request) (interface{}, error) 
 }
 
 func decodeListCSR(_ context.Context, r *http.Request) (interface{}, error) {
-	s, err := readStringQuery(r, status, "all")
+	o, err := readNumQuery(r, offsetKey, defOffset)
+	if err != nil {
+		return nil, err
+	}
+
+	l, err := readNumQuery(r, limitKey, defLimit)
+	if err != nil {
+		return nil, err
+	}
+
+	s, err := readStringQuery(r, status, "")
 	if err != nil {
 		return nil, err
 	}
@@ -330,11 +354,19 @@ func decodeListCSR(_ context.Context, r *http.Request) (interface{}, error) {
 		return nil, err
 	}
 
-	req := listCSRsReq{
-		entityID: e,
-		status:   s,
+	stat, err := certs.ParseCSRStatus(strings.ToLower(s))
+	if err != nil {
+		return nil, err
 	}
 
+	req := listCSRsReq{
+		pm: certs.PageMetadata{
+			Offset:   o,
+			Limit:    l,
+			EntityID: e,
+			Status:   stat,
+		},
+	}
 	return req, nil
 }
 

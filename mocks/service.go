@@ -351,9 +351,9 @@ func (_c *MockService_IssueCert_Call) RunAndReturn(run func(context.Context, str
 	return _c
 }
 
-// ListCSRs provides a mock function with given fields: ctx, entityID, status
-func (_m *MockService) ListCSRs(ctx context.Context, entityID string, status string) (certs.CSRPage, error) {
-	ret := _m.Called(ctx, entityID, status)
+// ListCSRs provides a mock function with given fields: ctx, pm
+func (_m *MockService) ListCSRs(ctx context.Context, pm certs.PageMetadata) (certs.CSRPage, error) {
+	ret := _m.Called(ctx, pm)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListCSRs")
@@ -361,17 +361,17 @@ func (_m *MockService) ListCSRs(ctx context.Context, entityID string, status str
 
 	var r0 certs.CSRPage
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string) (certs.CSRPage, error)); ok {
-		return rf(ctx, entityID, status)
+	if rf, ok := ret.Get(0).(func(context.Context, certs.PageMetadata) (certs.CSRPage, error)); ok {
+		return rf(ctx, pm)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, string) certs.CSRPage); ok {
-		r0 = rf(ctx, entityID, status)
+	if rf, ok := ret.Get(0).(func(context.Context, certs.PageMetadata) certs.CSRPage); ok {
+		r0 = rf(ctx, pm)
 	} else {
 		r0 = ret.Get(0).(certs.CSRPage)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
-		r1 = rf(ctx, entityID, status)
+	if rf, ok := ret.Get(1).(func(context.Context, certs.PageMetadata) error); ok {
+		r1 = rf(ctx, pm)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -386,15 +386,14 @@ type MockService_ListCSRs_Call struct {
 
 // ListCSRs is a helper method to define mock.On call
 //   - ctx context.Context
-//   - entityID string
-//   - status string
-func (_e *MockService_Expecter) ListCSRs(ctx interface{}, entityID interface{}, status interface{}) *MockService_ListCSRs_Call {
-	return &MockService_ListCSRs_Call{Call: _e.mock.On("ListCSRs", ctx, entityID, status)}
+//   - pm certs.PageMetadata
+func (_e *MockService_Expecter) ListCSRs(ctx interface{}, pm interface{}) *MockService_ListCSRs_Call {
+	return &MockService_ListCSRs_Call{Call: _e.mock.On("ListCSRs", ctx, pm)}
 }
 
-func (_c *MockService_ListCSRs_Call) Run(run func(ctx context.Context, entityID string, status string)) *MockService_ListCSRs_Call {
+func (_c *MockService_ListCSRs_Call) Run(run func(ctx context.Context, pm certs.PageMetadata)) *MockService_ListCSRs_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].(string))
+		run(args[0].(context.Context), args[1].(certs.PageMetadata))
 	})
 	return _c
 }
@@ -404,7 +403,7 @@ func (_c *MockService_ListCSRs_Call) Return(_a0 certs.CSRPage, _a1 error) *MockS
 	return _c
 }
 
-func (_c *MockService_ListCSRs_Call) RunAndReturn(run func(context.Context, string, string) (certs.CSRPage, error)) *MockService_ListCSRs_Call {
+func (_c *MockService_ListCSRs_Call) RunAndReturn(run func(context.Context, certs.PageMetadata) (certs.CSRPage, error)) *MockService_ListCSRs_Call {
 	_c.Call.Return(run)
 	return _c
 }

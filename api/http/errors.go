@@ -32,4 +32,7 @@ var (
 
 	// ErrMissingCN indicates missing common name.
 	ErrMissingCN = errors.New("missing common name")
+
+	// ErrMissingStatus indicates missing status.
+	ErrMissingStatus = errors.New("missing status")
 )

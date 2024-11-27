@@ -153,12 +153,12 @@ func (mm *metricsMiddleware) SignCSR(ctx context.Context, csrID string, approve 
 	return mm.svc.SignCSR(ctx, csrID, approve)
 }
 
-func (mm *metricsMiddleware) ListCSRs(ctx context.Context, entityID string, status string) (certs.CSRPage, error) {
+func (mm *metricsMiddleware) ListCSRs(ctx context.Context, pm certs.PageMetadata) (certs.CSRPage, error) {
 	defer func(begin time.Time) {
 		mm.counter.With("method", "list_csrs").Add(1)
 		mm.latency.With("method", "list_csrs").Observe(time.Since(begin).Seconds())
 	}(time.Now())
-	return mm.svc.ListCSRs(ctx, entityID, status)
+	return mm.svc.ListCSRs(ctx, pm)
 }
 
 func (mm *metricsMiddleware) RetrieveCSR(ctx context.Context, csrID string) (certs.CSR, error) {

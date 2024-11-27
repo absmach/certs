@@ -20,7 +20,7 @@ func Migration() *migrate.MemoryMigrationSource {
 						csr 		  TEXT,
                         private_key   TEXT,
 						entity_id     VARCHAR(36),
-                    	status        TEXT,
+                    	status        TEXT CHECK (status IN ('pending', 'signed', 'rejected')),
                         submitted_at  TIMESTAMP,
 						processed_at  TIMESTAMP
                     )`,

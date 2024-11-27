@@ -91,8 +91,9 @@ func (req ocspReq) validate() error {
 }
 
 type createCSRReq struct {
-	Metadata certs.CSRMetadata `json:"metadata"`
-	privKey  *rsa.PrivateKey
+	Metadata   certs.CSRMetadata `json:"metadata"`
+	PrivateKey []byte            `json:"private_Key"`
+	privKey    *rsa.PrivateKey
 }
 
 func (req createCSRReq) validate() error {
@@ -111,17 +112,17 @@ func (req SignCSRReq) validate() error {
 	if req.csrID == "" {
 		return errors.Wrap(certs.ErrMalformedEntity, ErrMissingEntityID)
 	}
+
 	return nil
 }
 
 type listCSRsReq struct {
-	entityID string
-	status   string
+	pm certs.PageMetadata
 }
 
 func (req listCSRsReq) validate() error {
-	if req.entityID == "" {
-		return errors.Wrap(certs.ErrMalformedEntity, ErrMissingEntityID)
+	if req.pm.Status.String() == "" {
+		return errors.Wrap(certs.ErrMalformedEntity, ErrMissingStatus)
 	}
 	return nil
 }

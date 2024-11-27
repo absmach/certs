@@ -92,16 +92,16 @@ func NewService(ctx context.Context, repo Repository, csrRepo CSRRepository, con
 // The certificate is then stored in the repository using the CreateCert method.
 // If the root CA is not found, it returns an error.
 func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options SubjectOptions, key ...*rsa.PrivateKey) (Certificate, error) {
+	var privKey rsa.PrivateKey
 	var err error
-	privKey := rsa.PrivateKey{}
 	if len(key) == 0 {
 		pKey, err := rsa.GenerateKey(rand.Reader, PrivateKeyBytes)
 		privKey = *pKey
 		if err != nil {
 			return Certificate{}, err
-		} else {
-			privKey = *key[0]
 		}
+	} else {
+		privKey = *key[0]
 	}
 	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
 	if err != nil {
@@ -468,7 +468,7 @@ func (s *service) CreateCSR(ctx context.Context, metadata CSRMetadata, entityID 
 		CSR:         csrPEM,
 		PrivateKey:  privKeyPEM,
 		EntityID:    entityID,
-		Status:      "pending",
+		Status:      Pending,
 		SubmittedAt: time.Now(),
 	}
 
@@ -486,7 +486,7 @@ func (s *service) SignCSR(ctx context.Context, csrID string, approve bool) error
 	}
 
 	if !approve {
-		csr.Status = "rejected"
+		csr.Status = Rejected
 		csr.ProcessedAt = time.Now()
 		return s.csrRepo.UpdateCSR(ctx, csr)
 	}
@@ -524,19 +524,20 @@ func (s *service) SignCSR(ctx context.Context, csrID string, approve bool) error
 		return errors.Wrap(ErrCreateEntity, err)
 	}
 
-	csr.Status = "approved"
+	csr.Status = Signed
 	csr.ProcessedAt = time.Now()
 	csr.SerialNumber = cert.SerialNumber
 
 	return s.csrRepo.UpdateCSR(ctx, csr)
 }
 
-func (s *service) ListCSRs(ctx context.Context, entityID string, status string) (CSRPage, error) {
-	pm := PageMetadata{
-		EntityID: entityID,
-		Status:   status,
+func (s *service) ListCSRs(ctx context.Context, pm PageMetadata) (CSRPage, error) {
+	cp, err := s.csrRepo.ListCSRs(ctx, pm)
+	if err != nil {
+		return CSRPage{}, errors.Wrap(ErrViewEntity, err)
 	}
-	return s.csrRepo.ListCSRs(ctx, pm)
+
+	return cp, nil
 }
 
 func (s *service) RetrieveCSR(ctx context.Context, csrID string) (CSR, error) {

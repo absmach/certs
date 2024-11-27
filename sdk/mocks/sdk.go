@@ -25,9 +25,9 @@ func (_m *MockSDK) EXPECT() *MockSDK_Expecter {
 	return &MockSDK_Expecter{mock: &_m.Mock}
 }
 
-// CreateCSR provides a mock function with given fields: pm, privKeyPath
-func (_m *MockSDK) CreateCSR(pm sdk.PageMetadata, privKeyPath string) (sdk.CSR, errors.SDKError) {
-	ret := _m.Called(pm, privKeyPath)
+// CreateCSR provides a mock function with given fields: pm, privKey
+func (_m *MockSDK) CreateCSR(pm sdk.PageMetadata, privKey []byte) (sdk.CSR, errors.SDKError) {
+	ret := _m.Called(pm, privKey)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateCSR")
@@ -35,17 +35,17 @@ func (_m *MockSDK) CreateCSR(pm sdk.PageMetadata, privKeyPath string) (sdk.CSR, 
 
 	var r0 sdk.CSR
 	var r1 errors.SDKError
-	if rf, ok := ret.Get(0).(func(sdk.PageMetadata, string) (sdk.CSR, errors.SDKError)); ok {
-		return rf(pm, privKeyPath)
+	if rf, ok := ret.Get(0).(func(sdk.PageMetadata, []byte) (sdk.CSR, errors.SDKError)); ok {
+		return rf(pm, privKey)
 	}
-	if rf, ok := ret.Get(0).(func(sdk.PageMetadata, string) sdk.CSR); ok {
-		r0 = rf(pm, privKeyPath)
+	if rf, ok := ret.Get(0).(func(sdk.PageMetadata, []byte) sdk.CSR); ok {
+		r0 = rf(pm, privKey)
 	} else {
 		r0 = ret.Get(0).(sdk.CSR)
 	}
 
-	if rf, ok := ret.Get(1).(func(sdk.PageMetadata, string) errors.SDKError); ok {
-		r1 = rf(pm, privKeyPath)
+	if rf, ok := ret.Get(1).(func(sdk.PageMetadata, []byte) errors.SDKError); ok {
+		r1 = rf(pm, privKey)
 	} else {
 		if ret.Get(1) != nil {
 			r1 = ret.Get(1).(errors.SDKError)
@@ -62,14 +62,14 @@ type MockSDK_CreateCSR_Call struct {
 
 // CreateCSR is a helper method to define mock.On call
 //   - pm sdk.PageMetadata
-//   - privKeyPath string
-func (_e *MockSDK_Expecter) CreateCSR(pm interface{}, privKeyPath interface{}) *MockSDK_CreateCSR_Call {
-	return &MockSDK_CreateCSR_Call{Call: _e.mock.On("CreateCSR", pm, privKeyPath)}
+//   - privKey []byte
+func (_e *MockSDK_Expecter) CreateCSR(pm interface{}, privKey interface{}) *MockSDK_CreateCSR_Call {
+	return &MockSDK_CreateCSR_Call{Call: _e.mock.On("CreateCSR", pm, privKey)}
 }
 
-func (_c *MockSDK_CreateCSR_Call) Run(run func(pm sdk.PageMetadata, privKeyPath string)) *MockSDK_CreateCSR_Call {
+func (_c *MockSDK_CreateCSR_Call) Run(run func(pm sdk.PageMetadata, privKey []byte)) *MockSDK_CreateCSR_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(sdk.PageMetadata), args[1].(string))
+		run(args[0].(sdk.PageMetadata), args[1].([]byte))
 	})
 	return _c
 }
@@ -79,7 +79,7 @@ func (_c *MockSDK_CreateCSR_Call) Return(_a0 sdk.CSR, _a1 errors.SDKError) *Mock
 	return _c
 }
 
-func (_c *MockSDK_CreateCSR_Call) RunAndReturn(run func(sdk.PageMetadata, string) (sdk.CSR, errors.SDKError)) *MockSDK_CreateCSR_Call {
+func (_c *MockSDK_CreateCSR_Call) RunAndReturn(run func(sdk.PageMetadata, []byte) (sdk.CSR, errors.SDKError)) *MockSDK_CreateCSR_Call {
 	_c.Call.Return(run)
 	return _c
 }

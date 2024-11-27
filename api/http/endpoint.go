@@ -333,16 +333,16 @@ func signCSREndpoint(svc certs.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(SignCSRReq)
 		if err := req.validate(); err != nil {
-			return signCSRRes{processed: false}, err
+			return signCSRRes{signed: false}, err
 		}
 
 		err = svc.SignCSR(ctx, req.csrID, req.approve)
 		if err != nil {
-			return signCSRRes{processed: false}, err
+			return signCSRRes{signed: false}, err
 		}
 
 		return signCSRRes{
-			processed: true,
+			signed: true,
 		}, nil
 	}
 }
@@ -354,7 +354,7 @@ func listCSRsEndpoint(svc certs.Service) endpoint.Endpoint {
 			return listCSRsRes{}, err
 		}
 
-		cp, err := svc.ListCSRs(ctx, req.entityID, req.status)
+		cp, err := svc.ListCSRs(ctx, req.pm)
 		if err != nil {
 			return listCSRsRes{}, err
 		}

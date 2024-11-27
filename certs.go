@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/json"
 	"net"
 	"time"
 
@@ -54,6 +55,56 @@ func CertTypeFromString(s string) (CertType, error) {
 	}
 }
 
+type CSRStatus int
+
+const (
+	Pending CSRStatus = iota
+	Signed
+	Rejected
+	All
+)
+
+const (
+	pending  = "pending"
+	signed   = "signed"
+	rejected = "rejected"
+	all      = "all"
+)
+
+func (c CSRStatus) String() string {
+	switch c {
+	case Pending:
+		return pending
+	case Signed:
+		return signed
+	case Rejected:
+		return rejected
+	case All:
+		return all
+	default:
+		return Unknown
+	}
+}
+
+func ParseCSRStatus(s string) (CSRStatus, error) {
+	switch s {
+	case pending:
+		return Pending, nil
+	case signed:
+		return Signed, nil
+	case rejected:
+		return Rejected, nil
+	case all:
+		return All, nil
+	default:
+		return -1, errors.New("unknown CSR status")
+	}
+}
+
+func (c CSRStatus) MarshalJSON() ([]byte, error) {
+	return json.Marshal(c.String())
+}
+
 type CA struct {
 	Type         CertType
 	Certificate  *x509.Certificate
@@ -78,16 +129,16 @@ type CertificatePage struct {
 }
 
 type PageMetadata struct {
-	Total    uint64 `json:"total,omitempty" db:"total"`
-	Offset   uint64 `json:"offset,omitempty" db:"offset"`
-	Limit    uint64 `json:"limit,omitempty" db:"limit"`
-	EntityID string `json:"entity_id,omitempty" db:"entity_id"`
-	Status   string `json:"status,omitempty" db:"status"`
+	Total    uint64    `json:"total" db:"total"`
+	Offset   uint64    `json:"offset,omitempty" db:"offset"`
+	Limit    uint64    `json:"limit" db:"limit"`
+	EntityID string    `json:"entity_id,omitempty" db:"entity_id"`
+	Status   CSRStatus `json:"status,omitempty" db:"status"`
 }
 
 type CSRMetadata struct {
+	EntityID           string
 	CommonName         string   `json:"common_name"`
-	EntityID           string   `json:"entity_id"`
 	Organization       []string `json:"organization"`
 	OrganizationalUnit []string `json:"organizational_unit"`
 	Country            []string `json:"country"`
@@ -102,18 +153,18 @@ type CSRMetadata struct {
 
 type CSR struct {
 	ID           string    `json:"id" db:"id"`
-	CSR          []byte    `json:"csr" db:"csr"`
-	PrivateKey   []byte    `json:"private_key" db:"private_key"`
+	CSR          []byte    `json:"csr,omitempty" db:"csr"`
+	PrivateKey   []byte    `json:"private_key,omitempty" db:"private_key"`
 	EntityID     string    `json:"entity_id" db:"entity_id"`
-	Status       string    `json:"status" db:"status"`
+	Status       CSRStatus `json:"status" db:"status"`
 	SubmittedAt  time.Time `json:"submitted_at" db:"submitted_at"`
-	ProcessedAt  time.Time `json:"processed_at" db:"processed_at"`
+	ProcessedAt  time.Time `json:"processed_at,omitempty" db:"processed_at"`
 	SerialNumber string    `json:"serial_number" db:"serial_number"`
 }
 
 type CSRPage struct {
 	PageMetadata
-	CSRs []CSR
+	CSRs []CSR `json:"csrs,omitempty"`
 }
 
 type SubjectOptions struct {
@@ -190,7 +241,7 @@ type Service interface {
 	SignCSR(ctx context.Context, csrID string, approve bool) error
 
 	// ListCSRs returns a list of CSRs based on filter criteria
-	ListCSRs(ctx context.Context, entityID string, status string) (CSRPage, error)
+	ListCSRs(ctx context.Context, pm PageMetadata) (CSRPage, error)
 
 	// RetrieveCSR retrieves a specific CSR by ID
 	RetrieveCSR(ctx context.Context, csrID string) (CSR, error)

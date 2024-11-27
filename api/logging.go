@@ -206,7 +206,7 @@ func (lm *loggingMiddleware) SignCSR(ctx context.Context, csrID string, approve 
 	return lm.svc.SignCSR(ctx, csrID, approve)
 }
 
-func (lm *loggingMiddleware) ListCSRs(ctx context.Context, entityID string, status string) (cp certs.CSRPage, err error) {
+func (lm *loggingMiddleware) ListCSRs(ctx context.Context, pm certs.PageMetadata) (cp certs.CSRPage, err error) {
 	defer func(begin time.Time) {
 		message := fmt.Sprintf("Method list_csrs took %s to complete", time.Since(begin))
 		if err != nil {
@@ -215,7 +215,7 @@ func (lm *loggingMiddleware) ListCSRs(ctx context.Context, entityID string, stat
 		}
 		lm.logger.Info(message)
 	}(time.Now())
-	return lm.svc.ListCSRs(ctx, entityID, status)
+	return lm.svc.ListCSRs(ctx, pm)
 }
 
 func (lm *loggingMiddleware) RetrieveCSR(ctx context.Context, csrID string) (csr certs.CSR, err error) {

@@ -255,10 +255,11 @@ var cmdCerts = []cobra.Command{
 				logErrorCmd(*cmd, err)
 				return
 			}
+
 			var csr ctxsdk.CSR
 			var err error
 			if len(args) == 1 {
-				csr, err = sdk.CreateCSR(pm, "")
+				csr, err = sdk.CreateCSR(pm, []byte{})
 				if err != nil {
 					logErrorCmd(*cmd, err)
 					return
@@ -266,7 +267,14 @@ var cmdCerts = []cobra.Command{
 				logJSONCmd(*cmd, csr)
 				return
 			}
-			csr, err = sdk.CreateCSR(pm, args[1])
+
+			data, err := os.ReadFile(args[1])
+			if err != nil {
+				logErrorCmd(*cmd, err)
+				return
+			}
+
+			csr, err = sdk.CreateCSR(pm, data)
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
