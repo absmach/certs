@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/absmach/certs/errors"
-	"github.com/absmach/certs/internal/uuid"
 	"github.com/golang-jwt/jwt"
 	"golang.org/x/crypto/ocsp"
 )
@@ -52,20 +51,16 @@ var (
 
 type service struct {
 	repo           Repository
-	csrRepo        CSRRepository
 	rootCA         *CA
 	intermediateCA *CA
-	idProvider     uuid.IDProvider
 }
 
 var _ Service = (*service)(nil)
 
-func NewService(ctx context.Context, repo Repository, csrRepo CSRRepository, config *Config, idp uuid.IDProvider) (Service, error) {
+func NewService(ctx context.Context, repo Repository, config *Config) (Service, error) {
 	var svc service
 
 	svc.repo = repo
-	svc.csrRepo = csrRepo
-	svc.idProvider = idp
 	if err := svc.loadCACerts(ctx); err != nil {
 		return &svc, err
 	}
@@ -407,25 +402,7 @@ func (s *service) GetChainCA(ctx context.Context, token string) (Certificate, er
 	return s.getConcatCAs(ctx)
 }
 
-func (s *service) CreateCSR(ctx context.Context, metadata CSRMetadata, entityID string, privateKey ...*rsa.PrivateKey) (CSR, error) {
-	var privKey *rsa.PrivateKey
-	var err error
-
-	// Check if a private key is provided else generate a new private key.
-	if len(privateKey) > 0 && privateKey[0] != nil {
-		privKey = privateKey[0]
-	} else {
-		privKey, err = rsa.GenerateKey(rand.Reader, PrivateKeyBytes)
-		if err != nil {
-			return CSR{}, errors.Wrap(ErrCreateEntity, err)
-		}
-	}
-
-	csrID, err := s.idProvider.ID()
-	if err != nil {
-		return CSR{}, err
-	}
-
+func (s *service) CreateCSR(ctx context.Context, metadata CSRMetadata, privKey *rsa.PrivateKey) (CSR, error) {
 	template := &x509.CertificateRequest{
 		Subject: pkix.Name{
 			CommonName:         metadata.CommonName,
@@ -464,57 +441,34 @@ func (s *service) CreateCSR(ctx context.Context, metadata CSRMetadata, entityID 
 	})
 
 	csr := CSR{
-		ID:          csrID,
 		CSR:         csrPEM,
 		PrivateKey:  privKeyPEM,
-		EntityID:    entityID,
-		Status:      Pending,
-		SubmittedAt: time.Now(),
-	}
-
-	if err := s.csrRepo.CreateCSR(ctx, csr); err != nil {
-		return CSR{}, errors.Wrap(ErrCreateEntity, err)
 	}
 
 	return csr, nil
 }
 
-func (s *service) SignCSR(ctx context.Context, csrID string, approve bool) error {
-	csr, err := s.csrRepo.RetrieveCSR(ctx, csrID)
-	if err != nil {
-		return errors.Wrap(ErrViewEntity, err)
-	}
-
-	if csr.Status != Pending {
-		return ErrConflict
-	}
-
-	if !approve {
-		csr.Status = Rejected
-		csr.SignedAt = time.Now()
-		return s.csrRepo.UpdateCSR(ctx, csr)
-	}
-
+func (s *service) SignCSR(ctx context.Context, entityID, ttl string, csr CSR) (Certificate, error) {
 	block, _ := pem.Decode(csr.CSR)
 	if block == nil {
-		return errors.New("failed to parse CSR PEM")
+		return Certificate{}, errors.New("failed to parse CSR PEM")
 	}
 
 	parsedCSR, err := x509.ParseCertificateRequest(block.Bytes)
 	if err != nil {
-		return errors.Wrap(ErrMalformedEntity, err)
+		return Certificate{}, errors.Wrap(ErrMalformedEntity, err)
 	}
 
 	if err := parsedCSR.CheckSignature(); err != nil {
-		return errors.Wrap(ErrMalformedEntity, err)
+		return Certificate{}, errors.Wrap(ErrMalformedEntity, err)
 	}
 
 	privKey, err := extractPrivateKey(csr.PrivateKey)
 	if err != nil {
-		return errors.Wrap(ErrMalformedEntity, err)
+		return Certificate{}, errors.Wrap(ErrMalformedEntity, err)
 	}
 
-	cert, err := s.IssueCert(ctx, csr.EntityID, "", nil, SubjectOptions{
+	cert, err := s.IssueCert(ctx, entityID, ttl, nil, SubjectOptions{
 		CommonName:         parsedCSR.Subject.CommonName,
 		Organization:       parsedCSR.Subject.Organization,
 		OrganizationalUnit: parsedCSR.Subject.OrganizationalUnit,
@@ -525,27 +479,10 @@ func (s *service) SignCSR(ctx context.Context, csrID string, approve bool) error
 		PostalCode:         parsedCSR.Subject.PostalCode,
 	}, privKey)
 	if err != nil {
-		return errors.Wrap(ErrCreateEntity, err)
+		return Certificate{}, errors.Wrap(ErrCreateEntity, err)
 	}
 
-	csr.Status = Signed
-	csr.SignedAt = time.Now()
-	csr.SerialNumber = cert.SerialNumber
-
-	return s.csrRepo.UpdateCSR(ctx, csr)
-}
-
-func (s *service) ListCSRs(ctx context.Context, pm PageMetadata) (CSRPage, error) {
-	cp, err := s.csrRepo.ListCSRs(ctx, pm)
-	if err != nil {
-		return CSRPage{}, errors.Wrap(ErrViewEntity, err)
-	}
-
-	return cp, nil
-}
-
-func (s *service) RetrieveCSR(ctx context.Context, csrID string) (CSR, error) {
-	return s.csrRepo.RetrieveCSR(ctx, csrID)
+	return cert, nil
 }
 
 func (s *service) getConcatCAs(ctx context.Context) (Certificate, error) {

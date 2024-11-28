@@ -317,7 +317,7 @@ func createCSREndpoint(svc certs.Service) endpoint.Endpoint {
 			return createCSRRes{created: false}, err
 		}
 
-		csr, err := svc.CreateCSR(ctx, req.Metadata, req.Metadata.EntityID, req.privKey)
+		csr, err := svc.CreateCSR(ctx, req.Metadata, req.privKey)
 		if err != nil {
 			return createCSRRes{created: false}, err
 		}
@@ -336,49 +336,14 @@ func signCSREndpoint(svc certs.Service) endpoint.Endpoint {
 			return signCSRRes{signed: false}, err
 		}
 
-		err = svc.SignCSR(ctx, req.csrID, req.approve)
+		cert, err := svc.SignCSR(ctx, req.entityID, req.ttl, certs.CSR{CSR: req.CSR})
 		if err != nil {
 			return signCSRRes{signed: false}, err
 		}
 
 		return signCSRRes{
+			crt:    cert,
 			signed: true,
-		}, nil
-	}
-}
-
-func retrieveCSREndpoint(svc certs.Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
-		req := request.(retrieveCSRReq)
-		if err := req.validate(); err != nil {
-			return retrieveCSRRes{}, err
-		}
-
-		csr, err := svc.RetrieveCSR(ctx, req.csrID)
-		if err != nil {
-			return retrieveCSRRes{}, err
-		}
-
-		return retrieveCSRRes{
-			CSR: csr,
-		}, nil
-	}
-}
-
-func listCSRsEndpoint(svc certs.Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
-		req := request.(listCSRsReq)
-		if err := req.validate(); err != nil {
-			return listCSRsRes{}, err
-		}
-
-		cp, err := svc.ListCSRs(ctx, req.pm)
-		if err != nil {
-			return listCSRsRes{}, err
-		}
-
-		return listCSRsRes{
-			cp,
 		}, nil
 	}
 }

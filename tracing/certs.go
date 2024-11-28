@@ -102,26 +102,14 @@ func (tm *tracingMiddleware) GetChainCA(ctx context.Context, token string) (cert
 	return tm.svc.GetChainCA(ctx, token)
 }
 
-func (tm *tracingMiddleware) CreateCSR(ctx context.Context, meta certs.CSRMetadata, entityID string, key ...*rsa.PrivateKey) (certs.CSR, error) {
+func (tm *tracingMiddleware) CreateCSR(ctx context.Context, metadata certs.CSRMetadata, privKey *rsa.PrivateKey) (certs.CSR, error) {
 	ctx, span := tm.tracer.Start(ctx, "create_csr")
 	defer span.End()
-	return tm.svc.CreateCSR(ctx, meta, entityID, key...)
+	return tm.svc.CreateCSR(ctx, metadata, privKey)
 }
 
-func (tm *tracingMiddleware) SignCSR(ctx context.Context, csrID string, approve bool) error {
+func (tm *tracingMiddleware) SignCSR(ctx context.Context, entityID, ttl string, csr certs.CSR) (certs.Certificate, error) {
 	ctx, span := tm.tracer.Start(ctx, "sign_csr")
 	defer span.End()
-	return tm.svc.SignCSR(ctx, csrID, approve)
-}
-
-func (tm *tracingMiddleware) ListCSRs(ctx context.Context, pm certs.PageMetadata) (certs.CSRPage, error) {
-	ctx, span := tm.tracer.Start(ctx, "list_csrs")
-	defer span.End()
-	return tm.svc.ListCSRs(ctx, pm)
-}
-
-func (tm *tracingMiddleware) RetrieveCSR(ctx context.Context, csrID string) (certs.CSR, error) {
-	ctx, span := tm.tracer.Start(ctx, "retrieve_csr")
-	defer span.End()
-	return tm.svc.RetrieveCSR(ctx, csrID)
+	return tm.svc.SignCSR(ctx, entityID,ttl, csr)
 }

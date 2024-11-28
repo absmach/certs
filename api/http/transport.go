@@ -39,6 +39,7 @@ const (
 	token           = "token"
 	ocspStatusParam = "force_status"
 	entityIDParam   = "entityID"
+	ttl = "ttl"
 	defOffset       = 0
 	defLimit        = 10
 	defType         = 1
@@ -142,30 +143,18 @@ func MakeHandler(svc certs.Service, logger *slog.Logger, instanceID string) http
 			opts...,
 		), "download_ca").ServeHTTP)
 		r.Route("/csrs", func(r chi.Router) {
-			r.Post("/{entityID}", otelhttp.NewHandler(kithttp.NewServer(
+			r.Post("/create", otelhttp.NewHandler(kithttp.NewServer(
 				createCSREndpoint(svc),
 				decodeCreateCSR,
 				EncodeResponse,
 				opts...,
 			), "create_csr").ServeHTTP)
-			r.Patch("/{id}", otelhttp.NewHandler(kithttp.NewServer(
+			r.Post("/{entityID}", otelhttp.NewHandler(kithttp.NewServer(
 				signCSREndpoint(svc),
-				decodeUpdateCSR,
+				decodeSignCSR,
 				EncodeResponse,
 				opts...,
 			), "sign_csr").ServeHTTP)
-			r.Get("/{id}", otelhttp.NewHandler(kithttp.NewServer(
-				retrieveCSREndpoint(svc),
-				decodeRetrieveCSR,
-				EncodeResponse,
-				opts...,
-			), "view_csr").ServeHTTP)
-			r.Get("/", otelhttp.NewHandler(kithttp.NewServer(
-				listCSRsEndpoint(svc),
-				decodeListCSR,
-				EncodeResponse,
-				opts...,
-			), "list_csrs").ServeHTTP)
 		})
 	})
 
@@ -293,82 +282,40 @@ func decodeListCerts(_ context.Context, r *http.Request) (interface{}, error) {
 
 func decodeCreateCSR(_ context.Context, r *http.Request) (interface{}, error) {
 	req := createCSRReq{}
-	req.Metadata.EntityID = chi.URLParam(r, "entityID")
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, err
 	}
 
-	if len(req.PrivateKey) > 0 {
-		block, _ := pem.Decode(req.PrivateKey)
-		if block != nil {
-			privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
-			if err != nil {
-				return nil, errors.Wrap(ErrInvalidRequest, err)
-			}
-			req.privKey = privateKey
+	block, _ := pem.Decode(req.PrivateKey)
+	if block != nil {
+		privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+		if err != nil {
+			return nil, errors.Wrap(ErrInvalidRequest, err)
 		}
+		req.privKey = privateKey
 	}
 
 	return req, nil
 }
 
-func decodeUpdateCSR(_ context.Context, r *http.Request) (interface{}, error) {
-	app, err := readBoolQuery(r, approve, false)
+func decodeSignCSR(_ context.Context, r *http.Request) (interface{}, error) {
+	t, err := readStringQuery(r, ttl, "")
 	if err != nil {
 		return nil, err
 	}
 
 	req := SignCSRReq{
-		csrID:   chi.URLParam(r, "id"),
-		approve: app,
+		entityID:   chi.URLParam(r, "entityID"),
+		ttl: t,
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, err
 	}
 
 	return req, nil
 }
 
-func decodeRetrieveCSR(_ context.Context, r *http.Request) (interface{}, error) {
-	req := retrieveCSRReq{
-		csrID: chi.URLParam(r, "id"),
-	}
-
-	return req, nil
-}
-
-func decodeListCSR(_ context.Context, r *http.Request) (interface{}, error) {
-	o, err := readNumQuery(r, offsetKey, defOffset)
-	if err != nil {
-		return nil, err
-	}
-
-	l, err := readNumQuery(r, limitKey, defLimit)
-	if err != nil {
-		return nil, err
-	}
-
-	s, err := readStringQuery(r, status, "")
-	if err != nil {
-		return nil, err
-	}
-	e, err := readStringQuery(r, entityKey, "")
-	if err != nil {
-		return nil, err
-	}
-
-	stat, err := certs.ParseCSRStatus(strings.ToLower(s))
-	if err != nil {
-		return nil, err
-	}
-
-	req := listCSRsReq{
-		pm: certs.PageMetadata{
-			Offset:   o,
-			Limit:    l,
-			EntityID: e,
-			Status:   stat,
-		},
-	}
-	return req, nil
-}
 
 // EncodeResponse encodes successful response.
 func EncodeResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
@@ -538,22 +485,4 @@ func readNumQuery(r *http.Request, key string, def uint64) (uint64, error) {
 		return 0, errors.Wrap(ErrInvalidQueryParams, err)
 	}
 	return v, nil
-}
-
-func readBoolQuery(r *http.Request, key string, def bool) (bool, error) {
-	vals := r.URL.Query()[key]
-	if len(vals) > 1 {
-		return false, ErrInvalidQueryParams
-	}
-
-	if len(vals) == 0 {
-		return def, nil
-	}
-
-	b, err := strconv.ParseBool(vals[0])
-	if err != nil {
-		return false, errors.Wrap(ErrInvalidQueryParams, err)
-	}
-
-	return b, nil
 }

@@ -225,6 +225,7 @@ func (res createCSRRes) Empty() bool {
 }
 
 type signCSRRes struct {
+	crt    certs.Certificate
 	signed bool
 }
 
@@ -237,7 +238,7 @@ func (res signCSRRes) Headers() map[string]string {
 }
 
 func (res signCSRRes) Empty() bool {
-	return true
+	return false
 }
 
 type listCSRsRes struct {

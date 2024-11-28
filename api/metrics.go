@@ -137,34 +137,18 @@ func (mm *metricsMiddleware) GetChainCA(ctx context.Context, token string) (cert
 	return mm.svc.GetChainCA(ctx, token)
 }
 
-func (mm *metricsMiddleware) CreateCSR(ctx context.Context, meta certs.CSRMetadata, entityID string, key ...*rsa.PrivateKey) (certs.CSR, error) {
+func (mm *metricsMiddleware) CreateCSR(ctx context.Context, metadata certs.CSRMetadata, privKey *rsa.PrivateKey) (certs.CSR, error) {
 	defer func(begin time.Time) {
 		mm.counter.With("method", "create_csr").Add(1)
 		mm.latency.With("method", "create_csr").Observe(time.Since(begin).Seconds())
 	}(time.Now())
-	return mm.svc.CreateCSR(ctx, meta, entityID, key...)
+	return mm.svc.CreateCSR(ctx, metadata, privKey)
 }
 
-func (mm *metricsMiddleware) SignCSR(ctx context.Context, csrID string, approve bool) error {
+func (mm *metricsMiddleware) SignCSR(ctx context.Context, entityID, ttl string, csr certs.CSR) (certs.Certificate, error) {
 	defer func(begin time.Time) {
 		mm.counter.With("method", "sign_csr").Add(1)
 		mm.latency.With("method", "sign_csr").Observe(time.Since(begin).Seconds())
 	}(time.Now())
-	return mm.svc.SignCSR(ctx, csrID, approve)
-}
-
-func (mm *metricsMiddleware) RetrieveCSR(ctx context.Context, csrID string) (certs.CSR, error) {
-	defer func(begin time.Time) {
-		mm.counter.With("method", "retrieve_csr").Add(1)
-		mm.latency.With("method", "retrieve_csr").Observe(time.Since(begin).Seconds())
-	}(time.Now())
-	return mm.svc.RetrieveCSR(ctx, csrID)
-}
-
-func (mm *metricsMiddleware) ListCSRs(ctx context.Context, pm certs.PageMetadata) (certs.CSRPage, error) {
-	defer func(begin time.Time) {
-		mm.counter.With("method", "list_csrs").Add(1)
-		mm.latency.With("method", "list_csrs").Observe(time.Since(begin).Seconds())
-	}(time.Now())
-	return mm.svc.ListCSRs(ctx, pm)
+	return mm.svc.SignCSR(ctx, entityID, ttl, csr)
 }

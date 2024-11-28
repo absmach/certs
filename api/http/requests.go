@@ -97,43 +97,25 @@ type createCSRReq struct {
 }
 
 func (req createCSRReq) validate() error {
-	if req.Metadata.EntityID == "" {
-		return errors.Wrap(certs.ErrMalformedEntity, ErrMissingEntityID)
+	if req.Metadata.CommonName == "" {
+		return errors.Wrap(certs.ErrMalformedEntity, ErrMissingCN)
 	}
 	return nil
 }
 
 type SignCSRReq struct {
-	csrID   string
-	approve bool
+	entityID string
+	ttl string
+	CSR           []byte `json:"csr"`
 }
 
 func (req SignCSRReq) validate() error {
-	if req.csrID == "" {
+	if req.entityID == "" {
 		return errors.Wrap(certs.ErrMalformedEntity, ErrMissingEntityID)
 	}
-
-	return nil
-}
-
-type listCSRsReq struct {
-	pm certs.PageMetadata
-}
-
-func (req listCSRsReq) validate() error {
-	if req.pm.Status.String() == "" {
-		return errors.Wrap(certs.ErrMalformedEntity, ErrMissingStatus)
+	if len(req.CSR) == 0 {
+		return errors.Wrap(certs.ErrMalformedEntity, ErrMissingCSR)
 	}
-	return nil
-}
 
-type retrieveCSRReq struct {
-	csrID string
-}
-
-func (req retrieveCSRReq) validate() error {
-	if req.csrID == "" {
-		return errors.Wrap(certs.ErrMalformedEntity, ErrMissingEntityID)
-	}
 	return nil
 }

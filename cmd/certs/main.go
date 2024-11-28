@@ -25,7 +25,6 @@ import (
 	httpserver "github.com/absmach/certs/internal/server/http"
 	"github.com/absmach/certs/internal/uuid"
 	cpostgres "github.com/absmach/certs/postgres/certs"
-	csrpostgres "github.com/absmach/certs/postgres/csr"
 	"github.com/absmach/certs/tracing"
 	"github.com/caarlos0/env/v10"
 	"github.com/jmoiron/sqlx"
@@ -80,8 +79,6 @@ func main() {
 		logger.Error(err.Error())
 	}
 	cm := cpostgres.Migration()
-	sm := csrpostgres.Migration()
-	cm.Migrations = append(cm.Migrations, sm.Migrations...)
 	db, err := pgClient.Setup(dbConfig, *cm)
 	if err != nil {
 		log.Fatalf(fmt.Sprintf("Failed to connect to %s database: %s", svcName, err))
@@ -150,9 +147,7 @@ func main() {
 func newService(ctx context.Context, db *sqlx.DB, tracer trace.Tracer, logger *slog.Logger, dbConfig pgClient.Config, config *certs.Config) (certs.Service, error) {
 	database := postgres.NewDatabase(db, dbConfig, tracer)
 	repo := cpostgres.NewRepository(database)
-	csrRepo := csrpostgres.NewRepository(database)
-	idp := uuid.New()
-	svc, err := certs.NewService(ctx, repo, csrRepo, config, idp)
+	svc, err := certs.NewService(ctx, repo, config)
 	if err != nil {
 		return nil, err
 	}

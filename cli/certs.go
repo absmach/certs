@@ -5,10 +5,8 @@ package cli
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 
-	"github.com/absmach/certs/errors"
 	ctxsdk "github.com/absmach/certs/sdk"
 	"github.com/spf13/cobra"
 )
@@ -245,7 +243,7 @@ var cmdCerts = []cobra.Command{
 		Short: "Create CSR",
 		Long:  `Creates a CSR.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) > 3 || len(args) == 0 {
+			if len(args) != 0 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
@@ -256,25 +254,13 @@ var cmdCerts = []cobra.Command{
 				return
 			}
 
-			var csr ctxsdk.CSR
-			var err error
-			if len(args) == 1 {
-				csr, err = sdk.CreateCSR(pm, []byte{})
-				if err != nil {
-					logErrorCmd(*cmd, err)
-					return
-				}
-				logJSONCmd(*cmd, csr)
-				return
-			}
-
 			data, err := os.ReadFile(args[1])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
 
-			csr, err = sdk.CreateCSR(pm, data)
+			csr, err := sdk.CreateCSR(pm, data)
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -284,80 +270,22 @@ var cmdCerts = []cobra.Command{
 		},
 	},
 	{
-		Use:   "sign <csr_id> <sign>",
+		Use:   "sign <entity_id> <ttl> <path_to_csr>",
 		Short: "Sign CSR",
 		Long:  `Signs a CSR for a given csr id.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 2 {
+			if len(args) != 3 {
 				logUsageCmd(*cmd, cmd.Use)
-				return
-			}
-			var sign bool
-			switch args[1] {
-			case "true":
-				sign = true
-			case "false":
-				sign = false
-			default:
-				logErrorCmd(*cmd, errors.NewSDKError(fmt.Errorf("unknown type")))
 				return
 			}
 
-			err := sdk.SignCSR(args[0], sign)
+			data, err := os.ReadFile(args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
-			logOKCmd(*cmd)
-		},
-	},
-	{
-		Use:   "get-csr [all | <entity_id>] <status>",
-		Short: "Get csr",
-		Long:  `Gets CSRs for a given entity ID or all CSR.`,
-		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 2 {
-				logUsageCmd(*cmd, cmd.Use)
-				return
-			}
-			if args[0] == "all" {
-				pm := ctxsdk.PageMetadata{
-					Limit:  Limit,
-					Offset: Offset,
-					Status: args[1],
-				}
-				page, err := sdk.ListCSRs(pm)
-				if err != nil {
-					logErrorCmd(*cmd, err)
-					return
-				}
-				logJSONCmd(*cmd, page)
-				return
-			}
-			pm := ctxsdk.PageMetadata{
-				EntityID: args[0],
-				Limit:    Limit,
-				Offset:   Offset,
-				Status:   args[1],
-			}
-			page, err := sdk.ListCSRs(pm)
-			if err != nil {
-				logErrorCmd(*cmd, err)
-				return
-			}
-			logJSONCmd(*cmd, page)
-		},
-	},
-	{
-		Use:   "view-csr <csr_id>",
-		Short: "View CSR",
-		Long:  `Views a CSR for a given csr id.`,
-		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 1 {
-				logUsageCmd(*cmd, cmd.Use)
-				return
-			}
-			cert, err := sdk.RetrieveCSR(args[0])
+
+			cert, err := sdk.SignCSR(args[0], args[1], data)
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -407,7 +335,7 @@ func NewCertsCmd() *cobra.Command {
 	issueCmd.Flags().StringVar(&ttl, "ttl", "8760h", "certificate time to live in duration")
 
 	cmd := cobra.Command{
-		Use:   "certs [issue | get | revoke | renew | ocsp | token | download]",
+		Use:   "certs [issue | get | revoke | renew | ocsp | token | download | download-ca | download-ca | csr | sign]",
 		Short: "Certificates management",
 		Long:  `Certificates management: issue, get all, get by entity ID, revoke, renew, OCSP, token, download.`,
 	}

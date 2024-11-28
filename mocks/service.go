@@ -30,16 +30,9 @@ func (_m *MockService) EXPECT() *MockService_Expecter {
 	return &MockService_Expecter{mock: &_m.Mock}
 }
 
-// CreateCSR provides a mock function with given fields: ctx, metadata, entityID, privKey
-func (_m *MockService) CreateCSR(ctx context.Context, metadata certs.CSRMetadata, entityID string, privKey ...*rsa.PrivateKey) (certs.CSR, error) {
-	_va := make([]interface{}, len(privKey))
-	for _i := range privKey {
-		_va[_i] = privKey[_i]
-	}
-	var _ca []interface{}
-	_ca = append(_ca, ctx, metadata, entityID)
-	_ca = append(_ca, _va...)
-	ret := _m.Called(_ca...)
+// CreateCSR provides a mock function with given fields: ctx, metadata, privKey
+func (_m *MockService) CreateCSR(ctx context.Context, metadata certs.CSRMetadata, privKey *rsa.PrivateKey) (certs.CSR, error) {
+	ret := _m.Called(ctx, metadata, privKey)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateCSR")
@@ -47,17 +40,17 @@ func (_m *MockService) CreateCSR(ctx context.Context, metadata certs.CSRMetadata
 
 	var r0 certs.CSR
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, certs.CSRMetadata, string, ...*rsa.PrivateKey) (certs.CSR, error)); ok {
-		return rf(ctx, metadata, entityID, privKey...)
+	if rf, ok := ret.Get(0).(func(context.Context, certs.CSRMetadata, *rsa.PrivateKey) (certs.CSR, error)); ok {
+		return rf(ctx, metadata, privKey)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, certs.CSRMetadata, string, ...*rsa.PrivateKey) certs.CSR); ok {
-		r0 = rf(ctx, metadata, entityID, privKey...)
+	if rf, ok := ret.Get(0).(func(context.Context, certs.CSRMetadata, *rsa.PrivateKey) certs.CSR); ok {
+		r0 = rf(ctx, metadata, privKey)
 	} else {
 		r0 = ret.Get(0).(certs.CSR)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, certs.CSRMetadata, string, ...*rsa.PrivateKey) error); ok {
-		r1 = rf(ctx, metadata, entityID, privKey...)
+	if rf, ok := ret.Get(1).(func(context.Context, certs.CSRMetadata, *rsa.PrivateKey) error); ok {
+		r1 = rf(ctx, metadata, privKey)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -73,22 +66,14 @@ type MockService_CreateCSR_Call struct {
 // CreateCSR is a helper method to define mock.On call
 //   - ctx context.Context
 //   - metadata certs.CSRMetadata
-//   - entityID string
-//   - privKey ...*rsa.PrivateKey
-func (_e *MockService_Expecter) CreateCSR(ctx interface{}, metadata interface{}, entityID interface{}, privKey ...interface{}) *MockService_CreateCSR_Call {
-	return &MockService_CreateCSR_Call{Call: _e.mock.On("CreateCSR",
-		append([]interface{}{ctx, metadata, entityID}, privKey...)...)}
+//   - privKey *rsa.PrivateKey
+func (_e *MockService_Expecter) CreateCSR(ctx interface{}, metadata interface{}, privKey interface{}) *MockService_CreateCSR_Call {
+	return &MockService_CreateCSR_Call{Call: _e.mock.On("CreateCSR", ctx, metadata, privKey)}
 }
 
-func (_c *MockService_CreateCSR_Call) Run(run func(ctx context.Context, metadata certs.CSRMetadata, entityID string, privKey ...*rsa.PrivateKey)) *MockService_CreateCSR_Call {
+func (_c *MockService_CreateCSR_Call) Run(run func(ctx context.Context, metadata certs.CSRMetadata, privKey *rsa.PrivateKey)) *MockService_CreateCSR_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]*rsa.PrivateKey, len(args)-3)
-		for i, a := range args[3:] {
-			if a != nil {
-				variadicArgs[i] = a.(*rsa.PrivateKey)
-			}
-		}
-		run(args[0].(context.Context), args[1].(certs.CSRMetadata), args[2].(string), variadicArgs...)
+		run(args[0].(context.Context), args[1].(certs.CSRMetadata), args[2].(*rsa.PrivateKey))
 	})
 	return _c
 }
@@ -98,7 +83,7 @@ func (_c *MockService_CreateCSR_Call) Return(_a0 certs.CSR, _a1 error) *MockServ
 	return _c
 }
 
-func (_c *MockService_CreateCSR_Call) RunAndReturn(run func(context.Context, certs.CSRMetadata, string, ...*rsa.PrivateKey) (certs.CSR, error)) *MockService_CreateCSR_Call {
+func (_c *MockService_CreateCSR_Call) RunAndReturn(run func(context.Context, certs.CSRMetadata, *rsa.PrivateKey) (certs.CSR, error)) *MockService_CreateCSR_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -347,63 +332,6 @@ func (_c *MockService_IssueCert_Call) Return(_a0 certs.Certificate, _a1 error) *
 }
 
 func (_c *MockService_IssueCert_Call) RunAndReturn(run func(context.Context, string, string, []string, certs.SubjectOptions, ...*rsa.PrivateKey) (certs.Certificate, error)) *MockService_IssueCert_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// ListCSRs provides a mock function with given fields: ctx, pm
-func (_m *MockService) ListCSRs(ctx context.Context, pm certs.PageMetadata) (certs.CSRPage, error) {
-	ret := _m.Called(ctx, pm)
-
-	if len(ret) == 0 {
-		panic("no return value specified for ListCSRs")
-	}
-
-	var r0 certs.CSRPage
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, certs.PageMetadata) (certs.CSRPage, error)); ok {
-		return rf(ctx, pm)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, certs.PageMetadata) certs.CSRPage); ok {
-		r0 = rf(ctx, pm)
-	} else {
-		r0 = ret.Get(0).(certs.CSRPage)
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, certs.PageMetadata) error); ok {
-		r1 = rf(ctx, pm)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// MockService_ListCSRs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListCSRs'
-type MockService_ListCSRs_Call struct {
-	*mock.Call
-}
-
-// ListCSRs is a helper method to define mock.On call
-//   - ctx context.Context
-//   - pm certs.PageMetadata
-func (_e *MockService_Expecter) ListCSRs(ctx interface{}, pm interface{}) *MockService_ListCSRs_Call {
-	return &MockService_ListCSRs_Call{Call: _e.mock.On("ListCSRs", ctx, pm)}
-}
-
-func (_c *MockService_ListCSRs_Call) Run(run func(ctx context.Context, pm certs.PageMetadata)) *MockService_ListCSRs_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(certs.PageMetadata))
-	})
-	return _c
-}
-
-func (_c *MockService_ListCSRs_Call) Return(_a0 certs.CSRPage, _a1 error) *MockService_ListCSRs_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *MockService_ListCSRs_Call) RunAndReturn(run func(context.Context, certs.PageMetadata) (certs.CSRPage, error)) *MockService_ListCSRs_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -690,63 +618,6 @@ func (_c *MockService_RetrieveCAToken_Call) RunAndReturn(run func(context.Contex
 	return _c
 }
 
-// RetrieveCSR provides a mock function with given fields: ctx, csrID
-func (_m *MockService) RetrieveCSR(ctx context.Context, csrID string) (certs.CSR, error) {
-	ret := _m.Called(ctx, csrID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for RetrieveCSR")
-	}
-
-	var r0 certs.CSR
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string) (certs.CSR, error)); ok {
-		return rf(ctx, csrID)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, string) certs.CSR); ok {
-		r0 = rf(ctx, csrID)
-	} else {
-		r0 = ret.Get(0).(certs.CSR)
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, csrID)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// MockService_RetrieveCSR_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RetrieveCSR'
-type MockService_RetrieveCSR_Call struct {
-	*mock.Call
-}
-
-// RetrieveCSR is a helper method to define mock.On call
-//   - ctx context.Context
-//   - csrID string
-func (_e *MockService_Expecter) RetrieveCSR(ctx interface{}, csrID interface{}) *MockService_RetrieveCSR_Call {
-	return &MockService_RetrieveCSR_Call{Call: _e.mock.On("RetrieveCSR", ctx, csrID)}
-}
-
-func (_c *MockService_RetrieveCSR_Call) Run(run func(ctx context.Context, csrID string)) *MockService_RetrieveCSR_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string))
-	})
-	return _c
-}
-
-func (_c *MockService_RetrieveCSR_Call) Return(_a0 certs.CSR, _a1 error) *MockService_RetrieveCSR_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *MockService_RetrieveCSR_Call) RunAndReturn(run func(context.Context, string) (certs.CSR, error)) *MockService_RetrieveCSR_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // RetrieveCert provides a mock function with given fields: ctx, token, serialNumber
 func (_m *MockService) RetrieveCert(ctx context.Context, token string, serialNumber string) (certs.Certificate, []byte, error) {
 	ret := _m.Called(ctx, token, serialNumber)
@@ -918,22 +789,32 @@ func (_c *MockService_RevokeCert_Call) RunAndReturn(run func(context.Context, st
 	return _c
 }
 
-// SignCSR provides a mock function with given fields: ctx, csrID, approve
-func (_m *MockService) SignCSR(ctx context.Context, csrID string, approve bool) error {
-	ret := _m.Called(ctx, csrID, approve)
+// SignCSR provides a mock function with given fields: ctx, entityID, ttl, csr
+func (_m *MockService) SignCSR(ctx context.Context, entityID string, ttl string, csr certs.CSR) (certs.Certificate, error) {
+	ret := _m.Called(ctx, entityID, ttl, csr)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SignCSR")
 	}
 
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, bool) error); ok {
-		r0 = rf(ctx, csrID, approve)
+	var r0 certs.Certificate
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, certs.CSR) (certs.Certificate, error)); ok {
+		return rf(ctx, entityID, ttl, csr)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, certs.CSR) certs.Certificate); ok {
+		r0 = rf(ctx, entityID, ttl, csr)
 	} else {
-		r0 = ret.Error(0)
+		r0 = ret.Get(0).(certs.Certificate)
 	}
 
-	return r0
+	if rf, ok := ret.Get(1).(func(context.Context, string, string, certs.CSR) error); ok {
+		r1 = rf(ctx, entityID, ttl, csr)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // MockService_SignCSR_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SignCSR'
@@ -943,25 +824,26 @@ type MockService_SignCSR_Call struct {
 
 // SignCSR is a helper method to define mock.On call
 //   - ctx context.Context
-//   - csrID string
-//   - approve bool
-func (_e *MockService_Expecter) SignCSR(ctx interface{}, csrID interface{}, approve interface{}) *MockService_SignCSR_Call {
-	return &MockService_SignCSR_Call{Call: _e.mock.On("SignCSR", ctx, csrID, approve)}
+//   - entityID string
+//   - ttl string
+//   - csr certs.CSR
+func (_e *MockService_Expecter) SignCSR(ctx interface{}, entityID interface{}, ttl interface{}, csr interface{}) *MockService_SignCSR_Call {
+	return &MockService_SignCSR_Call{Call: _e.mock.On("SignCSR", ctx, entityID, ttl, csr)}
 }
 
-func (_c *MockService_SignCSR_Call) Run(run func(ctx context.Context, csrID string, approve bool)) *MockService_SignCSR_Call {
+func (_c *MockService_SignCSR_Call) Run(run func(ctx context.Context, entityID string, ttl string, csr certs.CSR)) *MockService_SignCSR_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].(bool))
+		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(certs.CSR))
 	})
 	return _c
 }
 
-func (_c *MockService_SignCSR_Call) Return(_a0 error) *MockService_SignCSR_Call {
-	_c.Call.Return(_a0)
+func (_c *MockService_SignCSR_Call) Return(_a0 certs.Certificate, _a1 error) *MockService_SignCSR_Call {
+	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockService_SignCSR_Call) RunAndReturn(run func(context.Context, string, bool) error) *MockService_SignCSR_Call {
+func (_c *MockService_SignCSR_Call) RunAndReturn(run func(context.Context, string, string, certs.CSR) (certs.Certificate, error)) *MockService_SignCSR_Call {
 	_c.Call.Return(run)
 	return _c
 }

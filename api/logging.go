@@ -182,7 +182,7 @@ func (lm *loggingMiddleware) GetChainCA(ctx context.Context, token string) (cert
 	return lm.svc.GetChainCA(ctx, token)
 }
 
-func (lm *loggingMiddleware) CreateCSR(ctx context.Context, meta certs.CSRMetadata, entityID string, key ...*rsa.PrivateKey) (csr certs.CSR, err error) {
+func (lm *loggingMiddleware) CreateCSR(ctx context.Context, metadata certs.CSRMetadata, privKey *rsa.PrivateKey) (csr certs.CSR, err error) {
 	defer func(begin time.Time) {
 		message := fmt.Sprintf("Method create_csr took %s to complete", time.Since(begin))
 		if err != nil {
@@ -191,10 +191,10 @@ func (lm *loggingMiddleware) CreateCSR(ctx context.Context, meta certs.CSRMetada
 		}
 		lm.logger.Info(message)
 	}(time.Now())
-	return lm.svc.CreateCSR(ctx, meta, entityID, key...)
+	return lm.svc.CreateCSR(ctx, metadata, privKey)
 }
 
-func (lm *loggingMiddleware) SignCSR(ctx context.Context, csrID string, approve bool) (err error) {
+func (lm *loggingMiddleware) SignCSR(ctx context.Context, entityID, ttl string, csr certs.CSR) (c certs.Certificate, err error) {
 	defer func(begin time.Time) {
 		message := fmt.Sprintf("Method sign_csr took %s to complete", time.Since(begin))
 		if err != nil {
@@ -203,29 +203,5 @@ func (lm *loggingMiddleware) SignCSR(ctx context.Context, csrID string, approve 
 		}
 		lm.logger.Info(message)
 	}(time.Now())
-	return lm.svc.SignCSR(ctx, csrID, approve)
-}
-
-func (lm *loggingMiddleware) ListCSRs(ctx context.Context, pm certs.PageMetadata) (cp certs.CSRPage, err error) {
-	defer func(begin time.Time) {
-		message := fmt.Sprintf("Method list_csrs took %s to complete", time.Since(begin))
-		if err != nil {
-			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
-			return
-		}
-		lm.logger.Info(message)
-	}(time.Now())
-	return lm.svc.ListCSRs(ctx, pm)
-}
-
-func (lm *loggingMiddleware) RetrieveCSR(ctx context.Context, csrID string) (csr certs.CSR, err error) {
-	defer func(begin time.Time) {
-		message := fmt.Sprintf("Method retrieve_csr took %s to complete", time.Since(begin))
-		if err != nil {
-			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
-			return
-		}
-		lm.logger.Info(message)
-	}(time.Now())
-	return lm.svc.RetrieveCSR(ctx, csrID)
+	return lm.svc.SignCSR(ctx, entityID, ttl, csr)
 }
