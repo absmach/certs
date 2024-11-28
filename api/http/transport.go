@@ -141,31 +141,31 @@ func MakeHandler(svc certs.Service, logger *slog.Logger, instanceID string) http
 			encodeCADownloadResponse,
 			opts...,
 		), "download_ca").ServeHTTP)
-		r.Route("/csr", func(r chi.Router) {
+		r.Route("/csrs", func(r chi.Router) {
 			r.Post("/{entityID}", otelhttp.NewHandler(kithttp.NewServer(
 				createCSREndpoint(svc),
 				decodeCreateCSR,
 				EncodeResponse,
 				opts...,
-			), "").ServeHTTP)
+			), "create_csr").ServeHTTP)
 			r.Patch("/{id}", otelhttp.NewHandler(kithttp.NewServer(
 				signCSREndpoint(svc),
 				decodeUpdateCSR,
 				EncodeResponse,
 				opts...,
-			), "").ServeHTTP)
+			), "sign_csr").ServeHTTP)
 			r.Get("/{id}", otelhttp.NewHandler(kithttp.NewServer(
 				retrieveCSREndpoint(svc),
 				decodeRetrieveCSR,
 				EncodeResponse,
 				opts...,
-			), "").ServeHTTP)
-			r.Get("/list", otelhttp.NewHandler(kithttp.NewServer(
+			), "view_csr").ServeHTTP)
+			r.Get("/", otelhttp.NewHandler(kithttp.NewServer(
 				listCSRsEndpoint(svc),
 				decodeListCSR,
 				EncodeResponse,
 				opts...,
-			), "").ServeHTTP)
+			), "list_csrs").ServeHTTP)
 		})
 	})
 

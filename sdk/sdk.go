@@ -27,7 +27,7 @@ import (
 
 const (
 	certsEndpoint     = "certs"
-	csrEndpoint       = "csr"
+	csrEndpoint       = "csrs"
 	issueCertEndpoint = "certs/issue"
 	emptyOCSPbody     = 22
 )
@@ -182,7 +182,7 @@ type CSR struct {
 	EntityID     string    `json:"entity_id,omitempty"`
 	Status       string    `json:"status,omitempty"`
 	SubmittedAt  time.Time `json:"submitted_at,omitempty"`
-	ProcessedAt  time.Time `json:"processed_at,omitempty"`
+	SignedAt     time.Time `json:"signed_at,omitempty"`
 	SerialNumber string    `json:"serial_number,omitempty"`
 }
 
@@ -291,17 +291,17 @@ type SDK interface {
 	//	fmt.Println(err)
 	SignCSR(csrID string, sign bool) errors.SDKError
 
-	// ListCSRs returns a list of CSRs based on filter criteria
-	//
-	//	response, _ := sdk.ListCSRs(sdk.PageMetadata{EntityID: "entity_id", Status: "pending"})
-	//	fmt.Println(response)
-	ListCSRs(pm PageMetadata) (CSRPage, errors.SDKError)
-
 	// RetrieveCSR retrieves a specific CSR by ID
 	//
 	//	response, _ := sdk.RetrieveCSR("csr_id")
 	//	fmt.Println(response)
 	RetrieveCSR(csrID string) (CSR, errors.SDKError)
+
+	// ListCSRs returns a list of CSRs based on filter criteria
+	//
+	//	response, _ := sdk.ListCSRs(sdk.PageMetadata{EntityID: "entity_id", Status: "pending"})
+	//	fmt.Println(response)
+	ListCSRs(pm PageMetadata) (CSRPage, errors.SDKError)
 }
 
 func (sdk mgSDK) IssueCert(entityID, ttl string, ipAddrs []string, opts Options) (Certificate, errors.SDKError) {
@@ -618,7 +618,7 @@ func (sdk mgSDK) SignCSR(csrID string, sign bool) errors.SDKError {
 }
 
 func (sdk mgSDK) ListCSRs(pm PageMetadata) (CSRPage, errors.SDKError) {
-	url, err := sdk.withQueryParams(sdk.certsURL, fmt.Sprintf("%s/%s/list", certsEndpoint, csrEndpoint), pm)
+	url, err := sdk.withQueryParams(sdk.certsURL, fmt.Sprintf("%s/%s", certsEndpoint, csrEndpoint), pm)
 	if err != nil {
 		return CSRPage{}, errors.NewSDKError(err)
 	}

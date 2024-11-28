@@ -158,7 +158,7 @@ type CSR struct {
 	EntityID     string    `json:"entity_id" db:"entity_id"`
 	Status       CSRStatus `json:"status" db:"status"`
 	SubmittedAt  time.Time `json:"submitted_at" db:"submitted_at"`
-	ProcessedAt  time.Time `json:"processed_at,omitempty" db:"processed_at"`
+	SignedAt     time.Time `json:"signed_at,omitempty" db:"signed_at"`
 	SerialNumber string    `json:"serial_number,omitempty" db:"serial_number"`
 }
 
@@ -240,11 +240,11 @@ type Service interface {
 	// SignCSR processes a pending CSR and either approves or rejects it
 	SignCSR(ctx context.Context, csrID string, approve bool) error
 
-	// ListCSRs returns a list of CSRs based on filter criteria
-	ListCSRs(ctx context.Context, pm PageMetadata) (CSRPage, error)
-
 	// RetrieveCSR retrieves a specific CSR by ID
 	RetrieveCSR(ctx context.Context, csrID string) (CSR, error)
+
+	// ListCSRs returns a list of CSRs based on filter criteria
+	ListCSRs(ctx context.Context, pm PageMetadata) (CSRPage, error)
 }
 
 type Repository interface {
@@ -273,6 +273,6 @@ type Repository interface {
 type CSRRepository interface {
 	CreateCSR(context.Context, CSR) error
 	UpdateCSR(context.Context, CSR) error
-	ListCSRs(context.Context, PageMetadata) (CSRPage, error)
 	RetrieveCSR(context.Context, string) (CSR, error)
+	ListCSRs(context.Context, PageMetadata) (CSRPage, error)
 }

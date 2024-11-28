@@ -12,9 +12,9 @@ func Migration() *migrate.MemoryMigrationSource {
 	return &migrate.MemoryMigrationSource{
 		Migrations: []*migrate.Migration{
 			{
-				Id: "csr_1",
+				Id: "csrs_1",
 				Up: []string{
-					`CREATE TABLE IF NOT EXISTS csr (
+					`CREATE TABLE IF NOT EXISTS csrs (
 						id            VARCHAR(36) PRIMARY KEY,
 						serial_number VARCHAR(40),
 						csr 		  TEXT,
@@ -22,7 +22,7 @@ func Migration() *migrate.MemoryMigrationSource {
 						entity_id     VARCHAR(36),
                     	status        TEXT CHECK (status IN ('pending', 'signed', 'rejected')),
                         submitted_at  TIMESTAMP,
-						processed_at  TIMESTAMP
+						signed_at     TIMESTAMP
                     )`,
 				},
 				Down: []string{

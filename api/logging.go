@@ -196,7 +196,7 @@ func (lm *loggingMiddleware) CreateCSR(ctx context.Context, meta certs.CSRMetada
 
 func (lm *loggingMiddleware) SignCSR(ctx context.Context, csrID string, approve bool) (err error) {
 	defer func(begin time.Time) {
-		message := fmt.Sprintf("Method process_csr took %s to complete", time.Since(begin))
+		message := fmt.Sprintf("Method sign_csr took %s to complete", time.Since(begin))
 		if err != nil {
 			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
 			return

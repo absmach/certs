@@ -487,7 +487,7 @@ func (s *service) SignCSR(ctx context.Context, csrID string, approve bool) error
 
 	if !approve {
 		csr.Status = Rejected
-		csr.ProcessedAt = time.Now()
+		csr.SignedAt = time.Now()
 		return s.csrRepo.UpdateCSR(ctx, csr)
 	}
 
@@ -525,7 +525,7 @@ func (s *service) SignCSR(ctx context.Context, csrID string, approve bool) error
 	}
 
 	csr.Status = Signed
-	csr.ProcessedAt = time.Now()
+	csr.SignedAt = time.Now()
 	csr.SerialNumber = cert.SerialNumber
 
 	return s.csrRepo.UpdateCSR(ctx, csr)

@@ -109,7 +109,7 @@ func (tm *tracingMiddleware) CreateCSR(ctx context.Context, meta certs.CSRMetada
 }
 
 func (tm *tracingMiddleware) SignCSR(ctx context.Context, csrID string, approve bool) error {
-	ctx, span := tm.tracer.Start(ctx, "process_csr")
+	ctx, span := tm.tracer.Start(ctx, "sign_csr")
 	defer span.End()
 	return tm.svc.SignCSR(ctx, csrID, approve)
 }

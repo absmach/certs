@@ -45,8 +45,8 @@ func NewRepository(db postgres.Database) certs.CSRRepository {
 
 func (repo CSRRepo) CreateCSR(ctx context.Context, csr certs.CSR) error {
 	q := `
-	INSERT INTO csr (id, serial_number, csr, private_key, entity_id, status, submitted_at, processed_at)
-	VALUES (:id, :serial_number, :csr, :private_key, :entity_id, :status, :submitted_at, :processed_at)`
+	INSERT INTO csr (id, serial_number, csr, private_key, entity_id, status, submitted_at, signed_at)
+	VALUES (:id, :serial_number, :csr, :private_key, :entity_id, :status, :submitted_at, :signed_at)`
 	_, err := repo.db.NamedExecContext(ctx, q, csr)
 	if err != nil {
 		return handleError(certs.ErrCreateEntity, err)
@@ -61,10 +61,10 @@ func (repo CSRRepo) UpdateCSR(ctx context.Context, csr certs.CSR) error {
 		Status:       csr.Status.String(),
 		PrivateKey:   csr.PrivateKey,
 		SubmittedAt:  csr.SubmittedAt,
-		ProcessedAt:  csr.ProcessedAt,
+		SignedAt:     csr.SignedAt,
 	}
 
-	q := `UPDATE csr SET serial_number = :serial_number, status = :status, private_key = :private_key, submitted_at = :submitted_at, processed_at = :processed_at WHERE id = :id`
+	q := `UPDATE csr SET serial_number = :serial_number, status = :status, private_key = :private_key, submitted_at = :submitted_at, signed_at = :signed_at WHERE id = :id`
 	res, err := repo.db.NamedExecContext(ctx, q, updateData)
 	if err != nil {
 		return handleError(certs.ErrUpdateEntity, err)
@@ -80,7 +80,7 @@ func (repo CSRRepo) UpdateCSR(ctx context.Context, csr certs.CSR) error {
 }
 
 func (repo CSRRepo) RetrieveCSR(ctx context.Context, id string) (certs.CSR, error) {
-	q := `SELECT id, serial_number, csr, private_key, entity_id, status, submitted_at, processed_at FROM csr WHERE id = $1`
+	q := `SELECT id, serial_number, csr, private_key, entity_id, status, submitted_at, signed_at FROM csrs WHERE id = $1`
 	var csrRaw rawCSR
 	if err := repo.db.QueryRowxContext(ctx, q, id).StructScan(&csrRaw); err != nil {
 		if err == sql.ErrNoRows {
@@ -101,7 +101,7 @@ func (repo CSRRepo) RetrieveCSR(ctx context.Context, id string) (certs.CSR, erro
 		EntityID:     csrRaw.EntityID,
 		Status:       status,
 		SubmittedAt:  csrRaw.SubmittedAt,
-		ProcessedAt:  csrRaw.ProcessedAt,
+		SignedAt:     csrRaw.SignedAt,
 	}, nil
 }
 
@@ -130,9 +130,9 @@ func (repo CSRRepo) ListCSRs(ctx context.Context, pm certs.PageMetadata) (certs.
 		c.id,
 		c.serial_number,
 		c.submitted_at,
-		c.processed_at, 
+		c.signed_at, 
 		c.entity_id
-	FROM csr c %s LIMIT :limit OFFSET :offset;`, str)
+	FROM csrs c %s LIMIT :limit OFFSET :offset;`, str)
 
 	rows, err := repo.db.NamedQueryContext(ctx, q, pm)
 	if err != nil {
@@ -148,7 +148,7 @@ func (repo CSRRepo) ListCSRs(ctx context.Context, pm certs.PageMetadata) (certs.
 		csrs = append(csrs, csr)
 	}
 
-	cq := fmt.Sprintf(`SELECT COUNT(*) FROM csr c %s;`, str)
+	cq := fmt.Sprintf(`SELECT COUNT(*) FROM csrs c %s;`, str)
 	pm.Total, err = repo.total(ctx, cq, pm)
 	if err != nil {
 		return certs.CSRPage{}, errors.Wrap(certs.ErrViewEntity, err)
@@ -198,5 +198,5 @@ type rawCSR struct {
 	EntityID     string    `db:"entity_id"`
 	Status       string    `db:"status"`
 	SubmittedAt  time.Time `db:"submitted_at"`
-	ProcessedAt  time.Time `db:"processed_at"`
+	SignedAt     time.Time `db:"signed_at"`
 }
