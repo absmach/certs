@@ -649,12 +649,12 @@ func TestDownloadCACert(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			svcCall := svc.On("GetSigningCA", mock.Anything, tc.token).Return(tc.svcresp, tc.svcerr)
+			svcCall := svc.On("GetChainCA", mock.Anything, tc.token).Return(tc.svcresp, tc.svcerr)
 
 			_, err := ctsdk.DownloadCA(tc.token)
 			assert.Equal(t, tc.err, err)
 			if tc.err == nil {
-				ok := svcCall.Parent.AssertCalled(t, "GetSigningCA", mock.Anything, tc.token)
+				ok := svcCall.Parent.AssertCalled(t, "GetChainCA", mock.Anything, tc.token)
 				assert.True(t, ok)
 			}
 			svcCall.Unset()
@@ -709,12 +709,12 @@ func TestViewCA(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			svcCall := svc.On("GetSigningCA", mock.Anything, tc.token).Return(tc.svcresp, tc.svcerr)
+			svcCall := svc.On("GetChainCA", mock.Anything, tc.token).Return(tc.svcresp, tc.svcerr)
 
 			c, err := ctsdk.ViewCA(tc.token)
 			assert.Equal(t, tc.err, err)
 			if tc.err == nil {
-				ok := svcCall.Parent.AssertCalled(t, "GetSigningCA", mock.Anything, tc.token)
+				ok := svcCall.Parent.AssertCalled(t, "GetChainCA", mock.Anything, tc.token)
 				assert.True(t, ok)
 			}
 			assert.Equal(t, tc.sdkCert.Certificate, c.Certificate, fmt.Sprintf("expected: %v, got: %v", tc.sdkCert.Certificate, c.Certificate))
@@ -765,13 +765,13 @@ func TestGetCAToken(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			svcCall := svc.On("RetrieveCertDownloadToken", mock.Anything).Return(tc.svcresp, tc.svcerr)
+			svcCall := svc.On("RetrieveCAToken", mock.Anything).Return(tc.svcresp, tc.svcerr)
 
 			resp, err := ctsdk.GetCAToken()
 			assert.Equal(t, tc.err, err)
 			if tc.err == nil {
 				assert.Equal(t, tc.svcresp, resp.Token)
-				ok := svcCall.Parent.AssertCalled(t, "RetrieveCertDownloadToken", mock.Anything)
+				ok := svcCall.Parent.AssertCalled(t, "RetrieveCAToken", mock.Anything)
 				assert.True(t, ok)
 			}
 			svcCall.Unset()

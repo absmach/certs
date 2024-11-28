@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/absmach/certs"
 	"golang.org/x/crypto/ocsp"
 )
 
@@ -142,7 +143,7 @@ func (res listCertsRes) Empty() bool {
 type viewCertRes struct {
 	SerialNumber string    `json:"serial_number,omitempty"`
 	Certificate  string    `json:"certificate,omitempty"`
-	Key          string    `json:"key,omitempty,omitempty"`
+	Key          string    `json:"key,omitempty"`
 	Revoked      bool      `json:"revoked,omitempty"`
 	ExpiryTime   time.Time `json:"expiry_time,omitempty"`
 	EntityID     string    `json:"entity_id,omitempty"`
@@ -200,4 +201,73 @@ type fileDownloadRes struct {
 	CA          []byte `json:"ca"`
 	Filename    string
 	ContentType string
+}
+
+type createCSRRes struct {
+	certs.CSR
+	created bool
+}
+
+func (res createCSRRes) Code() int {
+	if res.created {
+		return http.StatusCreated
+	}
+
+	return http.StatusNoContent
+}
+
+func (res createCSRRes) Headers() map[string]string {
+	return map[string]string{}
+}
+
+func (res createCSRRes) Empty() bool {
+	return false
+}
+
+type signCSRRes struct {
+	signed bool
+}
+
+func (res signCSRRes) Code() int {
+	return http.StatusOK
+}
+
+func (res signCSRRes) Headers() map[string]string {
+	return map[string]string{}
+}
+
+func (res signCSRRes) Empty() bool {
+	return true
+}
+
+type listCSRsRes struct {
+	certs.CSRPage
+}
+
+func (res listCSRsRes) Code() int {
+	return http.StatusOK
+}
+
+func (res listCSRsRes) Headers() map[string]string {
+	return map[string]string{}
+}
+
+func (res listCSRsRes) Empty() bool {
+	return false
+}
+
+type retrieveCSRRes struct {
+	certs.CSR
+}
+
+func (res retrieveCSRRes) Code() int {
+	return http.StatusOK
+}
+
+func (res retrieveCSRRes) Headers() map[string]string {
+	return map[string]string{}
+}
+
+func (res retrieveCSRRes) Empty() bool {
+	return false
 }
