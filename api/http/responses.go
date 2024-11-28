@@ -240,35 +240,3 @@ func (res signCSRRes) Headers() map[string]string {
 func (res signCSRRes) Empty() bool {
 	return false
 }
-
-type listCSRsRes struct {
-	certs.CSRPage
-}
-
-func (res listCSRsRes) Code() int {
-	return http.StatusOK
-}
-
-func (res listCSRsRes) Headers() map[string]string {
-	return map[string]string{}
-}
-
-func (res listCSRsRes) Empty() bool {
-	return false
-}
-
-type retrieveCSRRes struct {
-	certs.CSR
-}
-
-func (res retrieveCSRRes) Code() int {
-	return http.StatusOK
-}
-
-func (res retrieveCSRRes) Headers() map[string]string {
-	return map[string]string{}
-}
-
-func (res retrieveCSRRes) Empty() bool {
-	return false
-}

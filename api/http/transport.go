@@ -39,7 +39,7 @@ const (
 	token           = "token"
 	ocspStatusParam = "force_status"
 	entityIDParam   = "entityID"
-	ttl = "ttl"
+	ttl             = "ttl"
 	defOffset       = 0
 	defLimit        = 10
 	defType         = 1
@@ -305,8 +305,8 @@ func decodeSignCSR(_ context.Context, r *http.Request) (interface{}, error) {
 	}
 
 	req := SignCSRReq{
-		entityID:   chi.URLParam(r, "entityID"),
-		ttl: t,
+		entityID: chi.URLParam(r, "entityID"),
+		ttl:      t,
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -315,7 +315,6 @@ func decodeSignCSR(_ context.Context, r *http.Request) (interface{}, error) {
 
 	return req, nil
 }
-
 
 // EncodeResponse encodes successful response.
 func EncodeResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {

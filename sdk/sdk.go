@@ -93,7 +93,7 @@ type PageMetadata struct {
 	IPAddresses        []string `json:"ip_addresses,omitempty"`
 	EmailAddresses     []string `json:"email_addresses,omitempty"`
 	Status             string   `json:"status,omitempty"`
-	TTL               string     `json:"ttl,omitempty"`
+	TTL                string   `json:"ttl,omitempty"`
 }
 
 type Options struct {
@@ -176,8 +176,8 @@ type CSRMetadata struct {
 }
 
 type CSR struct {
-	CSR          []byte    `json:"csr,omitempty"`
-	PrivateKey   []byte    `json:"private_key,omitempty"`
+	CSR        []byte `json:"csr,omitempty"`
+	PrivateKey []byte `json:"private_key,omitempty"`
 }
 
 type SDK interface {
@@ -278,7 +278,7 @@ type SDK interface {
 	// example:
 	//	certs, err := sdk.SignCSR( "entityID", "ttl", []bytes("csrFile"))
 	//	fmt.Println(err)
-	SignCSR(entityID, ttl string, csr []byte) (Certificate,errors.SDKError)
+	SignCSR(entityID, ttl string, csr []byte) (Certificate, errors.SDKError)
 }
 
 func (sdk mgSDK) IssueCert(entityID, ttl string, ipAddrs []string, opts Options) (Certificate, errors.SDKError) {
@@ -578,20 +578,20 @@ func (sdk mgSDK) CreateCSR(pm PageMetadata, privKey []byte) (CSR, errors.SDKErro
 	return csr, nil
 }
 
-func (sdk mgSDK) SignCSR(entityID, ttl string, csr []byte) (Certificate,errors.SDKError) {
+func (sdk mgSDK) SignCSR(entityID, ttl string, csr []byte) (Certificate, errors.SDKError) {
 	pm := PageMetadata{
 		TTL: ttl,
 	}
 	url, err := sdk.withQueryParams(sdk.certsURL, fmt.Sprintf("%s/%s/%s", certsEndpoint, csrEndpoint, entityID), pm)
 	if err != nil {
-		return Certificate{},errors.NewSDKError(err)
+		return Certificate{}, errors.NewSDKError(err)
 	}
 
 	_, _, sdkerr := sdk.processRequest(http.MethodPatch, url, nil, nil, http.StatusOK)
 	if sdkerr != nil {
-		return Certificate{},sdkerr
+		return Certificate{}, sdkerr
 	}
-	return Certificate{},nil
+	return Certificate{}, nil
 }
 
 func NewSDK(conf Config) SDK {

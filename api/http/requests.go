@@ -100,13 +100,17 @@ func (req createCSRReq) validate() error {
 	if req.Metadata.CommonName == "" {
 		return errors.Wrap(certs.ErrMalformedEntity, ErrMissingCN)
 	}
+
+	if len(req.PrivateKey) == 0 {
+		return errors.Wrap(certs.ErrMalformedEntity, ErrMissingPrivKey)
+	}
 	return nil
 }
 
 type SignCSRReq struct {
 	entityID string
-	ttl string
-	CSR           []byte `json:"csr"`
+	ttl      string
+	CSR      []byte `json:"csr"`
 }
 
 func (req SignCSRReq) validate() error {

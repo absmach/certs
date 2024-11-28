@@ -35,4 +35,7 @@ var (
 
 	// ErrMissingCSR indicates missing csr.
 	ErrMissingCSR = errors.New("missing CSR")
+
+	// ErrMissingPrivKey indicates missing csr.
+	ErrMissingPrivKey = errors.New("missing private key")
 )

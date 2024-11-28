@@ -441,8 +441,8 @@ func (s *service) CreateCSR(ctx context.Context, metadata CSRMetadata, privKey *
 	})
 
 	csr := CSR{
-		CSR:         csrPEM,
-		PrivateKey:  privKeyPEM,
+		CSR:        csrPEM,
+		PrivateKey: privKeyPEM,
 	}
 
 	return csr, nil
