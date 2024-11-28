@@ -159,7 +159,7 @@ type CSR struct {
 	Status       CSRStatus `json:"status" db:"status"`
 	SubmittedAt  time.Time `json:"submitted_at" db:"submitted_at"`
 	ProcessedAt  time.Time `json:"processed_at,omitempty" db:"processed_at"`
-	SerialNumber string    `json:"serial_number" db:"serial_number"`
+	SerialNumber string    `json:"serial_number,omitempty" db:"serial_number"`
 }
 
 type CSRPage struct {

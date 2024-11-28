@@ -7,8 +7,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
 	"strings"
+	"time"
 
 	"github.com/absmach/certs"
 	"github.com/absmach/certs/errors"
@@ -55,8 +55,17 @@ func (repo CSRRepo) CreateCSR(ctx context.Context, csr certs.CSR) error {
 }
 
 func (repo CSRRepo) UpdateCSR(ctx context.Context, csr certs.CSR) error {
+	updateData := rawCSR{
+		ID:           csr.ID,
+		SerialNumber: csr.SerialNumber,
+		Status:       csr.Status.String(),
+		PrivateKey:   csr.PrivateKey,
+		SubmittedAt:  csr.SubmittedAt,
+		ProcessedAt:  csr.ProcessedAt,
+	}
+
 	q := `UPDATE csr SET serial_number = :serial_number, status = :status, private_key = :private_key, submitted_at = :submitted_at, processed_at = :processed_at WHERE id = :id`
-	res, err := repo.db.NamedExecContext(ctx, q, csr)
+	res, err := repo.db.NamedExecContext(ctx, q, updateData)
 	if err != nil {
 		return handleError(certs.ErrUpdateEntity, err)
 	}
@@ -72,22 +81,36 @@ func (repo CSRRepo) UpdateCSR(ctx context.Context, csr certs.CSR) error {
 
 func (repo CSRRepo) RetrieveCSR(ctx context.Context, id string) (certs.CSR, error) {
 	q := `SELECT id, serial_number, csr, private_key, entity_id, status, submitted_at, processed_at FROM csr WHERE id = $1`
-	var csr certs.CSR
-	if err := repo.db.QueryRowxContext(ctx, q, id).StructScan(&csr); err != nil {
+	var csrRaw rawCSR
+	if err := repo.db.QueryRowxContext(ctx, q, id).StructScan(&csrRaw); err != nil {
 		if err == sql.ErrNoRows {
 			return certs.CSR{}, errors.Wrap(certs.ErrNotFound, err)
 		}
 		return certs.CSR{}, errors.Wrap(certs.ErrViewEntity, err)
 	}
-	return csr, nil
+
+	status, err := certs.ParseCSRStatus(csrRaw.Status)
+	if err != nil {
+		return certs.CSR{}, errors.Wrap(certs.ErrViewEntity, fmt.Errorf("invalid status: %s", csrRaw.Status))
+	}
+	return certs.CSR{
+		ID:           csrRaw.ID,
+		SerialNumber: csrRaw.SerialNumber,
+		CSR:          csrRaw.CSR,
+		PrivateKey:   csrRaw.PrivateKey,
+		EntityID:     csrRaw.EntityID,
+		Status:       status,
+		SubmittedAt:  csrRaw.SubmittedAt,
+		ProcessedAt:  csrRaw.ProcessedAt,
+	}, nil
 }
 
 func (repo CSRRepo) ListCSRs(ctx context.Context, pm certs.PageMetadata) (certs.CSRPage, error) {
 	var query []string
 	params := map[string]interface{}{
-        "limit":  pm.Limit,
-        "offset": pm.Offset,
-    }
+		"limit":  pm.Limit,
+		"offset": pm.Offset,
+	}
 	if pm.EntityID != "" {
 		query = append(query, `c.entity_id = :entity_id`)
 		params["entity_id"] = pm.EntityID
@@ -111,28 +134,19 @@ func (repo CSRRepo) ListCSRs(ctx context.Context, pm certs.PageMetadata) (certs.
 		c.entity_id
 	FROM csr c %s LIMIT :limit OFFSET :offset;`, str)
 
-	log.Printf("Query: %s", q)
-	log.Printf("Parameters: %+v", pm)
 	rows, err := repo.db.NamedQueryContext(ctx, q, pm)
 	if err != nil {
 		return certs.CSRPage{}, handleError(certs.ErrViewEntity, err)
 	}
 	defer rows.Close()
-	log.Printf("row : %+v", rows)
 	var csrs []certs.CSR
 	for rows.Next() {
 		csr := certs.CSR{}
 		if err := rows.StructScan(&csr); err != nil {
-			log.Printf("StructScan error: %v", err)
 			return certs.CSRPage{}, errors.Wrap(certs.ErrViewEntity, err)
 		}
-		log.Printf("Scanned CSR: %+v", csr)
 		csrs = append(csrs, csr)
 	}
-
-	if len(csrs) == 0 {
-        log.Println("No CSRs found matching the query")
-    }
 
 	cq := fmt.Sprintf(`SELECT COUNT(*) FROM csr c %s;`, str)
 	pm.Total, err = repo.total(ctx, cq, pm)
@@ -174,4 +188,15 @@ func handleError(wrapper, err error) error {
 	}
 
 	return errors.Wrap(wrapper, err)
+}
+
+type rawCSR struct {
+	ID           string    `db:"id"`
+	SerialNumber string    `db:"serial_number"`
+	CSR          []byte    `db:"csr"`
+	PrivateKey   []byte    `db:"private_key"`
+	EntityID     string    `db:"entity_id"`
+	Status       string    `db:"status"`
+	SubmittedAt  time.Time `db:"submitted_at"`
+	ProcessedAt  time.Time `db:"processed_at"`
 }

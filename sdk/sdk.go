@@ -280,7 +280,7 @@ type SDK interface {
 	//
 	// example:
 	//  pm = sdk.CSRMetadata{CommonName: "common_name", EntityID: "entity_id" }
-	//	reponse, _ := sdk.CreateCSR(pm, []bytes("privKey"))
+	//	response, _ := sdk.CreateCSR(pm, []bytes("privKey"))
 	//  fmt.Println(response)
 	CreateCSR(pm PageMetadata, privKey []byte) (CSR, errors.SDKError)
 
@@ -293,13 +293,13 @@ type SDK interface {
 
 	// ListCSRs returns a list of CSRs based on filter criteria
 	//
-	//	reponse, _ := sdk.ListCSRs(sdk.PageMetadata{EntityID: "entity_id", Status: "pending"})
+	//	response, _ := sdk.ListCSRs(sdk.PageMetadata{EntityID: "entity_id", Status: "pending"})
 	//	fmt.Println(response)
 	ListCSRs(pm PageMetadata) (CSRPage, errors.SDKError)
 
 	// RetrieveCSR retrieves a specific CSR by ID
 	//
-	//	reponse, _ := sdk.RetrieveCSR("csr_id")
+	//	response, _ := sdk.RetrieveCSR("csr_id")
 	//	fmt.Println(response)
 	RetrieveCSR(csrID string) (CSR, errors.SDKError)
 }
