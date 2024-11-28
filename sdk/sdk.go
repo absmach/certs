@@ -76,9 +76,9 @@ func (c CertStatus) MarshalJSON() ([]byte, error) {
 }
 
 type PageMetadata struct {
-	Total              uint64   `json:"total,omitempty"`
+	Total              uint64   `json:"total"`
 	Offset             uint64   `json:"offset,omitempty"`
-	Limit              uint64   `json:"limit,omitempty"`
+	Limit              uint64   `json:"limit"`
 	EntityID           string   `json:"entity_id,omitempty"`
 	Token              string   `json:"token,omitempty"`
 	CommonName         string   `json:"common_name,omitempty"`
@@ -188,7 +188,7 @@ type CSR struct {
 
 type CSRPage struct {
 	PageMetadata
-	CSRs []CSR
+	CSRs []CSR `json:"csrs,omitempty"`
 }
 
 type SDK interface {

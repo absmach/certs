@@ -45,7 +45,7 @@ func NewRepository(db postgres.Database) certs.CSRRepository {
 
 func (repo CSRRepo) CreateCSR(ctx context.Context, csr certs.CSR) error {
 	q := `
-	INSERT INTO csr (id, serial_number, csr, private_key, entity_id, status, submitted_at, signed_at)
+	INSERT INTO csrs (id, serial_number, csr, private_key, entity_id, status, submitted_at, signed_at)
 	VALUES (:id, :serial_number, :csr, :private_key, :entity_id, :status, :submitted_at, :signed_at)`
 	_, err := repo.db.NamedExecContext(ctx, q, csr)
 	if err != nil {
@@ -64,7 +64,7 @@ func (repo CSRRepo) UpdateCSR(ctx context.Context, csr certs.CSR) error {
 		SignedAt:     csr.SignedAt,
 	}
 
-	q := `UPDATE csr SET serial_number = :serial_number, status = :status, private_key = :private_key, submitted_at = :submitted_at, signed_at = :signed_at WHERE id = :id`
+	q := `UPDATE csrs SET serial_number = :serial_number, status = :status, private_key = :private_key, submitted_at = :submitted_at, signed_at = :signed_at WHERE id = :id`
 	res, err := repo.db.NamedExecContext(ctx, q, updateData)
 	if err != nil {
 		return handleError(certs.ErrUpdateEntity, err)

@@ -485,6 +485,10 @@ func (s *service) SignCSR(ctx context.Context, csrID string, approve bool) error
 		return errors.Wrap(ErrViewEntity, err)
 	}
 
+	if csr.Status != Pending {
+		return ErrConflict
+	}
+
 	if !approve {
 		csr.Status = Rejected
 		csr.SignedAt = time.Now()
