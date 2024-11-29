@@ -287,16 +287,32 @@ func decodeCreateCSR(_ context.Context, r *http.Request) (interface{}, error) {
 	}
 
 	block, _ := pem.Decode([]byte(req.PrivateKey))
-	if block != nil {
-		privateKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
-		fmt.Println(err)
-
-		if err != nil {
-			return nil, errors.Wrap(ErrInvalidRequest, err)
-		}
-
-		req.privKey = privateKey
+	if block == nil {
+		return nil, errors.Wrap(ErrInvalidRequest, errors.New("invalid PEM format"))
 	}
+
+	var (
+		privateKey any
+		err        error
+	)
+
+	switch block.Type {
+	case "RSA PRIVATE KEY":
+		privateKey, err = x509.ParsePKCS1PrivateKey(block.Bytes)
+	case "EC PRIVATE KEY":
+		privateKey, err = x509.ParseECPrivateKey(block.Bytes)
+	case "PRIVATE KEY", "PKCS8 PRIVATE KEY":
+		privateKey, err = x509.ParsePKCS8PrivateKey(block.Bytes)
+	case "ED25519 PRIVATE KEY":
+		privateKey, err = x509.ParsePKCS8PrivateKey(block.Bytes)
+	default:
+		err = errors.New("unsupported private key type")
+	}
+
+	if err != nil {
+		return nil, errors.Wrap(ErrInvalidRequest, err)
+	}
+	req.privKey = privateKey
 
 	return req, nil
 }
