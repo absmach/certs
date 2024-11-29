@@ -288,7 +288,6 @@ func decodeCreateCSR(_ context.Context, r *http.Request) (interface{}, error) {
 
 	block, _ := pem.Decode([]byte(req.PrivateKey))
 	if block != nil {
-
 		privateKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 		fmt.Println(err)
 
