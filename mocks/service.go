@@ -31,7 +31,7 @@ func (_m *MockService) EXPECT() *MockService_Expecter {
 }
 
 // CreateCSR provides a mock function with given fields: ctx, metadata, privKey
-func (_m *MockService) CreateCSR(ctx context.Context, metadata certs.CSRMetadata, privKey *rsa.PrivateKey) (certs.CSR, error) {
+func (_m *MockService) CreateCSR(ctx context.Context, metadata certs.CSRMetadata, privKey interface{}) (certs.CSR, error) {
 	ret := _m.Called(ctx, metadata, privKey)
 
 	if len(ret) == 0 {
@@ -40,16 +40,16 @@ func (_m *MockService) CreateCSR(ctx context.Context, metadata certs.CSRMetadata
 
 	var r0 certs.CSR
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, certs.CSRMetadata, *rsa.PrivateKey) (certs.CSR, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, certs.CSRMetadata, interface{}) (certs.CSR, error)); ok {
 		return rf(ctx, metadata, privKey)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, certs.CSRMetadata, *rsa.PrivateKey) certs.CSR); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, certs.CSRMetadata, interface{}) certs.CSR); ok {
 		r0 = rf(ctx, metadata, privKey)
 	} else {
 		r0 = ret.Get(0).(certs.CSR)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, certs.CSRMetadata, *rsa.PrivateKey) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, certs.CSRMetadata, interface{}) error); ok {
 		r1 = rf(ctx, metadata, privKey)
 	} else {
 		r1 = ret.Error(1)
@@ -66,14 +66,14 @@ type MockService_CreateCSR_Call struct {
 // CreateCSR is a helper method to define mock.On call
 //   - ctx context.Context
 //   - metadata certs.CSRMetadata
-//   - privKey *rsa.PrivateKey
+//   - privKey interface{}
 func (_e *MockService_Expecter) CreateCSR(ctx interface{}, metadata interface{}, privKey interface{}) *MockService_CreateCSR_Call {
 	return &MockService_CreateCSR_Call{Call: _e.mock.On("CreateCSR", ctx, metadata, privKey)}
 }
 
-func (_c *MockService_CreateCSR_Call) Run(run func(ctx context.Context, metadata certs.CSRMetadata, privKey *rsa.PrivateKey)) *MockService_CreateCSR_Call {
+func (_c *MockService_CreateCSR_Call) Run(run func(ctx context.Context, metadata certs.CSRMetadata, privKey interface{})) *MockService_CreateCSR_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(certs.CSRMetadata), args[2].(*rsa.PrivateKey))
+		run(args[0].(context.Context), args[1].(certs.CSRMetadata), args[2].(interface{}))
 	})
 	return _c
 }
@@ -83,7 +83,7 @@ func (_c *MockService_CreateCSR_Call) Return(_a0 certs.CSR, _a1 error) *MockServ
 	return _c
 }
 
-func (_c *MockService_CreateCSR_Call) RunAndReturn(run func(context.Context, certs.CSRMetadata, *rsa.PrivateKey) (certs.CSR, error)) *MockService_CreateCSR_Call {
+func (_c *MockService_CreateCSR_Call) RunAndReturn(run func(context.Context, certs.CSRMetadata, interface{}) (certs.CSR, error)) *MockService_CreateCSR_Call {
 	_c.Call.Return(run)
 	return _c
 }

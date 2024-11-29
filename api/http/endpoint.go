@@ -8,7 +8,6 @@ import (
 	"crypto"
 	"crypto/x509"
 	"encoding/pem"
-	"fmt"
 	"math/rand"
 	"strings"
 	"time"
