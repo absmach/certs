@@ -4,8 +4,6 @@
 package http
 
 import (
-	"crypto/rsa"
-
 	"github.com/absmach/certs"
 	"github.com/absmach/certs/errors"
 	"golang.org/x/crypto/ocsp"
@@ -92,8 +90,8 @@ func (req ocspReq) validate() error {
 
 type createCSRReq struct {
 	Metadata   certs.CSRMetadata `json:"metadata"`
-	PrivateKey []byte            `json:"private_Key"`
-	privKey    *rsa.PrivateKey
+	PrivateKey string            `json:"private_key"`
+	privKey    any
 }
 
 func (req createCSRReq) validate() error {

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"os"
 
+	"github.com/absmach/certs/errors"
 	ctxsdk "github.com/absmach/certs/sdk"
 	"github.com/spf13/cobra"
 )
@@ -243,14 +244,14 @@ var cmdCerts = []cobra.Command{
 		Short: "Create CSR",
 		Long:  `Creates a CSR.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 0 {
+			if len(args) != 2 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
 
 			var pm ctxsdk.PageMetadata
 			if err := json.Unmarshal([]byte(args[0]), &pm); err != nil {
-				logErrorCmd(*cmd, err)
+				logErrorCmd(*cmd, errors.New("here 1"))
 				return
 			}
 

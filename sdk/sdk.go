@@ -549,17 +549,19 @@ func (sdk mgSDK) GetCAToken() (Token, errors.SDKError) {
 
 func (sdk mgSDK) CreateCSR(pm PageMetadata, privKey []byte) (CSR, errors.SDKError) {
 	r := csrReq{
-		Organization:       pm.Organization,
-		OrganizationalUnit: pm.OrganizationalUnit,
-		Country:            pm.Country,
-		Province:           pm.Province,
-		Locality:           pm.Locality,
-		StreetAddress:      pm.StreetAddress,
-		PostalCode:         pm.PostalCode,
-		DNSNames:           pm.DNSNames,
-		IPAddresses:        pm.IPAddresses,
-		EmailAddresses:     pm.EmailAddresses,
-		PrivateKey:         privKey,
+		Metadata: meta{
+			Organization:       pm.Organization,
+			OrganizationalUnit: pm.OrganizationalUnit,
+			Country:            pm.Country,
+			Province:           pm.Province,
+			Locality:           pm.Locality,
+			StreetAddress:      pm.StreetAddress,
+			PostalCode:         pm.PostalCode,
+			DNSNames:           pm.DNSNames,
+			IPAddresses:        pm.IPAddresses,
+			EmailAddresses:     pm.EmailAddresses,
+		},
+		PrivateKey: privKey,
 	}
 	d, err := json.Marshal(r)
 	if err != nil {
@@ -568,7 +570,7 @@ func (sdk mgSDK) CreateCSR(pm PageMetadata, privKey []byte) (CSR, errors.SDKErro
 	url := fmt.Sprintf("%s/%s/%s", sdk.certsURL, certsEndpoint, csrEndpoint)
 	_, body, sdkerr := sdk.processRequest(http.MethodPost, url, d, nil, http.StatusOK)
 	if sdkerr != nil {
-		return CSR{}, sdkerr
+		return CSR{}, errors.NewSDKError(err)
 	}
 
 	var csr CSR
@@ -587,11 +589,16 @@ func (sdk mgSDK) SignCSR(entityID, ttl string, csr []byte) (Certificate, errors.
 		return Certificate{}, errors.NewSDKError(err)
 	}
 
-	_, _, sdkerr := sdk.processRequest(http.MethodPatch, url, nil, nil, http.StatusOK)
+	_, body, sdkerr := sdk.processRequest(http.MethodPost, url, nil, nil, http.StatusOK)
 	if sdkerr != nil {
 		return Certificate{}, sdkerr
 	}
-	return Certificate{}, nil
+
+	var cert Certificate
+	if err := json.Unmarshal(body, &cert); err != nil {
+		return Certificate{}, errors.NewSDKError(err)
+	}
+	return cert, nil
 }
 
 func NewSDK(conf Config) SDK {
@@ -703,6 +710,11 @@ type certReq struct {
 }
 
 type csrReq struct {
+	Metadata   meta   `json:"metadata"`
+	PrivateKey []byte `json:"private_key"`
+}
+
+type meta struct {
 	Organization       []string `json:"organization"`
 	OrganizationalUnit []string `json:"organizational_unit"`
 	Country            []string `json:"country"`
@@ -713,5 +725,4 @@ type csrReq struct {
 	DNSNames           []string `json:"dns_names"`
 	IPAddresses        []string `json:"ip_addresses"`
 	EmailAddresses     []string `json:"email_addresses"`
-	PrivateKey         []byte   `json:"private_key"`
 }

@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/absmach/certs"
 	"golang.org/x/crypto/ocsp"
 )
 
@@ -204,8 +203,9 @@ type fileDownloadRes struct {
 }
 
 type createCSRRes struct {
-	certs.CSR
-	created bool
+	CSR        []byte `json:"csr"`
+	PrivateKey []byte `json:"private_key"`
+	created    bool
 }
 
 func (res createCSRRes) Code() int {
@@ -225,8 +225,12 @@ func (res createCSRRes) Empty() bool {
 }
 
 type signCSRRes struct {
-	crt    certs.Certificate
-	signed bool
+	SerialNumber string    `json:"serial_number"`
+	Certificate  string    `json:"certificate,omitempty"`
+	Revoked      bool      `json:"revoked"`
+	ExpiryTime   time.Time `json:"expiry_time"`
+	EntityID     string    `json:"entity_id"`
+	signed       bool
 }
 
 func (res signCSRRes) Code() int {

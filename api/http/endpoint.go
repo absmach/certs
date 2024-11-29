@@ -8,6 +8,7 @@ import (
 	"crypto"
 	"crypto/x509"
 	"encoding/pem"
+	"fmt"
 	"math/rand"
 	"strings"
 	"time"
@@ -316,15 +317,15 @@ func createCSREndpoint(svc certs.Service) endpoint.Endpoint {
 		if err := req.validate(); err != nil {
 			return createCSRRes{created: false}, err
 		}
-
 		csr, err := svc.CreateCSR(ctx, req.Metadata, req.privKey)
 		if err != nil {
 			return createCSRRes{created: false}, err
 		}
 
 		return createCSRRes{
-			created: true,
-			CSR:     csr,
+			created:    true,
+			CSR:        csr.CSR,
+			PrivateKey: csr.PrivateKey,
 		}, nil
 	}
 }
@@ -342,8 +343,12 @@ func signCSREndpoint(svc certs.Service) endpoint.Endpoint {
 		}
 
 		return signCSRRes{
-			crt:    cert,
-			signed: true,
+			SerialNumber: cert.SerialNumber,
+			Certificate:  string(cert.Certificate),
+			Revoked:      cert.Revoked,
+			ExpiryTime:   cert.ExpiryTime,
+			EntityID:     cert.EntityID,
+			signed:       true,
 		}, nil
 	}
 }

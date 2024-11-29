@@ -143,7 +143,7 @@ func MakeHandler(svc certs.Service, logger *slog.Logger, instanceID string) http
 			opts...,
 		), "download_ca").ServeHTTP)
 		r.Route("/csrs", func(r chi.Router) {
-			r.Post("/create", otelhttp.NewHandler(kithttp.NewServer(
+			r.Post("/", otelhttp.NewHandler(kithttp.NewServer(
 				createCSREndpoint(svc),
 				decodeCreateCSR,
 				EncodeResponse,
@@ -286,12 +286,16 @@ func decodeCreateCSR(_ context.Context, r *http.Request) (interface{}, error) {
 		return nil, err
 	}
 
-	block, _ := pem.Decode(req.PrivateKey)
+	block, _ := pem.Decode([]byte(req.PrivateKey))
 	if block != nil {
-		privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+
+		privateKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+		fmt.Println(err)
+
 		if err != nil {
 			return nil, errors.Wrap(ErrInvalidRequest, err)
 		}
+
 		req.privKey = privateKey
 	}
 

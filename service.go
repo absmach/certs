@@ -5,6 +5,8 @@ package certs
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -402,7 +404,7 @@ func (s *service) GetChainCA(ctx context.Context, token string) (Certificate, er
 	return s.getConcatCAs(ctx)
 }
 
-func (s *service) CreateCSR(ctx context.Context, metadata CSRMetadata, privKey *rsa.PrivateKey) (CSR, error) {
+func (s *service) CreateCSR(ctx context.Context, metadata CSRMetadata, privKey any) (CSR, error) {
 	template := &x509.CertificateRequest{
 		Subject: pkix.Name{
 			CommonName:         metadata.CommonName,
@@ -435,9 +437,29 @@ func (s *service) CreateCSR(ctx context.Context, metadata CSRMetadata, privKey *
 		Bytes: csrBytes,
 	})
 
+	var privKeyBytes []byte
+	var privKeyType string
+	switch key := privKey.(type) {
+	case *rsa.PrivateKey:
+		privKeyBytes, err = x509.MarshalPKCS8PrivateKey(key)
+		privKeyType = "RSA PRIVATE KEY"
+	case *ecdsa.PrivateKey:
+		privKeyBytes, err = x509.MarshalPKCS8PrivateKey(key)
+		privKeyType = "EC PRIVATE KEY"
+	case ed25519.PrivateKey:
+		privKeyBytes, err = x509.MarshalPKCS8PrivateKey(key)
+		privKeyType = "PRIVATE KEY"
+	default:
+		return CSR{}, errors.Wrap(ErrCreateEntity, errors.New("unsupported private key type"))
+	}
+
+	if err != nil {
+		return CSR{}, errors.Wrap(ErrCreateEntity, err)
+	}
+
 	privKeyPEM := pem.EncodeToMemory(&pem.Block{
-		Type:  "RSA PRIVATE KEY",
-		Bytes: x509.MarshalPKCS1PrivateKey(privKey),
+		Type:  privKeyType,
+		Bytes: privKeyBytes,
 	})
 
 	csr := CSR{

@@ -176,7 +176,7 @@ type Service interface {
 	RemoveCert(ctx context.Context, entityId string) error
 
 	// CreateCSR creates a new Certificate Signing Request
-	CreateCSR(ctx context.Context, metadata CSRMetadata, privKey *rsa.PrivateKey) (CSR, error)
+	CreateCSR(ctx context.Context, metadata CSRMetadata, privKey any) (CSR, error)
 
 	// SignCSR parses and signs a CSR
 	SignCSR(ctx context.Context, entityID, ttl string, csr CSR) (Certificate, error)

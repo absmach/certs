@@ -137,7 +137,7 @@ func (mm *metricsMiddleware) GetChainCA(ctx context.Context, token string) (cert
 	return mm.svc.GetChainCA(ctx, token)
 }
 
-func (mm *metricsMiddleware) CreateCSR(ctx context.Context, metadata certs.CSRMetadata, privKey *rsa.PrivateKey) (certs.CSR, error) {
+func (mm *metricsMiddleware) CreateCSR(ctx context.Context, metadata certs.CSRMetadata, privKey any) (certs.CSR, error) {
 	defer func(begin time.Time) {
 		mm.counter.With("method", "create_csr").Add(1)
 		mm.latency.With("method", "create_csr").Observe(time.Since(begin).Seconds())
