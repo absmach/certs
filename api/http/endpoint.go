@@ -335,7 +335,7 @@ func signCSREndpoint(svc certs.Service) endpoint.Endpoint {
 			return signCSRRes{signed: false}, err
 		}
 
-		cert, err := svc.SignCSR(ctx, req.entityID, req.ttl, certs.CSR{CSR: req.CSR})
+		cert, err := svc.SignCSR(ctx, req.entityID, req.ttl, certs.CSR{CSR: []byte(req.CSR), PrivateKey: []byte(req.PrivateKey)})
 		if err != nil {
 			return signCSRRes{signed: false}, err
 		}

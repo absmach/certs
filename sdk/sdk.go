@@ -275,9 +275,9 @@ type SDK interface {
 	// SignCSR processes a pending CSR and either signs or rejects it
 	//
 	// example:
-	//	certs, err := sdk.SignCSR( "entityID", "ttl", "csrFile")
+	//	certs, err := sdk.SignCSR( "entityID", "ttl", "csrFile", "privKey")
 	//	fmt.Println(err)
-	SignCSR(entityID, ttl string, csr string) (Certificate, errors.SDKError)
+	SignCSR(entityID, ttl string, csr, privKey string) (Certificate, errors.SDKError)
 }
 
 func (sdk mgSDK) IssueCert(entityID, ttl string, ipAddrs []string, opts Options) (Certificate, errors.SDKError) {
@@ -591,13 +591,14 @@ func (sdk mgSDK) CreateCSR(pm PageMetadata, privKey string) (CSR, errors.SDKErro
 	return csr, nil
 }
 
-func (sdk mgSDK) SignCSR(entityID, ttl string, csr string) (Certificate, errors.SDKError) {
+func (sdk mgSDK) SignCSR(entityID, ttl string, csr, privKey string) (Certificate, errors.SDKError) {
 	pm := PageMetadata{
 		TTL: ttl,
 	}
 
 	r := csrReq{
-		CSR: csr,
+		CSR:        csr,
+		PrivateKey: privKey,
 	}
 
 	d, err := json.Marshal(r)
@@ -731,9 +732,9 @@ type certReq struct {
 }
 
 type csrReq struct {
-	Metadata   meta   `json:"metadata"`
-	PrivateKey string `json:"private_key"`
-	CSR        string `json:"csr"`
+	Metadata   meta   `json:"metadata,omitempty"`
+	PrivateKey string `json:"private_key,omitempty"`
+	CSR        string `json:"csr,omitempty"`
 }
 
 type meta struct {

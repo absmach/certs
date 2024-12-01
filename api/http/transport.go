@@ -328,8 +328,14 @@ func decodeSignCSR(_ context.Context, r *http.Request) (interface{}, error) {
 		ttl:      t,
 	}
 
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		return nil, err
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		return nil, errors.Wrap(ErrInvalidRequest, errors.New("failed to read request body"))
+	}
+	defer r.Body.Close()
+
+	if err := json.Unmarshal(body, &req); err != nil {
+		return nil, errors.Wrap(ErrInvalidRequest, errors.New("failed to decode JSON"))
 	}
 
 	return req, nil

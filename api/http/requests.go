@@ -106,9 +106,10 @@ func (req createCSRReq) validate() error {
 }
 
 type SignCSRReq struct {
-	entityID string
-	ttl      string
-	CSR      []byte `json:"csr"`
+	entityID   string
+	ttl        string
+	CSR        string `json:"csr"`
+	PrivateKey string `json:"private_key"`
 }
 
 func (req SignCSRReq) validate() error {

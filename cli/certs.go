@@ -270,22 +270,28 @@ var cmdCerts = []cobra.Command{
 		},
 	},
 	{
-		Use:   "sign <entity_id> <ttl> <path_to_csr>",
+		Use:   "sign <entity_id> <ttl> <path_to_csr> <private_key_path>",
 		Short: "Sign CSR",
-		Long:  `Signs a CSR for a given csr id.`,
+		Long:  `Signs a CSR for a given csr.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 3 {
+			if len(args) != 4 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
 
-			data, err := os.ReadFile(args[2])
+			csrData, err := os.ReadFile(args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
 
-			cert, err := sdk.SignCSR(args[0], args[1], string(data))
+			privData, err := os.ReadFile(args[3])
+			if err != nil {
+				logErrorCmd(*cmd, err)
+				return
+			}
+
+			cert, err := sdk.SignCSR(args[0], args[1], string(csrData), string(privData))
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return

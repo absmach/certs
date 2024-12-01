@@ -829,16 +829,32 @@ func (s *service) loadCACerts(ctx context.Context) error {
 	return nil
 }
 
-func extractPrivateKey(pemKey []byte) (*rsa.PrivateKey, error) {
+func extractPrivateKey(pemKey []byte) (any, error) {
 	block, _ := pem.Decode(pemKey)
 	if block == nil {
 		return nil, errors.New("failed to parse private key PEM")
 	}
 
-	privKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	var (
+		privateKey any
+		err        error
+	)
+
+	switch block.Type {
+	case "RSA PRIVATE KEY":
+		privateKey, err = x509.ParsePKCS1PrivateKey(block.Bytes)
+	case "EC PRIVATE KEY":
+		privateKey, err = x509.ParseECPrivateKey(block.Bytes)
+	case "PRIVATE KEY", "PKCS8 PRIVATE KEY":
+		privateKey, err = x509.ParsePKCS8PrivateKey(block.Bytes)
+	case "ED25519 PRIVATE KEY":
+		privateKey, err = x509.ParsePKCS8PrivateKey(block.Bytes)
+	default:
+		err = errors.New("unsupported private key type")
+	}
 	if err != nil {
-		return nil, err
+		return nil, errors.New("failed to parse key")
 	}
 
-	return privKey, nil
+	return privateKey, nil
 }
