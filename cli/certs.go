@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"os"
 
-	"github.com/absmach/certs/errors"
 	ctxsdk "github.com/absmach/certs/sdk"
 	"github.com/spf13/cobra"
 )
@@ -251,7 +250,7 @@ var cmdCerts = []cobra.Command{
 
 			var pm ctxsdk.PageMetadata
 			if err := json.Unmarshal([]byte(args[0]), &pm); err != nil {
-				logErrorCmd(*cmd, errors.New("here 1"))
+				logErrorCmd(*cmd, err)
 				return
 			}
 
@@ -261,13 +260,13 @@ var cmdCerts = []cobra.Command{
 				return
 			}
 
-			csr, err := sdk.CreateCSR(pm, data)
+			csr, err := sdk.CreateCSR(pm, string(data))
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
 
-			logJSONCmd(*cmd, csr)
+			logSaveCSRFiles(*cmd, csr)
 		},
 	},
 	{
@@ -286,7 +285,7 @@ var cmdCerts = []cobra.Command{
 				return
 			}
 
-			cert, err := sdk.SignCSR(args[0], args[1], data)
+			cert, err := sdk.SignCSR(args[0], args[1], string(data))
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return

@@ -314,17 +314,16 @@ func createCSREndpoint(svc certs.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(createCSRReq)
 		if err := req.validate(); err != nil {
-			return createCSRRes{created: false}, err
+			return createCSRRes{}, err
 		}
+
 		csr, err := svc.CreateCSR(ctx, req.Metadata, req.privKey)
 		if err != nil {
-			return createCSRRes{created: false}, err
+			return createCSRRes{}, err
 		}
 
 		return createCSRRes{
-			created:    true,
-			CSR:        csr.CSR,
-			PrivateKey: csr.PrivateKey,
+			CSR: string(csr.CSR),
 		}, nil
 	}
 }

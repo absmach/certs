@@ -203,17 +203,11 @@ type fileDownloadRes struct {
 }
 
 type createCSRRes struct {
-	CSR        []byte `json:"csr"`
-	PrivateKey []byte `json:"private_key"`
-	created    bool
+	CSR string `json:"csr"`
 }
 
 func (res createCSRRes) Code() int {
-	if res.created {
-		return http.StatusCreated
-	}
-
-	return http.StatusNoContent
+	return http.StatusCreated
 }
 
 func (res createCSRRes) Headers() map[string]string {

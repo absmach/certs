@@ -426,7 +426,6 @@ func (s *service) CreateCSR(ctx context.Context, metadata CSRMetadata, privKey a
 			template.IPAddresses = append(template.IPAddresses, parsedIP)
 		}
 	}
-
 	csrBytes, err := x509.CreateCertificateRequest(rand.Reader, template, privKey)
 	if err != nil {
 		return CSR{}, errors.Wrap(ErrCreateEntity, err)

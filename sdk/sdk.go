@@ -176,8 +176,7 @@ type CSRMetadata struct {
 }
 
 type CSR struct {
-	CSR        []byte `json:"csr,omitempty"`
-	PrivateKey []byte `json:"private_key,omitempty"`
+	CSR []byte `json:"csr,omitempty"`
 }
 
 type SDK interface {
@@ -268,17 +267,17 @@ type SDK interface {
 	// CreateCSR creates a new Certificate Signing Request
 	//
 	// example:
-	//  pm = sdk.CSRMetadata{CommonName: "common_name", EntityID: "entity_id" }
-	//	response, _ := sdk.CreateCSR(pm, []bytes("privKey"))
+	//  pm = sdk.CSRMetadata{CommonName: "common_name"}
+	//	response, _ := sdk.CreateCSR(pm, "privKey")
 	//  fmt.Println(response)
-	CreateCSR(pm PageMetadata, privKey []byte) (CSR, errors.SDKError)
+	CreateCSR(pm PageMetadata, privKey string) (CSR, errors.SDKError)
 
 	// SignCSR processes a pending CSR and either signs or rejects it
 	//
 	// example:
-	//	certs, err := sdk.SignCSR( "entityID", "ttl", []bytes("csrFile"))
+	//	certs, err := sdk.SignCSR( "entityID", "ttl", "csrFile")
 	//	fmt.Println(err)
-	SignCSR(entityID, ttl string, csr []byte) (Certificate, errors.SDKError)
+	SignCSR(entityID, ttl string, csr string) (Certificate, errors.SDKError)
 }
 
 func (sdk mgSDK) IssueCert(entityID, ttl string, ipAddrs []string, opts Options) (Certificate, errors.SDKError) {
@@ -547,9 +546,10 @@ func (sdk mgSDK) GetCAToken() (Token, errors.SDKError) {
 	return tk, nil
 }
 
-func (sdk mgSDK) CreateCSR(pm PageMetadata, privKey []byte) (CSR, errors.SDKError) {
+func (sdk mgSDK) CreateCSR(pm PageMetadata, privKey string) (CSR, errors.SDKError) {
 	r := csrReq{
 		Metadata: meta{
+			CommonName:         pm.CommonName,
 			Organization:       pm.Organization,
 			OrganizationalUnit: pm.OrganizationalUnit,
 			Country:            pm.Country,
@@ -573,23 +573,44 @@ func (sdk mgSDK) CreateCSR(pm PageMetadata, privKey []byte) (CSR, errors.SDKErro
 		return CSR{}, errors.NewSDKError(err)
 	}
 
-	var csr CSR
-	if err := json.Unmarshal(body, &csr); err != nil {
+	zipReader, err := zip.NewReader(bytes.NewReader(body), int64(len(body)))
+	if err != nil {
 		return CSR{}, errors.NewSDKError(err)
 	}
+
+	var csr CSR
+	for _, file := range zipReader.File {
+		fileContent, err := readZipFile(file)
+		if err != nil {
+			return CSR{}, errors.NewSDKError(err)
+		}
+
+		csr.CSR = fileContent
+	}
+
 	return csr, nil
 }
 
-func (sdk mgSDK) SignCSR(entityID, ttl string, csr []byte) (Certificate, errors.SDKError) {
+func (sdk mgSDK) SignCSR(entityID, ttl string, csr string) (Certificate, errors.SDKError) {
 	pm := PageMetadata{
 		TTL: ttl,
 	}
+
+	r := csrReq{
+		CSR: csr,
+	}
+
+	d, err := json.Marshal(r)
+	if err != nil {
+		return Certificate{}, errors.NewSDKError(err)
+	}
+
 	url, err := sdk.withQueryParams(sdk.certsURL, fmt.Sprintf("%s/%s/%s", certsEndpoint, csrEndpoint, entityID), pm)
 	if err != nil {
 		return Certificate{}, errors.NewSDKError(err)
 	}
 
-	_, body, sdkerr := sdk.processRequest(http.MethodPost, url, nil, nil, http.StatusOK)
+	_, body, sdkerr := sdk.processRequest(http.MethodPost, url, d, nil, http.StatusOK)
 	if sdkerr != nil {
 		return Certificate{}, sdkerr
 	}
@@ -711,10 +732,12 @@ type certReq struct {
 
 type csrReq struct {
 	Metadata   meta   `json:"metadata"`
-	PrivateKey []byte `json:"private_key"`
+	PrivateKey string `json:"private_key"`
+	CSR        string `json:"csr"`
 }
 
 type meta struct {
+	CommonName         string   `json:"common_name"`
 	Organization       []string `json:"organization"`
 	OrganizationalUnit []string `json:"organizational_unit"`
 	Country            []string `json:"country"`
