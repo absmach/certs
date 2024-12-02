@@ -202,22 +202,6 @@ type fileDownloadRes struct {
 	ContentType string
 }
 
-type createCSRRes struct {
-	CSR string `json:"csr"`
-}
-
-func (res createCSRRes) Code() int {
-	return http.StatusCreated
-}
-
-func (res createCSRRes) Headers() map[string]string {
-	return map[string]string{}
-}
-
-func (res createCSRRes) Empty() bool {
-	return false
-}
-
 type issueFromCSRRes struct {
 	SerialNumber string    `json:"serial_number"`
 	Certificate  string    `json:"certificate,omitempty"`

@@ -88,23 +88,6 @@ func (req ocspReq) validate() error {
 	return nil
 }
 
-type createCSRReq struct {
-	Metadata   certs.CSRMetadata `json:"metadata"`
-	PrivateKey string            `json:"private_key"`
-	privKey    any
-}
-
-func (req createCSRReq) validate() error {
-	if req.Metadata.CommonName == "" {
-		return errors.Wrap(certs.ErrMalformedEntity, ErrMissingCN)
-	}
-
-	if len(req.PrivateKey) == 0 {
-		return errors.Wrap(certs.ErrMalformedEntity, ErrMissingPrivKey)
-	}
-	return nil
-}
-
 type IssueFromCSRReq struct {
 	entityID   string
 	ttl        string
