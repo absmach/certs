@@ -544,7 +544,7 @@ func (sdk mgSDK) IssueFromCSR(entityID, ttl string, csr string) (Certificate, er
 	}
 
 	r := csrReq{
-		CSR:        csr,
+		CSR: csr,
 	}
 
 	d, err := json.Marshal(r)
@@ -678,6 +678,5 @@ type certReq struct {
 }
 
 type csrReq struct {
-	CSR        string `json:"csr,omitempty"`
+	CSR string `json:"csr,omitempty"`
 }
-
