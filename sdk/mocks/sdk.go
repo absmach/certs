@@ -25,65 +25,6 @@ func (_m *MockSDK) EXPECT() *MockSDK_Expecter {
 	return &MockSDK_Expecter{mock: &_m.Mock}
 }
 
-// CreateCSR provides a mock function with given fields: pm, privKey
-func (_m *MockSDK) CreateCSR(pm sdk.PageMetadata, privKey string) (sdk.CSR, errors.SDKError) {
-	ret := _m.Called(pm, privKey)
-
-	if len(ret) == 0 {
-		panic("no return value specified for CreateCSR")
-	}
-
-	var r0 sdk.CSR
-	var r1 errors.SDKError
-	if rf, ok := ret.Get(0).(func(sdk.PageMetadata, string) (sdk.CSR, errors.SDKError)); ok {
-		return rf(pm, privKey)
-	}
-	if rf, ok := ret.Get(0).(func(sdk.PageMetadata, string) sdk.CSR); ok {
-		r0 = rf(pm, privKey)
-	} else {
-		r0 = ret.Get(0).(sdk.CSR)
-	}
-
-	if rf, ok := ret.Get(1).(func(sdk.PageMetadata, string) errors.SDKError); ok {
-		r1 = rf(pm, privKey)
-	} else {
-		if ret.Get(1) != nil {
-			r1 = ret.Get(1).(errors.SDKError)
-		}
-	}
-
-	return r0, r1
-}
-
-// MockSDK_CreateCSR_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateCSR'
-type MockSDK_CreateCSR_Call struct {
-	*mock.Call
-}
-
-// CreateCSR is a helper method to define mock.On call
-//   - pm sdk.PageMetadata
-//   - privKey string
-func (_e *MockSDK_Expecter) CreateCSR(pm interface{}, privKey interface{}) *MockSDK_CreateCSR_Call {
-	return &MockSDK_CreateCSR_Call{Call: _e.mock.On("CreateCSR", pm, privKey)}
-}
-
-func (_c *MockSDK_CreateCSR_Call) Run(run func(pm sdk.PageMetadata, privKey string)) *MockSDK_CreateCSR_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(sdk.PageMetadata), args[1].(string))
-	})
-	return _c
-}
-
-func (_c *MockSDK_CreateCSR_Call) Return(_a0 sdk.CSR, _a1 errors.SDKError) *MockSDK_CreateCSR_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *MockSDK_CreateCSR_Call) RunAndReturn(run func(sdk.PageMetadata, string) (sdk.CSR, errors.SDKError)) *MockSDK_CreateCSR_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // DeleteCert provides a mock function with given fields: entityID
 func (_m *MockSDK) DeleteCert(entityID string) errors.SDKError {
 	ret := _m.Called(entityID)
@@ -367,9 +308,9 @@ func (_c *MockSDK_IssueCert_Call) RunAndReturn(run func(string, string, []string
 	return _c
 }
 
-// IssueFromCSR provides a mock function with given fields: entityID, ttl, csr, privKey
-func (_m *MockSDK) IssueFromCSR(entityID string, ttl string, csr string, privKey string) (sdk.Certificate, errors.SDKError) {
-	ret := _m.Called(entityID, ttl, csr, privKey)
+// IssueFromCSR provides a mock function with given fields: entityID, ttl, csr
+func (_m *MockSDK) IssueFromCSR(entityID string, ttl string, csr string) (sdk.Certificate, errors.SDKError) {
+	ret := _m.Called(entityID, ttl, csr)
 
 	if len(ret) == 0 {
 		panic("no return value specified for IssueFromCSR")
@@ -377,17 +318,17 @@ func (_m *MockSDK) IssueFromCSR(entityID string, ttl string, csr string, privKey
 
 	var r0 sdk.Certificate
 	var r1 errors.SDKError
-	if rf, ok := ret.Get(0).(func(string, string, string, string) (sdk.Certificate, errors.SDKError)); ok {
-		return rf(entityID, ttl, csr, privKey)
+	if rf, ok := ret.Get(0).(func(string, string, string) (sdk.Certificate, errors.SDKError)); ok {
+		return rf(entityID, ttl, csr)
 	}
-	if rf, ok := ret.Get(0).(func(string, string, string, string) sdk.Certificate); ok {
-		r0 = rf(entityID, ttl, csr, privKey)
+	if rf, ok := ret.Get(0).(func(string, string, string) sdk.Certificate); ok {
+		r0 = rf(entityID, ttl, csr)
 	} else {
 		r0 = ret.Get(0).(sdk.Certificate)
 	}
 
-	if rf, ok := ret.Get(1).(func(string, string, string, string) errors.SDKError); ok {
-		r1 = rf(entityID, ttl, csr, privKey)
+	if rf, ok := ret.Get(1).(func(string, string, string) errors.SDKError); ok {
+		r1 = rf(entityID, ttl, csr)
 	} else {
 		if ret.Get(1) != nil {
 			r1 = ret.Get(1).(errors.SDKError)
@@ -406,14 +347,13 @@ type MockSDK_IssueFromCSR_Call struct {
 //   - entityID string
 //   - ttl string
 //   - csr string
-//   - privKey string
-func (_e *MockSDK_Expecter) IssueFromCSR(entityID interface{}, ttl interface{}, csr interface{}, privKey interface{}) *MockSDK_IssueFromCSR_Call {
-	return &MockSDK_IssueFromCSR_Call{Call: _e.mock.On("IssueFromCSR", entityID, ttl, csr, privKey)}
+func (_e *MockSDK_Expecter) IssueFromCSR(entityID interface{}, ttl interface{}, csr interface{}) *MockSDK_IssueFromCSR_Call {
+	return &MockSDK_IssueFromCSR_Call{Call: _e.mock.On("IssueFromCSR", entityID, ttl, csr)}
 }
 
-func (_c *MockSDK_IssueFromCSR_Call) Run(run func(entityID string, ttl string, csr string, privKey string)) *MockSDK_IssueFromCSR_Call {
+func (_c *MockSDK_IssueFromCSR_Call) Run(run func(entityID string, ttl string, csr string)) *MockSDK_IssueFromCSR_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string), args[1].(string), args[2].(string), args[3].(string))
+		run(args[0].(string), args[1].(string), args[2].(string))
 	})
 	return _c
 }
@@ -423,7 +363,7 @@ func (_c *MockSDK_IssueFromCSR_Call) Return(_a0 sdk.Certificate, _a1 errors.SDKE
 	return _c
 }
 
-func (_c *MockSDK_IssueFromCSR_Call) RunAndReturn(run func(string, string, string, string) (sdk.Certificate, errors.SDKError)) *MockSDK_IssueFromCSR_Call {
+func (_c *MockSDK_IssueFromCSR_Call) RunAndReturn(run func(string, string, string) (sdk.Certificate, errors.SDKError)) *MockSDK_IssueFromCSR_Call {
 	_c.Call.Return(run)
 	return _c
 }
