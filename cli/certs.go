@@ -270,9 +270,9 @@ var cmdCerts = []cobra.Command{
 		},
 	},
 	{
-		Use:   "sign <entity_id> <ttl> <path_to_csr> <private_key_path>",
-		Short: "Sign CSR",
-		Long:  `Signs a CSR for a given csr.`,
+		Use:   "issue-csr <entity_id> <ttl> <path_to_csr> <private_key_path>",
+		Short: "Issue from CSR",
+		Long:  `issues a certificate for a given csr.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 4 {
 				logUsageCmd(*cmd, cmd.Use)
@@ -291,7 +291,7 @@ var cmdCerts = []cobra.Command{
 				return
 			}
 
-			cert, err := sdk.SignCSR(args[0], args[1], string(csrData), string(privData))
+			cert, err := sdk.IssueFromCSR(args[0], args[1], string(csrData), string(privData))
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -341,7 +341,7 @@ func NewCertsCmd() *cobra.Command {
 	issueCmd.Flags().StringVar(&ttl, "ttl", "8760h", "certificate time to live in duration")
 
 	cmd := cobra.Command{
-		Use:   "certs [issue | get | revoke | renew | ocsp | token | download | download-ca | download-ca | csr | sign]",
+		Use:   "certs [issue | get | revoke | renew | ocsp | token | download | download-ca | download-ca | csr | issue-csr]",
 		Short: "Certificates management",
 		Long:  `Certificates management: issue, get all, get by entity ID, revoke, renew, OCSP, token, download.`,
 	}

@@ -175,11 +175,11 @@ type Service interface {
 	// RemoveCert deletes a cert for a provided  entityID.
 	RemoveCert(ctx context.Context, entityId string) error
 
-	// CreateCSR creates a new Certificate Signing Request
+	// CreateCSR creates a new Certificate Signing Request.
 	CreateCSR(ctx context.Context, metadata CSRMetadata, privKey any) (CSR, error)
 
-	// SignCSR parses and signs a CSR
-	SignCSR(ctx context.Context, entityID, ttl string, csr CSR) (Certificate, error)
+	// IssueFromCSR creates a certificate from a given CSR.
+	IssueFromCSR(ctx context.Context, entityID, ttl string, csr CSR) (Certificate, error)
 }
 
 type Repository interface {

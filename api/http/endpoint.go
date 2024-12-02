@@ -328,25 +328,24 @@ func createCSREndpoint(svc certs.Service) endpoint.Endpoint {
 	}
 }
 
-func signCSREndpoint(svc certs.Service) endpoint.Endpoint {
+func issueFromCSREndpoint(svc certs.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
-		req := request.(SignCSRReq)
+		req := request.(IssueFromCSRReq)
 		if err := req.validate(); err != nil {
-			return signCSRRes{signed: false}, err
+			return issueFromCSRRes{}, err
 		}
 
-		cert, err := svc.SignCSR(ctx, req.entityID, req.ttl, certs.CSR{CSR: []byte(req.CSR), PrivateKey: []byte(req.PrivateKey)})
+		cert, err := svc.IssueFromCSR(ctx, req.entityID, req.ttl, certs.CSR{CSR: []byte(req.CSR), PrivateKey: []byte(req.PrivateKey)})
 		if err != nil {
-			return signCSRRes{signed: false}, err
+			return issueFromCSRRes{}, err
 		}
 
-		return signCSRRes{
+		return issueFromCSRRes{
 			SerialNumber: cert.SerialNumber,
 			Certificate:  string(cert.Certificate),
 			Revoked:      cert.Revoked,
 			ExpiryTime:   cert.ExpiryTime,
 			EntityID:     cert.EntityID,
-			signed:       true,
 		}, nil
 	}
 }

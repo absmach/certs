@@ -498,7 +498,7 @@ func (s *service) CreateCSR(ctx context.Context, metadata CSRMetadata, privKey a
 	return csr, nil
 }
 
-func (s *service) SignCSR(ctx context.Context, entityID, ttl string, csr CSR) (Certificate, error) {
+func (s *service) IssueFromCSR(ctx context.Context, entityID, ttl string, csr CSR) (Certificate, error) {
 	block, _ := pem.Decode(csr.CSR)
 	if block == nil {
 		return Certificate{}, errors.New("failed to parse CSR PEM")

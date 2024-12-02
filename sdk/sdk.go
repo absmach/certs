@@ -272,12 +272,12 @@ type SDK interface {
 	//  fmt.Println(response)
 	CreateCSR(pm PageMetadata, privKey string) (CSR, errors.SDKError)
 
-	// SignCSR processes a pending CSR and either signs or rejects it
+	// IssueFromCSR issues certificate from provided CSR
 	//
 	// example:
-	//	certs, err := sdk.SignCSR( "entityID", "ttl", "csrFile", "privKey")
+	//	certs, err := sdk.IssueFromCSR( "entityID", "ttl", "csrFile", "privKey")
 	//	fmt.Println(err)
-	SignCSR(entityID, ttl string, csr, privKey string) (Certificate, errors.SDKError)
+	IssueFromCSR(entityID, ttl string, csr, privKey string) (Certificate, errors.SDKError)
 }
 
 func (sdk mgSDK) IssueCert(entityID, ttl string, ipAddrs []string, opts Options) (Certificate, errors.SDKError) {
@@ -591,7 +591,7 @@ func (sdk mgSDK) CreateCSR(pm PageMetadata, privKey string) (CSR, errors.SDKErro
 	return csr, nil
 }
 
-func (sdk mgSDK) SignCSR(entityID, ttl string, csr, privKey string) (Certificate, errors.SDKError) {
+func (sdk mgSDK) IssueFromCSR(entityID, ttl string, csr, privKey string) (Certificate, errors.SDKError) {
 	pm := PageMetadata{
 		TTL: ttl,
 	}

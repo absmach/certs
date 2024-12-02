@@ -193,14 +193,14 @@ func (lm *loggingMiddleware) CreateCSR(ctx context.Context, metadata certs.CSRMe
 	return lm.svc.CreateCSR(ctx, metadata, privKey)
 }
 
-func (lm *loggingMiddleware) SignCSR(ctx context.Context, entityID, ttl string, csr certs.CSR) (c certs.Certificate, err error) {
+func (lm *loggingMiddleware) IssueFromCSR(ctx context.Context, entityID, ttl string, csr certs.CSR) (c certs.Certificate, err error) {
 	defer func(begin time.Time) {
-		message := fmt.Sprintf("Method sign_csr took %s to complete", time.Since(begin))
+		message := fmt.Sprintf("Method issue_from_csr took %s to complete", time.Since(begin))
 		if err != nil {
 			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
 			return
 		}
 		lm.logger.Info(message)
 	}(time.Now())
-	return lm.svc.SignCSR(ctx, entityID, ttl, csr)
+	return lm.svc.IssueFromCSR(ctx, entityID, ttl, csr)
 }

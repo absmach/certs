@@ -150,11 +150,11 @@ func MakeHandler(svc certs.Service, logger *slog.Logger, instanceID string) http
 				opts...,
 			), "create_csr").ServeHTTP)
 			r.Post("/{entityID}", otelhttp.NewHandler(kithttp.NewServer(
-				signCSREndpoint(svc),
-				decodeSignCSR,
+				issueFromCSREndpoint(svc),
+				decodeIssueFromCSR,
 				EncodeResponse,
 				opts...,
-			), "sign_csr").ServeHTTP)
+			), "issue_from_csr").ServeHTTP)
 		})
 	})
 
@@ -317,13 +317,13 @@ func decodeCreateCSR(_ context.Context, r *http.Request) (interface{}, error) {
 	return req, nil
 }
 
-func decodeSignCSR(_ context.Context, r *http.Request) (interface{}, error) {
+func decodeIssueFromCSR(_ context.Context, r *http.Request) (interface{}, error) {
 	t, err := readStringQuery(r, ttl, "")
 	if err != nil {
 		return nil, err
 	}
 
-	req := SignCSRReq{
+	req := IssueFromCSRReq{
 		entityID: chi.URLParam(r, "entityID"),
 		ttl:      t,
 	}

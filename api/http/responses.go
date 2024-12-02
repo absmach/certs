@@ -218,23 +218,22 @@ func (res createCSRRes) Empty() bool {
 	return false
 }
 
-type signCSRRes struct {
+type issueFromCSRRes struct {
 	SerialNumber string    `json:"serial_number"`
 	Certificate  string    `json:"certificate,omitempty"`
 	Revoked      bool      `json:"revoked"`
 	ExpiryTime   time.Time `json:"expiry_time"`
 	EntityID     string    `json:"entity_id"`
-	signed       bool
 }
 
-func (res signCSRRes) Code() int {
+func (res issueFromCSRRes) Code() int {
 	return http.StatusOK
 }
 
-func (res signCSRRes) Headers() map[string]string {
+func (res issueFromCSRRes) Headers() map[string]string {
 	return map[string]string{}
 }
 
-func (res signCSRRes) Empty() bool {
+func (res issueFromCSRRes) Empty() bool {
 	return false
 }

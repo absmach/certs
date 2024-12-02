@@ -107,8 +107,8 @@ func (tm *tracingMiddleware) CreateCSR(ctx context.Context, metadata certs.CSRMe
 	return tm.svc.CreateCSR(ctx, metadata, privKey)
 }
 
-func (tm *tracingMiddleware) SignCSR(ctx context.Context, entityID, ttl string, csr certs.CSR) (certs.Certificate, error) {
-	ctx, span := tm.tracer.Start(ctx, "sign_csr")
+func (tm *tracingMiddleware) IssueFromCSR(ctx context.Context, entityID, ttl string, csr certs.CSR) (certs.Certificate, error) {
+	ctx, span := tm.tracer.Start(ctx, "issue_from_csr")
 	defer span.End()
-	return tm.svc.SignCSR(ctx, entityID, ttl, csr)
+	return tm.svc.IssueFromCSR(ctx, entityID, ttl, csr)
 }

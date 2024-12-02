@@ -105,14 +105,14 @@ func (req createCSRReq) validate() error {
 	return nil
 }
 
-type SignCSRReq struct {
+type IssueFromCSRReq struct {
 	entityID   string
 	ttl        string
 	CSR        string `json:"csr"`
 	PrivateKey string `json:"private_key"`
 }
 
-func (req SignCSRReq) validate() error {
+func (req IssueFromCSRReq) validate() error {
 	if req.entityID == "" {
 		return errors.Wrap(certs.ErrMalformedEntity, ErrMissingEntityID)
 	}
