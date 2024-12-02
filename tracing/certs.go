@@ -5,7 +5,6 @@ package tracing
 
 import (
 	"context"
-	"crypto/rsa"
 	"crypto/x509"
 
 	"github.com/absmach/certs"
@@ -54,7 +53,7 @@ func (tm *tracingMiddleware) RetrieveCAToken(ctx context.Context) (string, error
 	return tm.svc.RetrieveCAToken(ctx)
 }
 
-func (tm *tracingMiddleware) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options certs.SubjectOptions, privKey ...*rsa.PrivateKey) (certs.Certificate, error) {
+func (tm *tracingMiddleware) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options certs.SubjectOptions, privKey ...any) (certs.Certificate, error) {
 	ctx, span := tm.tracer.Start(ctx, "issue_cert")
 	defer span.End()
 	return tm.svc.IssueCert(ctx, entityID, ttl, ipAddrs, options, privKey...)

@@ -5,6 +5,7 @@ package certs
 
 import (
 	"context"
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rand"
@@ -88,17 +89,17 @@ func NewService(ctx context.Context, repo Repository, config *Config) (Service, 
 // using the provided template and the generated private key.
 // The certificate is then stored in the repository using the CreateCert method.
 // If the root CA is not found, it returns an error.
-func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options SubjectOptions, key ...*rsa.PrivateKey) (Certificate, error) {
-	var privKey rsa.PrivateKey
+func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options SubjectOptions, key ...any) (Certificate, error) {
+	var privKey any
 	var err error
 	if len(key) == 0 {
 		pKey, err := rsa.GenerateKey(rand.Reader, PrivateKeyBytes)
-		privKey = *pKey
+		privKey = pKey
 		if err != nil {
 			return Certificate{}, err
 		}
 	} else {
-		privKey = *key[0]
+		privKey = key[0]
 	}
 	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
 	if err != nil {
@@ -132,12 +133,37 @@ func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs [
 		DNSNames:              append(s.intermediateCA.Certificate.DNSNames, ipAddrs...),
 	}
 
-	certBytes, err := x509.CreateCertificate(rand.Reader, &template, s.intermediateCA.Certificate, &privKey.PublicKey, s.intermediateCA.PrivateKey)
+	var pubKey crypto.PublicKey
+	var privKeyBytes []byte
+	var privKeyType string
+
+	switch key := privKey.(type) {
+	case *rsa.PrivateKey:
+		pubKey = key.Public()
+		privKeyBytes = x509.MarshalPKCS1PrivateKey(key)
+		privKeyType = "RSA PRIVATE KEY"
+	case *ecdsa.PrivateKey:
+		pubKey = key.Public()
+		privKeyBytes, err = x509.MarshalPKCS8PrivateKey(key)
+		privKeyType = "EC PRIVATE KEY"
+	case ed25519.PrivateKey:
+		pubKey = key.Public()
+		privKeyBytes, err = x509.MarshalPKCS8PrivateKey(key)
+		privKeyType = "PRIVATE KEY"
+	default:
+		return Certificate{}, errors.Wrap(ErrCreateEntity, errors.New("unsupported private key type"))
+	}
+
+	if err != nil {
+		return Certificate{}, err
+	}
+
+	certBytes, err := x509.CreateCertificate(rand.Reader, &template, s.intermediateCA.Certificate, pubKey, s.intermediateCA.PrivateKey)
 	if err != nil {
 		return Certificate{}, err
 	}
 	dbCert := Certificate{
-		Key:          pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(&privKey)}),
+		Key:          pem.EncodeToMemory(&pem.Block{Type: privKeyType, Bytes: privKeyBytes}),
 		Certificate:  pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certBytes}),
 		SerialNumber: template.SerialNumber.String(),
 		EntityID:     entityID,

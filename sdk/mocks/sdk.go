@@ -638,9 +638,9 @@ func (_c *MockSDK_RevokeCert_Call) RunAndReturn(run func(string) errors.SDKError
 	return _c
 }
 
-// SignCSR provides a mock function with given fields: entityID, ttl, csr
-func (_m *MockSDK) SignCSR(entityID string, ttl string, csr string) (sdk.Certificate, errors.SDKError) {
-	ret := _m.Called(entityID, ttl, csr)
+// SignCSR provides a mock function with given fields: entityID, ttl, csr, privKey
+func (_m *MockSDK) SignCSR(entityID string, ttl string, csr string, privKey string) (sdk.Certificate, errors.SDKError) {
+	ret := _m.Called(entityID, ttl, csr, privKey)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SignCSR")
@@ -648,17 +648,17 @@ func (_m *MockSDK) SignCSR(entityID string, ttl string, csr string) (sdk.Certifi
 
 	var r0 sdk.Certificate
 	var r1 errors.SDKError
-	if rf, ok := ret.Get(0).(func(string, string, string) (sdk.Certificate, errors.SDKError)); ok {
-		return rf(entityID, ttl, csr)
+	if rf, ok := ret.Get(0).(func(string, string, string, string) (sdk.Certificate, errors.SDKError)); ok {
+		return rf(entityID, ttl, csr, privKey)
 	}
-	if rf, ok := ret.Get(0).(func(string, string, string) sdk.Certificate); ok {
-		r0 = rf(entityID, ttl, csr)
+	if rf, ok := ret.Get(0).(func(string, string, string, string) sdk.Certificate); ok {
+		r0 = rf(entityID, ttl, csr, privKey)
 	} else {
 		r0 = ret.Get(0).(sdk.Certificate)
 	}
 
-	if rf, ok := ret.Get(1).(func(string, string, string) errors.SDKError); ok {
-		r1 = rf(entityID, ttl, csr)
+	if rf, ok := ret.Get(1).(func(string, string, string, string) errors.SDKError); ok {
+		r1 = rf(entityID, ttl, csr, privKey)
 	} else {
 		if ret.Get(1) != nil {
 			r1 = ret.Get(1).(errors.SDKError)
@@ -677,13 +677,14 @@ type MockSDK_SignCSR_Call struct {
 //   - entityID string
 //   - ttl string
 //   - csr string
-func (_e *MockSDK_Expecter) SignCSR(entityID interface{}, ttl interface{}, csr interface{}) *MockSDK_SignCSR_Call {
-	return &MockSDK_SignCSR_Call{Call: _e.mock.On("SignCSR", entityID, ttl, csr)}
+//   - privKey string
+func (_e *MockSDK_Expecter) SignCSR(entityID interface{}, ttl interface{}, csr interface{}, privKey interface{}) *MockSDK_SignCSR_Call {
+	return &MockSDK_SignCSR_Call{Call: _e.mock.On("SignCSR", entityID, ttl, csr, privKey)}
 }
 
-func (_c *MockSDK_SignCSR_Call) Run(run func(entityID string, ttl string, csr string)) *MockSDK_SignCSR_Call {
+func (_c *MockSDK_SignCSR_Call) Run(run func(entityID string, ttl string, csr string, privKey string)) *MockSDK_SignCSR_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string), args[1].(string), args[2].(string))
+		run(args[0].(string), args[1].(string), args[2].(string), args[3].(string))
 	})
 	return _c
 }
@@ -693,7 +694,7 @@ func (_c *MockSDK_SignCSR_Call) Return(_a0 sdk.Certificate, _a1 errors.SDKError)
 	return _c
 }
 
-func (_c *MockSDK_SignCSR_Call) RunAndReturn(run func(string, string, string) (sdk.Certificate, errors.SDKError)) *MockSDK_SignCSR_Call {
+func (_c *MockSDK_SignCSR_Call) RunAndReturn(run func(string, string, string, string) (sdk.Certificate, errors.SDKError)) *MockSDK_SignCSR_Call {
 	_c.Call.Return(run)
 	return _c
 }
