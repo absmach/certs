@@ -101,12 +101,6 @@ func (tm *tracingMiddleware) GetChainCA(ctx context.Context, token string) (cert
 	return tm.svc.GetChainCA(ctx, token)
 }
 
-func (tm *tracingMiddleware) CreateCSR(ctx context.Context, metadata certs.CSRMetadata, privKey any) (certs.CSR, error) {
-	ctx, span := tm.tracer.Start(ctx, "create_csr")
-	defer span.End()
-	return tm.svc.CreateCSR(ctx, metadata, privKey)
-}
-
 func (tm *tracingMiddleware) IssueFromCSR(ctx context.Context, entityID, ttl string, csr certs.CSR) (certs.Certificate, error) {
 	ctx, span := tm.tracer.Start(ctx, "issue_from_csr")
 	defer span.End()

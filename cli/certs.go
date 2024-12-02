@@ -4,15 +4,28 @@
 package cli
 
 import (
+	"crypto"
+	"crypto/ecdsa"
+	"crypto/ed25519"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/json"
+	"encoding/pem"
+	"net"
 	"os"
 
+	"github.com/absmach/certs"
+	"github.com/absmach/certs/errors"
 	ctxsdk "github.com/absmach/certs/sdk"
 	"github.com/spf13/cobra"
 )
 
 // Keep SDK handle in global var.
 var sdk ctxsdk.SDK
+
+var ErrCreateEntity = errors.New("failed to create entity")
 
 func SetSDK(s ctxsdk.SDK) {
 	sdk = s
@@ -248,7 +261,7 @@ var cmdCerts = []cobra.Command{
 				return
 			}
 
-			var pm ctxsdk.PageMetadata
+			var pm certs.CSRMetadata
 			if err := json.Unmarshal([]byte(args[0]), &pm); err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -260,7 +273,7 @@ var cmdCerts = []cobra.Command{
 				return
 			}
 
-			csr, err := sdk.CreateCSR(pm, string(data))
+			csr, err := CreateCSR(pm, data)
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -353,4 +366,64 @@ func NewCertsCmd() *cobra.Command {
 	}
 
 	return &cmd
+}
+
+func CreateCSR(metadata certs.CSRMetadata, privKey any) (certs.CSR, errors.SDKError) {
+	template := &x509.CertificateRequest{
+		Subject: pkix.Name{
+			CommonName:         metadata.CommonName,
+			Organization:       metadata.Organization,
+			OrganizationalUnit: metadata.OrganizationalUnit,
+			Country:            metadata.Country,
+			Province:           metadata.Province,
+			Locality:           metadata.Locality,
+			StreetAddress:      metadata.StreetAddress,
+			PostalCode:         metadata.PostalCode,
+		},
+		EmailAddresses: metadata.EmailAddresses,
+		DNSNames:       metadata.DNSNames,
+	}
+
+	for _, ip := range metadata.IPAddresses {
+		parsedIP := net.ParseIP(ip)
+		if parsedIP != nil {
+			template.IPAddresses = append(template.IPAddresses, parsedIP)
+		}
+	}
+
+	var signer crypto.Signer
+	var err error
+
+	switch key := privKey.(type) {
+	case *rsa.PrivateKey:
+		signer = key
+	case *ecdsa.PrivateKey:
+		signer = key
+	case ed25519.PrivateKey:
+		signer = key
+	case []byte:
+		parsedKey, err := certs.ExtractPrivateKey(key)
+		if err != nil {
+			return certs.CSR{}, errors.NewSDKError(errors.Wrap(ErrCreateEntity, err))
+		}
+		return CreateCSR(metadata, parsedKey)
+	default:
+		return certs.CSR{}, errors.NewSDKError(errors.Wrap(ErrCreateEntity, errors.New("unsupported private key type")))
+	}
+
+	csrBytes, err := x509.CreateCertificateRequest(rand.Reader, template, signer)
+	if err != nil {
+		return certs.CSR{}, errors.NewSDKError(errors.Wrap(ErrCreateEntity, err))
+	}
+
+	csrPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE REQUEST",
+		Bytes: csrBytes,
+	})
+
+	csr := certs.CSR{
+		CSR: csrPEM,
+	}
+
+	return csr, nil
 }

@@ -136,14 +136,6 @@ func (mm *metricsMiddleware) GetChainCA(ctx context.Context, token string) (cert
 	return mm.svc.GetChainCA(ctx, token)
 }
 
-func (mm *metricsMiddleware) CreateCSR(ctx context.Context, metadata certs.CSRMetadata, privKey any) (certs.CSR, error) {
-	defer func(begin time.Time) {
-		mm.counter.With("method", "create_csr").Add(1)
-		mm.latency.With("method", "create_csr").Observe(time.Since(begin).Seconds())
-	}(time.Now())
-	return mm.svc.CreateCSR(ctx, metadata, privKey)
-}
-
 func (mm *metricsMiddleware) IssueFromCSR(ctx context.Context, entityID, ttl string, csr certs.CSR) (certs.Certificate, error) {
 	defer func(begin time.Time) {
 		mm.counter.With("method", "issue_from_csr").Add(1)

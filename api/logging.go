@@ -181,18 +181,6 @@ func (lm *loggingMiddleware) GetChainCA(ctx context.Context, token string) (cert
 	return lm.svc.GetChainCA(ctx, token)
 }
 
-func (lm *loggingMiddleware) CreateCSR(ctx context.Context, metadata certs.CSRMetadata, privKey any) (csr certs.CSR, err error) {
-	defer func(begin time.Time) {
-		message := fmt.Sprintf("Method create_csr took %s to complete", time.Since(begin))
-		if err != nil {
-			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
-			return
-		}
-		lm.logger.Info(message)
-	}(time.Now())
-	return lm.svc.CreateCSR(ctx, metadata, privKey)
-}
-
 func (lm *loggingMiddleware) IssueFromCSR(ctx context.Context, entityID, ttl string, csr certs.CSR) (c certs.Certificate, err error) {
 	defer func(begin time.Time) {
 		message := fmt.Sprintf("Method issue_from_csr took %s to complete", time.Since(begin))

@@ -15,7 +15,6 @@ import (
 	"encoding/asn1"
 	"encoding/pem"
 	"math/big"
-	"net"
 	"time"
 
 	"github.com/absmach/certs/errors"
@@ -433,71 +432,6 @@ func (s *service) GetChainCA(ctx context.Context, token string) (Certificate, er
 	return s.getConcatCAs(ctx)
 }
 
-func (s *service) CreateCSR(ctx context.Context, metadata CSRMetadata, privKey any) (CSR, error) {
-	template := &x509.CertificateRequest{
-		Subject: pkix.Name{
-			CommonName:         metadata.CommonName,
-			Organization:       metadata.Organization,
-			OrganizationalUnit: metadata.OrganizationalUnit,
-			Country:            metadata.Country,
-			Province:           metadata.Province,
-			Locality:           metadata.Locality,
-			StreetAddress:      metadata.StreetAddress,
-			PostalCode:         metadata.PostalCode,
-		},
-		EmailAddresses: metadata.EmailAddresses,
-		DNSNames:       metadata.DNSNames,
-	}
-
-	for _, ip := range metadata.IPAddresses {
-		parsedIP := net.ParseIP(ip)
-		if parsedIP != nil {
-			template.IPAddresses = append(template.IPAddresses, parsedIP)
-		}
-	}
-	csrBytes, err := x509.CreateCertificateRequest(rand.Reader, template, privKey)
-	if err != nil {
-		return CSR{}, errors.Wrap(ErrCreateEntity, err)
-	}
-
-	csrPEM := pem.EncodeToMemory(&pem.Block{
-		Type:  "CERTIFICATE REQUEST",
-		Bytes: csrBytes,
-	})
-
-	var privKeyBytes []byte
-	var privKeyType string
-	switch key := privKey.(type) {
-	case *rsa.PrivateKey:
-		privKeyBytes, err = x509.MarshalPKCS8PrivateKey(key)
-		privKeyType = RSAPrivateKey
-	case *ecdsa.PrivateKey:
-		privKeyBytes, err = x509.MarshalPKCS8PrivateKey(key)
-		privKeyType = ECPrivateKey
-	case ed25519.PrivateKey:
-		privKeyBytes, err = x509.MarshalPKCS8PrivateKey(key)
-		privKeyType = PrivateKey
-	default:
-		return CSR{}, errors.Wrap(ErrCreateEntity, errors.New("unsupported private key type"))
-	}
-
-	if err != nil {
-		return CSR{}, errors.Wrap(ErrCreateEntity, err)
-	}
-
-	privKeyPEM := pem.EncodeToMemory(&pem.Block{
-		Type:  privKeyType,
-		Bytes: privKeyBytes,
-	})
-
-	csr := CSR{
-		CSR:        csrPEM,
-		PrivateKey: privKeyPEM,
-	}
-
-	return csr, nil
-}
-
 func (s *service) IssueFromCSR(ctx context.Context, entityID, ttl string, csr CSR) (Certificate, error) {
 	block, _ := pem.Decode(csr.CSR)
 	if block == nil {
@@ -513,7 +447,7 @@ func (s *service) IssueFromCSR(ctx context.Context, entityID, ttl string, csr CS
 		return Certificate{}, errors.Wrap(ErrMalformedEntity, err)
 	}
 
-	privKey, err := extractPrivateKey(csr.PrivateKey)
+	privKey, err := ExtractPrivateKey(csr.PrivateKey)
 	if err != nil {
 		return Certificate{}, errors.Wrap(ErrMalformedEntity, err)
 	}
@@ -858,7 +792,7 @@ func (s *service) loadCACerts(ctx context.Context) error {
 	return nil
 }
 
-func extractPrivateKey(pemKey []byte) (any, error) {
+func ExtractPrivateKey(pemKey []byte) (any, error) {
 	block, _ := pem.Decode(pemKey)
 	if block == nil {
 		return nil, errors.New("failed to parse private key PEM")

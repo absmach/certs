@@ -310,24 +310,6 @@ func viewCAEndpoint(svc certs.Service) endpoint.Endpoint {
 	}
 }
 
-func createCSREndpoint(svc certs.Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
-		req := request.(createCSRReq)
-		if err := req.validate(); err != nil {
-			return createCSRRes{}, err
-		}
-
-		csr, err := svc.CreateCSR(ctx, req.Metadata, req.privKey)
-		if err != nil {
-			return createCSRRes{}, err
-		}
-
-		return createCSRRes{
-			CSR: string(csr.CSR),
-		}, nil
-	}
-}
-
 func issueFromCSREndpoint(svc certs.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(IssueFromCSRReq)

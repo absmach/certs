@@ -7,10 +7,8 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
-	"crypto/x509"
 	"encoding/asn1"
 	"encoding/json"
-	"encoding/pem"
 	"fmt"
 	"io"
 	"log/slog"
@@ -143,12 +141,6 @@ func MakeHandler(svc certs.Service, logger *slog.Logger, instanceID string) http
 			opts...,
 		), "download_ca").ServeHTTP)
 		r.Route("/csrs", func(r chi.Router) {
-			r.Post("/", otelhttp.NewHandler(kithttp.NewServer(
-				createCSREndpoint(svc),
-				decodeCreateCSR,
-				EncodeResponse,
-				opts...,
-			), "create_csr").ServeHTTP)
 			r.Post("/{entityID}", otelhttp.NewHandler(kithttp.NewServer(
 				issueFromCSREndpoint(svc),
 				decodeIssueFromCSR,
@@ -277,43 +269,6 @@ func decodeListCerts(_ context.Context, r *http.Request) (interface{}, error) {
 			EntityID: entity,
 		},
 	}
-	return req, nil
-}
-
-func decodeCreateCSR(_ context.Context, r *http.Request) (interface{}, error) {
-	req := createCSRReq{}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		return nil, err
-	}
-
-	block, _ := pem.Decode([]byte(req.PrivateKey))
-	if block == nil {
-		return nil, errors.Wrap(ErrInvalidRequest, errors.New("invalid PEM format"))
-	}
-
-	var (
-		privateKey any
-		err        error
-	)
-
-	switch block.Type {
-	case "RSA PRIVATE KEY":
-		privateKey, err = x509.ParsePKCS1PrivateKey(block.Bytes)
-	case "EC PRIVATE KEY":
-		privateKey, err = x509.ParseECPrivateKey(block.Bytes)
-	case "PRIVATE KEY", "PKCS8 PRIVATE KEY":
-		privateKey, err = x509.ParsePKCS8PrivateKey(block.Bytes)
-	case "ED25519 PRIVATE KEY":
-		privateKey, err = x509.ParsePKCS8PrivateKey(block.Bytes)
-	default:
-		err = errors.New("unsupported private key type")
-	}
-
-	if err != nil {
-		return nil, errors.Wrap(ErrInvalidRequest, err)
-	}
-	req.privKey = privateKey
-
 	return req, nil
 }
 

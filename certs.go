@@ -99,8 +99,8 @@ type CSRMetadata struct {
 }
 
 type CSR struct {
-	CSR        []byte `json:"csr"`
-	PrivateKey []byte `json:"private_key"`
+	CSR        []byte `json:"csr,omitempty"`
+	PrivateKey []byte `json:"private_key,omitempty"`
 }
 
 type CSRPage struct {
@@ -174,9 +174,6 @@ type Service interface {
 
 	// RemoveCert deletes a cert for a provided  entityID.
 	RemoveCert(ctx context.Context, entityId string) error
-
-	// CreateCSR creates a new Certificate Signing Request.
-	CreateCSR(ctx context.Context, metadata CSRMetadata, privKey any) (CSR, error)
 
 	// IssueFromCSR creates a certificate from a given CSR.
 	IssueFromCSR(ctx context.Context, entityID, ttl string, csr CSR) (Certificate, error)
