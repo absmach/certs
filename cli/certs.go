@@ -283,11 +283,11 @@ var cmdCerts = []cobra.Command{
 		},
 	},
 	{
-		Use:   "issue-csr <entity_id> <ttl> <path_to_csr> <private_key_path>",
+		Use:   "issue-csr <entity_id> <ttl> <path_to_csr>",
 		Short: "Issue from CSR",
 		Long:  `issues a certificate for a given csr.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 4 {
+			if len(args) != 3 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
@@ -298,13 +298,7 @@ var cmdCerts = []cobra.Command{
 				return
 			}
 
-			privData, err := os.ReadFile(args[3])
-			if err != nil {
-				logErrorCmd(*cmd, err)
-				return
-			}
-
-			cert, err := sdk.IssueFromCSR(args[0], args[1], string(csrData), string(privData))
+			cert, err := sdk.IssueFromCSR(args[0], args[1], string(csrData))
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -402,7 +396,7 @@ func CreateCSR(metadata certs.CSRMetadata, privKey any) (certs.CSR, errors.SDKEr
 	case ed25519.PrivateKey:
 		signer = key
 	case []byte:
-		parsedKey, err := certs.ExtractPrivateKey(key)
+		parsedKey, err := extractPrivateKey(key)
 		if err != nil {
 			return certs.CSR{}, errors.NewSDKError(errors.Wrap(ErrCreateEntity, err))
 		}
@@ -426,4 +420,34 @@ func CreateCSR(metadata certs.CSRMetadata, privKey any) (certs.CSR, errors.SDKEr
 	}
 
 	return csr, nil
+}
+
+func extractPrivateKey(pemKey []byte) (any, error) {
+	block, _ := pem.Decode(pemKey)
+	if block == nil {
+		return nil, errors.New("failed to parse private key PEM")
+	}
+
+	var (
+		privateKey any
+		err        error
+	)
+
+	switch block.Type {
+	case certs.RSAPrivateKey:
+		privateKey, err = x509.ParsePKCS1PrivateKey(block.Bytes)
+	case certs.ECPrivateKey:
+		privateKey, err = x509.ParseECPrivateKey(block.Bytes)
+	case certs.PrivateKey, "PKCS8 PRIVATE KEY":
+		privateKey, err = x509.ParsePKCS8PrivateKey(block.Bytes)
+	case "ED25519 PRIVATE KEY":
+		privateKey, err = x509.ParsePKCS8PrivateKey(block.Bytes)
+	default:
+		err = errors.New("unsupported private key type")
+	}
+	if err != nil {
+		return nil, errors.New("failed to parse key")
+	}
+
+	return privateKey, nil
 }

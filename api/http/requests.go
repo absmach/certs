@@ -89,10 +89,9 @@ func (req ocspReq) validate() error {
 }
 
 type IssueFromCSRReq struct {
-	entityID   string
-	ttl        string
-	CSR        string `json:"csr"`
-	PrivateKey string `json:"private_key"`
+	entityID string
+	ttl      string
+	CSR      string `json:"csr"`
 }
 
 func (req IssueFromCSRReq) validate() error {

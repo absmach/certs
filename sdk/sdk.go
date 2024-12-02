@@ -264,20 +264,12 @@ type SDK interface {
 	//  fmt.Println(response)
 	GetCAToken() (Token, errors.SDKError)
 
-	// CreateCSR creates a new Certificate Signing Request
-	//
-	// example:
-	//  pm = sdk.CSRMetadata{CommonName: "common_name"}
-	//	response, _ := sdk.CreateCSR(pm, "privKey")
-	//  fmt.Println(response)
-	CreateCSR(pm PageMetadata, privKey string) (CSR, errors.SDKError)
-
 	// IssueFromCSR issues certificate from provided CSR
 	//
 	// example:
-	//	certs, err := sdk.IssueFromCSR( "entityID", "ttl", "csrFile", "privKey")
+	//	certs, err := sdk.IssueFromCSR( "entityID", "ttl", "csrFile")
 	//	fmt.Println(err)
-	IssueFromCSR(entityID, ttl string, csr, privKey string) (Certificate, errors.SDKError)
+	IssueFromCSR(entityID, ttl string, csr string) (Certificate, errors.SDKError)
 }
 
 func (sdk mgSDK) IssueCert(entityID, ttl string, ipAddrs []string, opts Options) (Certificate, errors.SDKError) {
@@ -546,59 +538,13 @@ func (sdk mgSDK) GetCAToken() (Token, errors.SDKError) {
 	return tk, nil
 }
 
-func (sdk mgSDK) CreateCSR(pm PageMetadata, privKey string) (CSR, errors.SDKError) {
-	r := csrReq{
-		Metadata: meta{
-			CommonName:         pm.CommonName,
-			Organization:       pm.Organization,
-			OrganizationalUnit: pm.OrganizationalUnit,
-			Country:            pm.Country,
-			Province:           pm.Province,
-			Locality:           pm.Locality,
-			StreetAddress:      pm.StreetAddress,
-			PostalCode:         pm.PostalCode,
-			DNSNames:           pm.DNSNames,
-			IPAddresses:        pm.IPAddresses,
-			EmailAddresses:     pm.EmailAddresses,
-		},
-		PrivateKey: privKey,
-	}
-	d, err := json.Marshal(r)
-	if err != nil {
-		return CSR{}, errors.NewSDKError(err)
-	}
-	url := fmt.Sprintf("%s/%s/%s", sdk.certsURL, certsEndpoint, csrEndpoint)
-	_, body, sdkerr := sdk.processRequest(http.MethodPost, url, d, nil, http.StatusOK)
-	if sdkerr != nil {
-		return CSR{}, errors.NewSDKError(err)
-	}
-
-	zipReader, err := zip.NewReader(bytes.NewReader(body), int64(len(body)))
-	if err != nil {
-		return CSR{}, errors.NewSDKError(err)
-	}
-
-	var csr CSR
-	for _, file := range zipReader.File {
-		fileContent, err := readZipFile(file)
-		if err != nil {
-			return CSR{}, errors.NewSDKError(err)
-		}
-
-		csr.CSR = fileContent
-	}
-
-	return csr, nil
-}
-
-func (sdk mgSDK) IssueFromCSR(entityID, ttl string, csr, privKey string) (Certificate, errors.SDKError) {
+func (sdk mgSDK) IssueFromCSR(entityID, ttl string, csr string) (Certificate, errors.SDKError) {
 	pm := PageMetadata{
 		TTL: ttl,
 	}
 
 	r := csrReq{
 		CSR:        csr,
-		PrivateKey: privKey,
 	}
 
 	d, err := json.Marshal(r)
@@ -732,21 +678,6 @@ type certReq struct {
 }
 
 type csrReq struct {
-	Metadata   meta   `json:"metadata,omitempty"`
-	PrivateKey string `json:"private_key,omitempty"`
 	CSR        string `json:"csr,omitempty"`
 }
 
-type meta struct {
-	CommonName         string   `json:"common_name"`
-	Organization       []string `json:"organization"`
-	OrganizationalUnit []string `json:"organizational_unit"`
-	Country            []string `json:"country"`
-	Province           []string `json:"province"`
-	Locality           []string `json:"locality"`
-	StreetAddress      []string `json:"street_address"`
-	PostalCode         []string `json:"postal_code"`
-	DNSNames           []string `json:"dns_names"`
-	IPAddresses        []string `json:"ip_addresses"`
-	EmailAddresses     []string `json:"email_addresses"`
-}

@@ -317,7 +317,7 @@ func issueFromCSREndpoint(svc certs.Service) endpoint.Endpoint {
 			return issueFromCSRRes{}, err
 		}
 
-		cert, err := svc.IssueFromCSR(ctx, req.entityID, req.ttl, certs.CSR{CSR: []byte(req.CSR), PrivateKey: []byte(req.PrivateKey)})
+		cert, err := svc.IssueFromCSR(ctx, req.entityID, req.ttl, certs.CSR{CSR: []byte(req.CSR)})
 		if err != nil {
 			return issueFromCSRRes{}, err
 		}

@@ -28,7 +28,7 @@ const (
 	PrivateKeyBytes              = 2048
 	RootCAValidityPeriod         = time.Hour * 24 * 365 // 365 days
 	IntermediateCAVAlidityPeriod = time.Hour * 24 * 90  // 90 days
-	certValidityPeriod           = time.Hour * 24 * 90  // 30 days
+	certValidityPeriod           = time.Hour * 24 * 30  // 30 days
 	rCertExpiryThreshold         = time.Hour * 24 * 30  // 30 days
 	iCertExpiryThreshold         = time.Hour * 24 * 10  // 10 days
 	downloadTokenExpiry          = time.Minute * 5
@@ -91,18 +91,42 @@ func NewService(ctx context.Context, repo Repository, config *Config) (Service, 
 // using the provided template and the generated private key.
 // The certificate is then stored in the repository using the CreateCert method.
 // If the root CA is not found, it returns an error.
+// issueCert generates and issues a certificate for a given backendID.
+// It uses the RSA algorithm to generate a private key, and then creates a certificate
+// using the provided template and the generated private key.
+// The certificate is then stored in the repository using the CreateCert method.
+// If the root CA is not found, it returns an error.
 func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options SubjectOptions, key ...any) (Certificate, error) {
 	var privKey any
+	var pubKey crypto.PublicKey
 	var err error
+
 	if len(key) == 0 {
 		pKey, err := rsa.GenerateKey(rand.Reader, PrivateKeyBytes)
-		privKey = pKey
 		if err != nil {
 			return Certificate{}, err
 		}
+		privKey = pKey
+		pubKey = pKey.Public()
 	} else {
-		privKey = key[0]
+		switch k := key[0].(type) {
+		case *rsa.PrivateKey:
+			privKey = k
+			pubKey = k.Public()
+		case *ecdsa.PrivateKey:
+			privKey = k
+			pubKey = k.Public()
+		case ed25519.PrivateKey:
+			privKey = k
+			pubKey = k.Public()
+		case *rsa.PublicKey, *ecdsa.PublicKey, ed25519.PublicKey:
+			pubKey = k
+			privKey = nil
+		default:
+			return Certificate{}, errors.Wrap(ErrCreateEntity, errors.New("unsupported key type"))
+		}
 	}
+
 	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
 	if err != nil {
 		return Certificate{}, err
@@ -135,43 +159,44 @@ func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs [
 		DNSNames:              append(s.intermediateCA.Certificate.DNSNames, ipAddrs...),
 	}
 
-	var pubKey crypto.PublicKey
 	var privKeyBytes []byte
 	var privKeyType string
 
-	switch key := privKey.(type) {
-	case *rsa.PrivateKey:
-		pubKey = key.Public()
-		privKeyBytes = x509.MarshalPKCS1PrivateKey(key)
-		privKeyType = RSAPrivateKey
-	case *ecdsa.PrivateKey:
-		pubKey = key.Public()
-		privKeyBytes, err = x509.MarshalPKCS8PrivateKey(key)
-		privKeyType = ECPrivateKey
-	case ed25519.PrivateKey:
-		pubKey = key.Public()
-		privKeyBytes, err = x509.MarshalPKCS8PrivateKey(key)
-		privKeyType = PrivateKey
-	default:
-		return Certificate{}, errors.Wrap(ErrCreateEntity, errors.New("unsupported private key type"))
-	}
+	if privKey != nil {
+		switch key := privKey.(type) {
+		case *rsa.PrivateKey:
+			privKeyBytes = x509.MarshalPKCS1PrivateKey(key)
+			privKeyType = RSAPrivateKey
+		case *ecdsa.PrivateKey:
+			privKeyBytes, err = x509.MarshalPKCS8PrivateKey(key)
+			privKeyType = ECPrivateKey
+		case ed25519.PrivateKey:
+			privKeyBytes, err = x509.MarshalPKCS8PrivateKey(key)
+			privKeyType = PrivateKey
+		}
 
-	if err != nil {
-		return Certificate{}, err
+		if err != nil {
+			return Certificate{}, err
+		}
 	}
 
 	certBytes, err := x509.CreateCertificate(rand.Reader, &template, s.intermediateCA.Certificate, pubKey, s.intermediateCA.PrivateKey)
 	if err != nil {
 		return Certificate{}, err
 	}
+
 	dbCert := Certificate{
-		Key:          pem.EncodeToMemory(&pem.Block{Type: privKeyType, Bytes: privKeyBytes}),
-		Certificate:  pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certBytes}),
 		SerialNumber: template.SerialNumber.String(),
 		EntityID:     entityID,
 		ExpiryTime:   template.NotAfter,
 		Type:         ClientCert,
+		Certificate:  pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certBytes}),
 	}
+
+	if privKeyBytes != nil {
+		dbCert.Key = pem.EncodeToMemory(&pem.Block{Type: privKeyType, Bytes: privKeyBytes})
+	}
+
 	if err = s.repo.CreateCert(ctx, dbCert); err != nil {
 		return Certificate{}, errors.Wrap(ErrCreateEntity, err)
 	}
@@ -447,11 +472,6 @@ func (s *service) IssueFromCSR(ctx context.Context, entityID, ttl string, csr CS
 		return Certificate{}, errors.Wrap(ErrMalformedEntity, err)
 	}
 
-	privKey, err := ExtractPrivateKey(csr.PrivateKey)
-	if err != nil {
-		return Certificate{}, errors.Wrap(ErrMalformedEntity, err)
-	}
-
 	cert, err := s.IssueCert(ctx, entityID, ttl, nil, SubjectOptions{
 		CommonName:         parsedCSR.Subject.CommonName,
 		Organization:       parsedCSR.Subject.Organization,
@@ -461,7 +481,7 @@ func (s *service) IssueFromCSR(ctx context.Context, entityID, ttl string, csr CS
 		Locality:           parsedCSR.Subject.Locality,
 		StreetAddress:      parsedCSR.Subject.StreetAddress,
 		PostalCode:         parsedCSR.Subject.PostalCode,
-	}, privKey)
+	}, parsedCSR.PublicKey)
 	if err != nil {
 		return Certificate{}, errors.Wrap(ErrCreateEntity, err)
 	}
@@ -790,34 +810,4 @@ func (s *service) loadCACerts(ctx context.Context) error {
 		}
 	}
 	return nil
-}
-
-func ExtractPrivateKey(pemKey []byte) (any, error) {
-	block, _ := pem.Decode(pemKey)
-	if block == nil {
-		return nil, errors.New("failed to parse private key PEM")
-	}
-
-	var (
-		privateKey any
-		err        error
-	)
-
-	switch block.Type {
-	case RSAPrivateKey:
-		privateKey, err = x509.ParsePKCS1PrivateKey(block.Bytes)
-	case ECPrivateKey:
-		privateKey, err = x509.ParseECPrivateKey(block.Bytes)
-	case PrivateKey, "PKCS8 PRIVATE KEY":
-		privateKey, err = x509.ParsePKCS8PrivateKey(block.Bytes)
-	case "ED25519 PRIVATE KEY":
-		privateKey, err = x509.ParsePKCS8PrivateKey(block.Bytes)
-	default:
-		err = errors.New("unsupported private key type")
-	}
-	if err != nil {
-		return nil, errors.New("failed to parse key")
-	}
-
-	return privateKey, nil
 }
