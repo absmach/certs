@@ -33,6 +33,9 @@ const (
 	rCertExpiryThreshold         = time.Hour * 24 * 30  // 30 days
 	iCertExpiryThreshold         = time.Hour * 24 * 10  // 10 days
 	downloadTokenExpiry          = time.Minute * 5
+	PrivateKey                   = "PRIVATE KEY"
+	RSAPrivateKey                = "RSA PRIVATE KEY"
+	ECPrivateKey                 = "EC PRIVATE KEY"
 )
 
 var (
@@ -141,15 +144,15 @@ func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs [
 	case *rsa.PrivateKey:
 		pubKey = key.Public()
 		privKeyBytes = x509.MarshalPKCS1PrivateKey(key)
-		privKeyType = "RSA PRIVATE KEY"
+		privKeyType = RSAPrivateKey
 	case *ecdsa.PrivateKey:
 		pubKey = key.Public()
 		privKeyBytes, err = x509.MarshalPKCS8PrivateKey(key)
-		privKeyType = "EC PRIVATE KEY"
+		privKeyType = ECPrivateKey
 	case ed25519.PrivateKey:
 		pubKey = key.Public()
 		privKeyBytes, err = x509.MarshalPKCS8PrivateKey(key)
-		privKeyType = "PRIVATE KEY"
+		privKeyType = PrivateKey
 	default:
 		return Certificate{}, errors.Wrap(ErrCreateEntity, errors.New("unsupported private key type"))
 	}
@@ -467,13 +470,13 @@ func (s *service) CreateCSR(ctx context.Context, metadata CSRMetadata, privKey a
 	switch key := privKey.(type) {
 	case *rsa.PrivateKey:
 		privKeyBytes, err = x509.MarshalPKCS8PrivateKey(key)
-		privKeyType = "RSA PRIVATE KEY"
+		privKeyType = RSAPrivateKey
 	case *ecdsa.PrivateKey:
 		privKeyBytes, err = x509.MarshalPKCS8PrivateKey(key)
-		privKeyType = "EC PRIVATE KEY"
+		privKeyType = ECPrivateKey
 	case ed25519.PrivateKey:
 		privKeyBytes, err = x509.MarshalPKCS8PrivateKey(key)
-		privKeyType = "PRIVATE KEY"
+		privKeyType = PrivateKey
 	default:
 		return CSR{}, errors.Wrap(ErrCreateEntity, errors.New("unsupported private key type"))
 	}
@@ -615,7 +618,7 @@ func (s *service) generateRootCA(ctx context.Context, config Config) (*CA, error
 
 func (s *service) saveCA(ctx context.Context, cert *x509.Certificate, privateKey *rsa.PrivateKey, CertType CertType) error {
 	dbCert := Certificate{
-		Key:          pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(privateKey)}),
+		Key:          pem.EncodeToMemory(&pem.Block{Type: RSAPrivateKey, Bytes: x509.MarshalPKCS1PrivateKey(privateKey)}),
 		Certificate:  pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw}),
 		SerialNumber: cert.SerialNumber.String(),
 		ExpiryTime:   cert.NotAfter,
@@ -867,11 +870,11 @@ func extractPrivateKey(pemKey []byte) (any, error) {
 	)
 
 	switch block.Type {
-	case "RSA PRIVATE KEY":
+	case RSAPrivateKey:
 		privateKey, err = x509.ParsePKCS1PrivateKey(block.Bytes)
-	case "EC PRIVATE KEY":
+	case ECPrivateKey:
 		privateKey, err = x509.ParseECPrivateKey(block.Bytes)
-	case "PRIVATE KEY", "PKCS8 PRIVATE KEY":
+	case PrivateKey, "PKCS8 PRIVATE KEY":
 		privateKey, err = x509.ParsePKCS8PrivateKey(block.Bytes)
 	case "ED25519 PRIVATE KEY":
 		privateKey, err = x509.ParsePKCS8PrivateKey(block.Bytes)
