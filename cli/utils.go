@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/absmach/certs"
 	ctxsdk "github.com/absmach/certs/sdk"
 	"github.com/fatih/color"
 	"github.com/hokaccha/go-prettyjson"
@@ -96,6 +97,22 @@ func logSaveCAFiles(cmd cobra.Command, certBundle ctxsdk.CertificateBundle) {
 		fmt.Fprintf(cmd.OutOrStdout(), "Saved %s\n", filename)
 	}
 	fmt.Fprintf(cmd.OutOrStdout(), "\nAll certificate files have been saved successfully.\n")
+}
+
+func logSaveCSRFiles(cmd cobra.Command, csr certs.CSR) {
+	files := map[string][]byte{
+		"file.csr": []byte(csr.CSR),
+	}
+
+	for filename, content := range files {
+		err := saveToFile(filename, content)
+		if err != nil {
+			logErrorCmd(cmd, err)
+			return
+		}
+		fmt.Fprintf(cmd.OutOrStdout(), "Saved %s\n", filename)
+	}
+	fmt.Fprintf(cmd.OutOrStdout(), "\nCSR file have been saved successfully.\n")
 }
 
 func saveToFile(filename string, content []byte) error {

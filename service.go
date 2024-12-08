@@ -5,6 +5,9 @@ package certs
 
 import (
 	"context"
+	"crypto"
+	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -12,11 +15,9 @@ import (
 	"encoding/asn1"
 	"encoding/pem"
 	"math/big"
-	"net"
 	"time"
 
 	"github.com/absmach/certs/errors"
-	"github.com/absmach/certs/internal/uuid"
 	"github.com/golang-jwt/jwt"
 	"golang.org/x/crypto/ocsp"
 )
@@ -27,10 +28,15 @@ const (
 	PrivateKeyBytes              = 2048
 	RootCAValidityPeriod         = time.Hour * 24 * 365 // 365 days
 	IntermediateCAVAlidityPeriod = time.Hour * 24 * 90  // 90 days
-	certValidityPeriod           = time.Hour * 24 * 90  // 30 days
+	certValidityPeriod           = time.Hour * 24 * 30  // 30 days
 	rCertExpiryThreshold         = time.Hour * 24 * 30  // 30 days
 	iCertExpiryThreshold         = time.Hour * 24 * 10  // 10 days
 	downloadTokenExpiry          = time.Minute * 5
+	PrivateKey                   = "PRIVATE KEY"
+	RSAPrivateKey                = "RSA PRIVATE KEY"
+	ECPrivateKey                 = "EC PRIVATE KEY"
+	PKCS8PrivateKey              = "PKCS8 PRIVATE KEY"
+	EDPrivateKey                 = "ED25519 PRIVATE KEY"
 )
 
 var (
@@ -52,20 +58,16 @@ var (
 
 type service struct {
 	repo           Repository
-	csrRepo        CSRRepository
 	rootCA         *CA
 	intermediateCA *CA
-	idProvider     uuid.IDProvider
 }
 
 var _ Service = (*service)(nil)
 
-func NewService(ctx context.Context, repo Repository, csrRepo CSRRepository, config *Config, idp uuid.IDProvider) (Service, error) {
+func NewService(ctx context.Context, repo Repository, config *Config) (Service, error) {
 	var svc service
 
 	svc.repo = repo
-	svc.csrRepo = csrRepo
-	svc.idProvider = idp
 	if err := svc.loadCACerts(ctx); err != nil {
 		return &svc, err
 	}
@@ -91,18 +93,42 @@ func NewService(ctx context.Context, repo Repository, csrRepo CSRRepository, con
 // using the provided template and the generated private key.
 // The certificate is then stored in the repository using the CreateCert method.
 // If the root CA is not found, it returns an error.
-func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options SubjectOptions, key ...*rsa.PrivateKey) (Certificate, error) {
-	var privKey rsa.PrivateKey
+// issueCert generates and issues a certificate for a given backendID.
+// It uses the RSA algorithm to generate a private key, and then creates a certificate
+// using the provided template and the generated private key.
+// The certificate is then stored in the repository using the CreateCert method.
+// If the root CA is not found, it returns an error.
+func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options SubjectOptions, key ...any) (Certificate, error) {
+	var privKey any
+	var pubKey crypto.PublicKey
 	var err error
+
 	if len(key) == 0 {
 		pKey, err := rsa.GenerateKey(rand.Reader, PrivateKeyBytes)
-		privKey = *pKey
 		if err != nil {
 			return Certificate{}, err
 		}
+		privKey = pKey
+		pubKey = pKey.Public()
 	} else {
-		privKey = *key[0]
+		switch k := key[0].(type) {
+		case *rsa.PrivateKey:
+			privKey = k
+			pubKey = k.Public()
+		case *ecdsa.PrivateKey:
+			privKey = k
+			pubKey = k.Public()
+		case ed25519.PrivateKey:
+			privKey = k
+			pubKey = k.Public()
+		case *rsa.PublicKey, *ecdsa.PublicKey, ed25519.PublicKey:
+			pubKey = k
+			privKey = nil
+		default:
+			return Certificate{}, errors.Wrap(ErrCreateEntity, errors.New("unsupported key type"))
+		}
 	}
+
 	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
 	if err != nil {
 		return Certificate{}, err
@@ -135,18 +161,44 @@ func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs [
 		DNSNames:              append(s.intermediateCA.Certificate.DNSNames, ipAddrs...),
 	}
 
-	certBytes, err := x509.CreateCertificate(rand.Reader, &template, s.intermediateCA.Certificate, &privKey.PublicKey, s.intermediateCA.PrivateKey)
+	var privKeyBytes []byte
+	var privKeyType string
+
+	if privKey != nil {
+		switch key := privKey.(type) {
+		case *rsa.PrivateKey:
+			privKeyBytes = x509.MarshalPKCS1PrivateKey(key)
+			privKeyType = RSAPrivateKey
+		case *ecdsa.PrivateKey:
+			privKeyBytes, err = x509.MarshalPKCS8PrivateKey(key)
+			privKeyType = ECPrivateKey
+		case ed25519.PrivateKey:
+			privKeyBytes, err = x509.MarshalPKCS8PrivateKey(key)
+			privKeyType = PrivateKey
+		}
+
+		if err != nil {
+			return Certificate{}, err
+		}
+	}
+
+	certBytes, err := x509.CreateCertificate(rand.Reader, &template, s.intermediateCA.Certificate, pubKey, s.intermediateCA.PrivateKey)
 	if err != nil {
 		return Certificate{}, err
 	}
+
 	dbCert := Certificate{
-		Key:          pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(&privKey)}),
-		Certificate:  pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certBytes}),
 		SerialNumber: template.SerialNumber.String(),
 		EntityID:     entityID,
 		ExpiryTime:   template.NotAfter,
 		Type:         ClientCert,
+		Certificate:  pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certBytes}),
 	}
+
+	if privKeyBytes != nil {
+		dbCert.Key = pem.EncodeToMemory(&pem.Block{Type: privKeyType, Bytes: privKeyBytes})
+	}
+
 	if err = s.repo.CreateCert(ctx, dbCert); err != nil {
 		return Certificate{}, errors.Wrap(ErrCreateEntity, err)
 	}
@@ -407,114 +459,22 @@ func (s *service) GetChainCA(ctx context.Context, token string) (Certificate, er
 	return s.getConcatCAs(ctx)
 }
 
-func (s *service) CreateCSR(ctx context.Context, metadata CSRMetadata, entityID string, privateKey ...*rsa.PrivateKey) (CSR, error) {
-	var privKey *rsa.PrivateKey
-	var err error
-
-	// Check if a private key is provided else generate a new private key.
-	if len(privateKey) > 0 && privateKey[0] != nil {
-		privKey = privateKey[0]
-	} else {
-		privKey, err = rsa.GenerateKey(rand.Reader, PrivateKeyBytes)
-		if err != nil {
-			return CSR{}, errors.Wrap(ErrCreateEntity, err)
-		}
-	}
-
-	csrID, err := s.idProvider.ID()
-	if err != nil {
-		return CSR{}, err
-	}
-
-	template := &x509.CertificateRequest{
-		Subject: pkix.Name{
-			CommonName:         metadata.CommonName,
-			Organization:       metadata.Organization,
-			OrganizationalUnit: metadata.OrganizationalUnit,
-			Country:            metadata.Country,
-			Province:           metadata.Province,
-			Locality:           metadata.Locality,
-			StreetAddress:      metadata.StreetAddress,
-			PostalCode:         metadata.PostalCode,
-		},
-		EmailAddresses: metadata.EmailAddresses,
-		DNSNames:       metadata.DNSNames,
-	}
-
-	for _, ip := range metadata.IPAddresses {
-		parsedIP := net.ParseIP(ip)
-		if parsedIP != nil {
-			template.IPAddresses = append(template.IPAddresses, parsedIP)
-		}
-	}
-
-	csrBytes, err := x509.CreateCertificateRequest(rand.Reader, template, privKey)
-	if err != nil {
-		return CSR{}, errors.Wrap(ErrCreateEntity, err)
-	}
-
-	csrPEM := pem.EncodeToMemory(&pem.Block{
-		Type:  "CERTIFICATE REQUEST",
-		Bytes: csrBytes,
-	})
-
-	privKeyPEM := pem.EncodeToMemory(&pem.Block{
-		Type:  "RSA PRIVATE KEY",
-		Bytes: x509.MarshalPKCS1PrivateKey(privKey),
-	})
-
-	csr := CSR{
-		ID:          csrID,
-		CSR:         csrPEM,
-		PrivateKey:  privKeyPEM,
-		EntityID:    entityID,
-		Status:      Pending,
-		SubmittedAt: time.Now(),
-	}
-
-	if err := s.csrRepo.CreateCSR(ctx, csr); err != nil {
-		return CSR{}, errors.Wrap(ErrCreateEntity, err)
-	}
-
-	return csr, nil
-}
-
-func (s *service) SignCSR(ctx context.Context, csrID string, approve bool) error {
-	csr, err := s.csrRepo.RetrieveCSR(ctx, csrID)
-	if err != nil {
-		return errors.Wrap(ErrViewEntity, err)
-	}
-
-	if csr.Status != Pending {
-		return ErrConflict
-	}
-
-	if !approve {
-		csr.Status = Rejected
-		csr.SignedAt = time.Now()
-		return s.csrRepo.UpdateCSR(ctx, csr)
-	}
-
+func (s *service) IssueFromCSR(ctx context.Context, entityID, ttl string, csr CSR) (Certificate, error) {
 	block, _ := pem.Decode(csr.CSR)
 	if block == nil {
-		return errors.New("failed to parse CSR PEM")
+		return Certificate{}, errors.New("failed to parse CSR PEM")
 	}
 
 	parsedCSR, err := x509.ParseCertificateRequest(block.Bytes)
 	if err != nil {
-		return errors.Wrap(ErrMalformedEntity, err)
+		return Certificate{}, errors.Wrap(ErrMalformedEntity, err)
 	}
 
 	if err := parsedCSR.CheckSignature(); err != nil {
-		return errors.Wrap(ErrMalformedEntity, err)
+		return Certificate{}, errors.Wrap(ErrMalformedEntity, err)
 	}
 
-	privKey, err := extractPrivateKey(csr.PrivateKey)
-	if err != nil {
-		return errors.Wrap(ErrMalformedEntity, err)
-	}
-
-	cert, err := s.IssueCert(ctx, csr.EntityID, "", nil, SubjectOptions{
+	cert, err := s.IssueCert(ctx, entityID, ttl, nil, SubjectOptions{
 		CommonName:         parsedCSR.Subject.CommonName,
 		Organization:       parsedCSR.Subject.Organization,
 		OrganizationalUnit: parsedCSR.Subject.OrganizationalUnit,
@@ -523,29 +483,12 @@ func (s *service) SignCSR(ctx context.Context, csrID string, approve bool) error
 		Locality:           parsedCSR.Subject.Locality,
 		StreetAddress:      parsedCSR.Subject.StreetAddress,
 		PostalCode:         parsedCSR.Subject.PostalCode,
-	}, privKey)
+	}, parsedCSR.PublicKey)
 	if err != nil {
-		return errors.Wrap(ErrCreateEntity, err)
+		return Certificate{}, errors.Wrap(ErrCreateEntity, err)
 	}
 
-	csr.Status = Signed
-	csr.SignedAt = time.Now()
-	csr.SerialNumber = cert.SerialNumber
-
-	return s.csrRepo.UpdateCSR(ctx, csr)
-}
-
-func (s *service) ListCSRs(ctx context.Context, pm PageMetadata) (CSRPage, error) {
-	cp, err := s.csrRepo.ListCSRs(ctx, pm)
-	if err != nil {
-		return CSRPage{}, errors.Wrap(ErrViewEntity, err)
-	}
-
-	return cp, nil
-}
-
-func (s *service) RetrieveCSR(ctx context.Context, csrID string) (CSR, error) {
-	return s.csrRepo.RetrieveCSR(ctx, csrID)
+	return cert, nil
 }
 
 func (s *service) getConcatCAs(ctx context.Context) (Certificate, error) {
@@ -631,7 +574,7 @@ func (s *service) generateRootCA(ctx context.Context, config Config) (*CA, error
 
 func (s *service) saveCA(ctx context.Context, cert *x509.Certificate, privateKey *rsa.PrivateKey, CertType CertType) error {
 	dbCert := Certificate{
-		Key:          pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(privateKey)}),
+		Key:          pem.EncodeToMemory(&pem.Block{Type: RSAPrivateKey, Bytes: x509.MarshalPKCS1PrivateKey(privateKey)}),
 		Certificate:  pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw}),
 		SerialNumber: cert.SerialNumber.String(),
 		ExpiryTime:   cert.NotAfter,
@@ -869,18 +812,4 @@ func (s *service) loadCACerts(ctx context.Context) error {
 		}
 	}
 	return nil
-}
-
-func extractPrivateKey(pemKey []byte) (*rsa.PrivateKey, error) {
-	block, _ := pem.Decode(pemKey)
-	if block == nil {
-		return nil, errors.New("failed to parse private key PEM")
-	}
-
-	privKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
-	if err != nil {
-		return nil, err
-	}
-
-	return privKey, nil
 }
