@@ -25,7 +25,11 @@ import (
 // Keep SDK handle in global var.
 var sdk ctxsdk.SDK
 
-var ErrCreateEntity = errors.New("failed to create entity")
+var (
+	ErrCreateEntity = errors.New("failed to create entity")
+	ErrPrivKeyType  = errors.New("unsupported private key type")
+	ErrFailedParse  = errors.New("failed to parse key")
+)
 
 func SetSDK(s ctxsdk.SDK) {
 	sdk = s
@@ -389,10 +393,8 @@ func CreateCSR(metadata certs.CSRMetadata, privKey any) (certs.CSR, errors.SDKEr
 	var err error
 
 	switch key := privKey.(type) {
-	case *rsa.PrivateKey:
-		signer = key
-	case *ecdsa.PrivateKey:
-		signer = key
+	case *rsa.PrivateKey, *ecdsa.PrivateKey:
+		signer = key.(crypto.Signer)
 	case ed25519.PrivateKey:
 		signer = key
 	case []byte:
@@ -402,7 +404,7 @@ func CreateCSR(metadata certs.CSRMetadata, privKey any) (certs.CSR, errors.SDKEr
 		}
 		return CreateCSR(metadata, parsedKey)
 	default:
-		return certs.CSR{}, errors.NewSDKError(errors.Wrap(ErrCreateEntity, errors.New("unsupported private key type")))
+		return certs.CSR{}, errors.NewSDKError(errors.Wrap(ErrCreateEntity, ErrPrivKeyType))
 	}
 
 	csrBytes, err := x509.CreateCertificateRequest(rand.Reader, template, signer)
@@ -438,15 +440,13 @@ func extractPrivateKey(pemKey []byte) (any, error) {
 		privateKey, err = x509.ParsePKCS1PrivateKey(block.Bytes)
 	case certs.ECPrivateKey:
 		privateKey, err = x509.ParseECPrivateKey(block.Bytes)
-	case certs.PrivateKey, "PKCS8 PRIVATE KEY":
-		privateKey, err = x509.ParsePKCS8PrivateKey(block.Bytes)
-	case "ED25519 PRIVATE KEY":
+	case certs.PrivateKey, certs.PKCS8PrivateKey, certs.EDPrivateKey:
 		privateKey, err = x509.ParsePKCS8PrivateKey(block.Bytes)
 	default:
-		err = errors.New("unsupported private key type")
+		err = ErrPrivKeyType
 	}
 	if err != nil {
-		return nil, errors.New("failed to parse key")
+		return nil, ErrFailedParse
 	}
 
 	return privateKey, nil

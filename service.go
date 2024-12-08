@@ -35,6 +35,8 @@ const (
 	PrivateKey                   = "PRIVATE KEY"
 	RSAPrivateKey                = "RSA PRIVATE KEY"
 	ECPrivateKey                 = "EC PRIVATE KEY"
+	PKCS8PrivateKey              = "PKCS8 PRIVATE KEY"
+	EDPrivateKey                 = "ED25519 PRIVATE KEY"
 )
 
 var (
