@@ -54,6 +54,8 @@ var (
 	ErrCertRevoked            = errors.New("certificate has been revoked and cannot be renewed")
 	ErrCertInvalidType        = errors.New("invalid cert type")
 	ErrInvalidLength          = errors.New("invalid length of serial numbers")
+	ErrPrivKeyType            = errors.New("unsupported private key type")
+	ErrFailedParse            = errors.New("failed to parse key PEM")
 )
 
 type service struct {
@@ -98,12 +100,12 @@ func NewService(ctx context.Context, repo Repository, config *Config) (Service, 
 // using the provided template and the generated private key.
 // The certificate is then stored in the repository using the CreateCert method.
 // If the root CA is not found, it returns an error.
-func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options SubjectOptions, key ...crypto.PrivateKey) (Certificate, error) {
+func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options SubjectOptions, key crypto.PrivateKey) (Certificate, error) {
 	var privKey crypto.PrivateKey
 	var pubKey crypto.PublicKey
 	var err error
 
-	if len(key) == 0 {
+	if key == nil {
 		pKey, err := rsa.GenerateKey(rand.Reader, PrivateKeyBytes)
 		if err != nil {
 			return Certificate{}, err
@@ -111,7 +113,7 @@ func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs [
 		privKey = pKey
 		pubKey = pKey.Public()
 	} else {
-		switch k := key[0].(type) {
+		switch k := key.(type) {
 		case *rsa.PrivateKey:
 			privKey = k
 			pubKey = k.Public()
@@ -772,7 +774,7 @@ func (s *service) loadCACerts(ctx context.Context) error {
 			}
 			rkey, _ := pem.Decode(c.Key)
 			if rkey == nil {
-				return errors.New("failed to parse key PEM")
+				return ErrFailedParse
 			}
 			rootKey, err := x509.ParsePKCS1PrivateKey(rkey.Bytes)
 			if err != nil {
@@ -797,7 +799,7 @@ func (s *service) loadCACerts(ctx context.Context) error {
 			}
 			ikey, _ := pem.Decode(c.Key)
 			if ikey == nil {
-				return errors.New("failed to parse key PEM")
+				return ErrFailedParse
 			}
 			interKey, err := x509.ParsePKCS1PrivateKey(ikey.Bytes)
 			if err != nil {

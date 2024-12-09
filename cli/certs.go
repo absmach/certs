@@ -25,12 +25,6 @@ import (
 // Keep SDK handle in global var.
 var sdk ctxsdk.SDK
 
-var (
-	ErrCreateEntity = errors.New("failed to create entity")
-	ErrPrivKeyType  = errors.New("unsupported private key type")
-	ErrFailedParse  = errors.New("failed to parse key")
-)
-
 func SetSDK(s ctxsdk.SDK) {
 	sdk = s
 }
@@ -400,16 +394,16 @@ func CreateCSR(metadata certs.CSRMetadata, privKey any) (certs.CSR, errors.SDKEr
 	case []byte:
 		parsedKey, err := extractPrivateKey(key)
 		if err != nil {
-			return certs.CSR{}, errors.NewSDKError(errors.Wrap(ErrCreateEntity, err))
+			return certs.CSR{}, errors.NewSDKError(errors.Wrap(certs.ErrCreateEntity, err))
 		}
 		return CreateCSR(metadata, parsedKey)
 	default:
-		return certs.CSR{}, errors.NewSDKError(errors.Wrap(ErrCreateEntity, ErrPrivKeyType))
+		return certs.CSR{}, errors.NewSDKError(errors.Wrap(certs.ErrCreateEntity, certs.ErrPrivKeyType))
 	}
 
 	csrBytes, err := x509.CreateCertificateRequest(rand.Reader, template, signer)
 	if err != nil {
-		return certs.CSR{}, errors.NewSDKError(errors.Wrap(ErrCreateEntity, err))
+		return certs.CSR{}, errors.NewSDKError(errors.Wrap(certs.ErrCreateEntity, err))
 	}
 
 	csrPEM := pem.EncodeToMemory(&pem.Block{
@@ -443,10 +437,10 @@ func extractPrivateKey(pemKey []byte) (any, error) {
 	case certs.PrivateKey, certs.PKCS8PrivateKey, certs.EDPrivateKey:
 		privateKey, err = x509.ParsePKCS8PrivateKey(block.Bytes)
 	default:
-		err = ErrPrivKeyType
+		err = certs.ErrPrivKeyType
 	}
 	if err != nil {
-		return nil, ErrFailedParse
+		return nil, certs.ErrFailedParse
 	}
 
 	return privateKey, nil

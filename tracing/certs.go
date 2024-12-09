@@ -54,10 +54,10 @@ func (tm *tracingMiddleware) RetrieveCAToken(ctx context.Context) (string, error
 	return tm.svc.RetrieveCAToken(ctx)
 }
 
-func (tm *tracingMiddleware) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options certs.SubjectOptions, privKey ...crypto.PrivateKey) (certs.Certificate, error) {
+func (tm *tracingMiddleware) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options certs.SubjectOptions, privKey crypto.PrivateKey) (certs.Certificate, error) {
 	ctx, span := tm.tracer.Start(ctx, "issue_cert")
 	defer span.End()
-	return tm.svc.IssueCert(ctx, entityID, ttl, ipAddrs, options, privKey...)
+	return tm.svc.IssueCert(ctx, entityID, ttl, ipAddrs, options, privKey)
 }
 
 func (tm *tracingMiddleware) ListCerts(ctx context.Context, pm certs.PageMetadata) (certs.CertificatePage, error) {
