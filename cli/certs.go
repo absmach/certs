@@ -4,10 +4,19 @@
 package cli
 
 import (
+	"crypto"
+	"crypto/ecdsa"
+	"crypto/ed25519"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/json"
-	"fmt"
+	"encoding/pem"
+	"net"
 	"os"
 
+	"github.com/absmach/certs"
 	"github.com/absmach/certs/errors"
 	ctxsdk "github.com/absmach/certs/sdk"
 	"github.com/spf13/cobra"
@@ -245,26 +254,14 @@ var cmdCerts = []cobra.Command{
 		Short: "Create CSR",
 		Long:  `Creates a CSR.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) > 3 || len(args) == 0 {
+			if len(args) != 2 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
 
-			var pm ctxsdk.PageMetadata
+			var pm certs.CSRMetadata
 			if err := json.Unmarshal([]byte(args[0]), &pm); err != nil {
 				logErrorCmd(*cmd, err)
-				return
-			}
-
-			var csr ctxsdk.CSR
-			var err error
-			if len(args) == 1 {
-				csr, err = sdk.CreateCSR(pm, []byte{})
-				if err != nil {
-					logErrorCmd(*cmd, err)
-					return
-				}
-				logJSONCmd(*cmd, csr)
 				return
 			}
 
@@ -274,90 +271,32 @@ var cmdCerts = []cobra.Command{
 				return
 			}
 
-			csr, err = sdk.CreateCSR(pm, data)
+			csr, err := CreateCSR(pm, data)
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
 
-			logJSONCmd(*cmd, csr)
+			logSaveCSRFiles(*cmd, csr)
 		},
 	},
 	{
-		Use:   "sign <csr_id> <sign>",
-		Short: "Sign CSR",
-		Long:  `Signs a CSR for a given csr id.`,
+		Use:   "issue-csr <entity_id> <ttl> <path_to_csr>",
+		Short: "Issue from CSR",
+		Long:  `issues a certificate for a given csr.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 2 {
+			if len(args) != 3 {
 				logUsageCmd(*cmd, cmd.Use)
-				return
-			}
-			var sign bool
-			switch args[1] {
-			case "true":
-				sign = true
-			case "false":
-				sign = false
-			default:
-				logErrorCmd(*cmd, errors.NewSDKError(fmt.Errorf("unknown type")))
 				return
 			}
 
-			err := sdk.SignCSR(args[0], sign)
+			csrData, err := os.ReadFile(args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
-			logOKCmd(*cmd)
-		},
-	},
-	{
-		Use:   "get-csr [all | <entity_id>] <status>",
-		Short: "Get csr",
-		Long:  `Gets CSRs for a given entity ID or all CSR.`,
-		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 2 {
-				logUsageCmd(*cmd, cmd.Use)
-				return
-			}
-			if args[0] == "all" {
-				pm := ctxsdk.PageMetadata{
-					Limit:  Limit,
-					Offset: Offset,
-					Status: args[1],
-				}
-				page, err := sdk.ListCSRs(pm)
-				if err != nil {
-					logErrorCmd(*cmd, err)
-					return
-				}
-				logJSONCmd(*cmd, page)
-				return
-			}
-			pm := ctxsdk.PageMetadata{
-				EntityID: args[0],
-				Limit:    Limit,
-				Offset:   Offset,
-				Status:   args[1],
-			}
-			page, err := sdk.ListCSRs(pm)
-			if err != nil {
-				logErrorCmd(*cmd, err)
-				return
-			}
-			logJSONCmd(*cmd, page)
-		},
-	},
-	{
-		Use:   "view-csr <csr_id>",
-		Short: "View CSR",
-		Long:  `Views a CSR for a given csr id.`,
-		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 1 {
-				logUsageCmd(*cmd, cmd.Use)
-				return
-			}
-			cert, err := sdk.RetrieveCSR(args[0])
+
+			cert, err := sdk.IssueFromCSR(args[0], args[1], string(csrData))
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -407,7 +346,7 @@ func NewCertsCmd() *cobra.Command {
 	issueCmd.Flags().StringVar(&ttl, "ttl", "8760h", "certificate time to live in duration")
 
 	cmd := cobra.Command{
-		Use:   "certs [issue | get | revoke | renew | ocsp | token | download]",
+		Use:   "certs [issue | get | revoke | renew | ocsp | token | download | download-ca | download-ca | csr | issue-csr]",
 		Short: "Certificates management",
 		Long:  `Certificates management: issue, get all, get by entity ID, revoke, renew, OCSP, token, download.`,
 	}
@@ -419,4 +358,90 @@ func NewCertsCmd() *cobra.Command {
 	}
 
 	return &cmd
+}
+
+func CreateCSR(metadata certs.CSRMetadata, privKey any) (certs.CSR, errors.SDKError) {
+	template := &x509.CertificateRequest{
+		Subject: pkix.Name{
+			CommonName:         metadata.CommonName,
+			Organization:       metadata.Organization,
+			OrganizationalUnit: metadata.OrganizationalUnit,
+			Country:            metadata.Country,
+			Province:           metadata.Province,
+			Locality:           metadata.Locality,
+			StreetAddress:      metadata.StreetAddress,
+			PostalCode:         metadata.PostalCode,
+		},
+		EmailAddresses: metadata.EmailAddresses,
+		DNSNames:       metadata.DNSNames,
+	}
+
+	for _, ip := range metadata.IPAddresses {
+		parsedIP := net.ParseIP(ip)
+		if parsedIP != nil {
+			template.IPAddresses = append(template.IPAddresses, parsedIP)
+		}
+	}
+
+	var signer crypto.Signer
+	var err error
+
+	switch key := privKey.(type) {
+	case *rsa.PrivateKey, *ecdsa.PrivateKey:
+		signer = key.(crypto.Signer)
+	case ed25519.PrivateKey:
+		signer = key
+	case []byte:
+		parsedKey, err := extractPrivateKey(key)
+		if err != nil {
+			return certs.CSR{}, errors.NewSDKError(errors.Wrap(certs.ErrCreateEntity, err))
+		}
+		return CreateCSR(metadata, parsedKey)
+	default:
+		return certs.CSR{}, errors.NewSDKError(errors.Wrap(certs.ErrCreateEntity, certs.ErrPrivKeyType))
+	}
+
+	csrBytes, err := x509.CreateCertificateRequest(rand.Reader, template, signer)
+	if err != nil {
+		return certs.CSR{}, errors.NewSDKError(errors.Wrap(certs.ErrCreateEntity, err))
+	}
+
+	csrPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE REQUEST",
+		Bytes: csrBytes,
+	})
+
+	csr := certs.CSR{
+		CSR: csrPEM,
+	}
+
+	return csr, nil
+}
+
+func extractPrivateKey(pemKey []byte) (any, error) {
+	block, _ := pem.Decode(pemKey)
+	if block == nil {
+		return nil, errors.New("failed to parse private key PEM")
+	}
+
+	var (
+		privateKey any
+		err        error
+	)
+
+	switch block.Type {
+	case certs.RSAPrivateKey:
+		privateKey, err = x509.ParsePKCS1PrivateKey(block.Bytes)
+	case certs.ECPrivateKey:
+		privateKey, err = x509.ParseECPrivateKey(block.Bytes)
+	case certs.PrivateKey, certs.PKCS8PrivateKey, certs.EDPrivateKey:
+		privateKey, err = x509.ParsePKCS8PrivateKey(block.Bytes)
+	default:
+		err = certs.ErrPrivKeyType
+	}
+	if err != nil {
+		return nil, certs.ErrFailedParse
+	}
+
+	return privateKey, nil
 }

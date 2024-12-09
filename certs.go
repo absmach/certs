@@ -7,7 +7,6 @@ import (
 	"context"
 	"crypto/rsa"
 	"crypto/x509"
-	"encoding/json"
 	"net"
 	"time"
 
@@ -55,56 +54,6 @@ func CertTypeFromString(s string) (CertType, error) {
 	}
 }
 
-type CSRStatus int
-
-const (
-	Pending CSRStatus = iota
-	Signed
-	Rejected
-	All
-)
-
-const (
-	pending  = "pending"
-	signed   = "signed"
-	rejected = "rejected"
-	all      = "all"
-)
-
-func (c CSRStatus) String() string {
-	switch c {
-	case Pending:
-		return pending
-	case Signed:
-		return signed
-	case Rejected:
-		return rejected
-	case All:
-		return all
-	default:
-		return Unknown
-	}
-}
-
-func ParseCSRStatus(s string) (CSRStatus, error) {
-	switch s {
-	case pending:
-		return Pending, nil
-	case signed:
-		return Signed, nil
-	case rejected:
-		return Rejected, nil
-	case all:
-		return All, nil
-	default:
-		return -1, errors.New("unknown CSR status")
-	}
-}
-
-func (c CSRStatus) MarshalJSON() ([]byte, error) {
-	return json.Marshal(c.String())
-}
-
 type CA struct {
 	Type         CertType
 	Certificate  *x509.Certificate
@@ -129,15 +78,13 @@ type CertificatePage struct {
 }
 
 type PageMetadata struct {
-	Total    uint64    `json:"total" db:"total"`
-	Offset   uint64    `json:"offset,omitempty" db:"offset"`
-	Limit    uint64    `json:"limit" db:"limit"`
-	EntityID string    `json:"entity_id,omitempty" db:"entity_id"`
-	Status   CSRStatus `json:"status,omitempty" db:"status"`
+	Total    uint64 `json:"total" db:"total"`
+	Offset   uint64 `json:"offset,omitempty" db:"offset"`
+	Limit    uint64 `json:"limit" db:"limit"`
+	EntityID string `json:"entity_id,omitempty" db:"entity_id"`
 }
 
 type CSRMetadata struct {
-	EntityID           string
 	CommonName         string   `json:"common_name"`
 	Organization       []string `json:"organization"`
 	OrganizationalUnit []string `json:"organizational_unit"`
@@ -152,14 +99,8 @@ type CSRMetadata struct {
 }
 
 type CSR struct {
-	ID           string    `json:"id" db:"id"`
-	CSR          []byte    `json:"csr,omitempty" db:"csr"`
-	PrivateKey   []byte    `json:"private_key,omitempty" db:"private_key"`
-	EntityID     string    `json:"entity_id" db:"entity_id"`
-	Status       CSRStatus `json:"status" db:"status"`
-	SubmittedAt  time.Time `json:"submitted_at" db:"submitted_at"`
-	SignedAt     time.Time `json:"signed_at,omitempty" db:"signed_at"`
-	SerialNumber string    `json:"serial_number,omitempty" db:"serial_number"`
+	CSR        []byte `json:"csr,omitempty"`
+	PrivateKey []byte `json:"private_key,omitempty"`
 }
 
 type CSRPage struct {
@@ -217,7 +158,7 @@ type Service interface {
 	RetrieveCAToken(ctx context.Context) (string, error)
 
 	// IssueCert issues a certificate from the database.
-	IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, option SubjectOptions, privKey ...*rsa.PrivateKey) (Certificate, error)
+	IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, option SubjectOptions) (Certificate, error)
 
 	// OCSP retrieves the OCSP response for a certificate.
 	OCSP(ctx context.Context, serialNumber string) (*Certificate, int, *x509.Certificate, error)
@@ -234,17 +175,8 @@ type Service interface {
 	// RemoveCert deletes a cert for a provided  entityID.
 	RemoveCert(ctx context.Context, entityId string) error
 
-	// CreateCSR creates a new Certificate Signing Request
-	CreateCSR(ctx context.Context, metadata CSRMetadata, entityID string, privKey ...*rsa.PrivateKey) (CSR, error)
-
-	// SignCSR processes a pending CSR and either approves or rejects it
-	SignCSR(ctx context.Context, csrID string, approve bool) error
-
-	// RetrieveCSR retrieves a specific CSR by ID
-	RetrieveCSR(ctx context.Context, csrID string) (CSR, error)
-
-	// ListCSRs returns a list of CSRs based on filter criteria
-	ListCSRs(ctx context.Context, pm PageMetadata) (CSRPage, error)
+	// IssueFromCSR creates a certificate from a given CSR.
+	IssueFromCSR(ctx context.Context, entityID, ttl string, csr CSR) (Certificate, error)
 }
 
 type Repository interface {
@@ -268,11 +200,4 @@ type Repository interface {
 
 	// RemoveCert deletes cert from database.
 	RemoveCert(ctx context.Context, entityId string) error
-}
-
-type CSRRepository interface {
-	CreateCSR(context.Context, CSR) error
-	UpdateCSR(context.Context, CSR) error
-	RetrieveCSR(context.Context, string) (CSR, error)
-	ListCSRs(context.Context, PageMetadata) (CSRPage, error)
 }

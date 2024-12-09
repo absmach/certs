@@ -310,75 +310,24 @@ func viewCAEndpoint(svc certs.Service) endpoint.Endpoint {
 	}
 }
 
-func createCSREndpoint(svc certs.Service) endpoint.Endpoint {
+func issueFromCSREndpoint(svc certs.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
-		req := request.(createCSRReq)
+		req := request.(IssueFromCSRReq)
 		if err := req.validate(); err != nil {
-			return createCSRRes{created: false}, err
+			return issueFromCSRRes{}, err
 		}
 
-		csr, err := svc.CreateCSR(ctx, req.Metadata, req.Metadata.EntityID, req.privKey)
+		cert, err := svc.IssueFromCSR(ctx, req.entityID, req.ttl, certs.CSR{CSR: []byte(req.CSR)})
 		if err != nil {
-			return createCSRRes{created: false}, err
+			return issueFromCSRRes{}, err
 		}
 
-		return createCSRRes{
-			created: true,
-			CSR:     csr,
-		}, nil
-	}
-}
-
-func signCSREndpoint(svc certs.Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
-		req := request.(SignCSRReq)
-		if err := req.validate(); err != nil {
-			return signCSRRes{signed: false}, err
-		}
-
-		err = svc.SignCSR(ctx, req.csrID, req.approve)
-		if err != nil {
-			return signCSRRes{signed: false}, err
-		}
-
-		return signCSRRes{
-			signed: true,
-		}, nil
-	}
-}
-
-func retrieveCSREndpoint(svc certs.Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
-		req := request.(retrieveCSRReq)
-		if err := req.validate(); err != nil {
-			return retrieveCSRRes{}, err
-		}
-
-		csr, err := svc.RetrieveCSR(ctx, req.csrID)
-		if err != nil {
-			return retrieveCSRRes{}, err
-		}
-
-		return retrieveCSRRes{
-			CSR: csr,
-		}, nil
-	}
-}
-
-func listCSRsEndpoint(svc certs.Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
-		req := request.(listCSRsReq)
-		if err := req.validate(); err != nil {
-			return listCSRsRes{}, err
-		}
-
-		cp, err := svc.ListCSRs(ctx, req.pm)
-		if err != nil {
-			return listCSRsRes{}, err
-		}
-
-		return listCSRsRes{
-			cp,
+		return issueFromCSRRes{
+			SerialNumber: cert.SerialNumber,
+			Certificate:  string(cert.Certificate),
+			Revoked:      cert.Revoked,
+			ExpiryTime:   cert.ExpiryTime,
+			EntityID:     cert.EntityID,
 		}, nil
 	}
 }

@@ -5,7 +5,6 @@ package tracing
 
 import (
 	"context"
-	"crypto/rsa"
 	"crypto/x509"
 
 	"github.com/absmach/certs"
@@ -54,10 +53,10 @@ func (tm *tracingMiddleware) RetrieveCAToken(ctx context.Context) (string, error
 	return tm.svc.RetrieveCAToken(ctx)
 }
 
-func (tm *tracingMiddleware) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options certs.SubjectOptions, privKey ...*rsa.PrivateKey) (certs.Certificate, error) {
+func (tm *tracingMiddleware) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options certs.SubjectOptions) (certs.Certificate, error) {
 	ctx, span := tm.tracer.Start(ctx, "issue_cert")
 	defer span.End()
-	return tm.svc.IssueCert(ctx, entityID, ttl, ipAddrs, options, privKey...)
+	return tm.svc.IssueCert(ctx, entityID, ttl, ipAddrs, options)
 }
 
 func (tm *tracingMiddleware) ListCerts(ctx context.Context, pm certs.PageMetadata) (certs.CertificatePage, error) {
@@ -102,26 +101,8 @@ func (tm *tracingMiddleware) GetChainCA(ctx context.Context, token string) (cert
 	return tm.svc.GetChainCA(ctx, token)
 }
 
-func (tm *tracingMiddleware) CreateCSR(ctx context.Context, meta certs.CSRMetadata, entityID string, key ...*rsa.PrivateKey) (certs.CSR, error) {
-	ctx, span := tm.tracer.Start(ctx, "create_csr")
+func (tm *tracingMiddleware) IssueFromCSR(ctx context.Context, entityID, ttl string, csr certs.CSR) (certs.Certificate, error) {
+	ctx, span := tm.tracer.Start(ctx, "issue_from_csr")
 	defer span.End()
-	return tm.svc.CreateCSR(ctx, meta, entityID, key...)
-}
-
-func (tm *tracingMiddleware) SignCSR(ctx context.Context, csrID string, approve bool) error {
-	ctx, span := tm.tracer.Start(ctx, "sign_csr")
-	defer span.End()
-	return tm.svc.SignCSR(ctx, csrID, approve)
-}
-
-func (tm *tracingMiddleware) ListCSRs(ctx context.Context, pm certs.PageMetadata) (certs.CSRPage, error) {
-	ctx, span := tm.tracer.Start(ctx, "list_csrs")
-	defer span.End()
-	return tm.svc.ListCSRs(ctx, pm)
-}
-
-func (tm *tracingMiddleware) RetrieveCSR(ctx context.Context, csrID string) (certs.CSR, error) {
-	ctx, span := tm.tracer.Start(ctx, "retrieve_csr")
-	defer span.End()
-	return tm.svc.RetrieveCSR(ctx, csrID)
+	return tm.svc.IssueFromCSR(ctx, entityID, ttl, csr)
 }
