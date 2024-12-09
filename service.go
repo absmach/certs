@@ -120,7 +120,7 @@ func (s *service) issue(ctx context.Context, entityID, ttl string, ipAddrs []str
 		return Certificate{}, err
 	}
 
-	subject := s.getSubject(options)
+	subject := subjectFromOpts(options)
 	if privKey != nil {
 		switch privKey.(type) {
 		case *rsa.PrivateKey, *ecdsa.PrivateKey, *ed25519.PrivateKey:
@@ -647,31 +647,31 @@ func (s *service) createIntermediateCA(ctx context.Context, rootCA *CA, config C
 	return intermediateCA, nil
 }
 
-func (s *service) getSubject(options SubjectOptions) pkix.Name {
+func subjectFromOpts(opts SubjectOptions) pkix.Name {
 	subject := pkix.Name{
-		CommonName: options.CommonName,
+		CommonName: opts.CommonName,
 	}
 
-	if len(options.Organization) > 0 {
-		subject.Organization = options.Organization
+	if len(opts.Organization) > 0 {
+		subject.Organization = opts.Organization
 	}
-	if len(options.OrganizationalUnit) > 0 {
-		subject.OrganizationalUnit = options.OrganizationalUnit
+	if len(opts.OrganizationalUnit) > 0 {
+		subject.OrganizationalUnit = opts.OrganizationalUnit
 	}
-	if len(options.Country) > 0 {
-		subject.Country = options.Country
+	if len(opts.Country) > 0 {
+		subject.Country = opts.Country
 	}
-	if len(options.Province) > 0 {
-		subject.Province = options.Province
+	if len(opts.Province) > 0 {
+		subject.Province = opts.Province
 	}
-	if len(options.Locality) > 0 {
-		subject.Locality = options.Locality
+	if len(opts.Locality) > 0 {
+		subject.Locality = opts.Locality
 	}
-	if len(options.StreetAddress) > 0 {
-		subject.StreetAddress = options.StreetAddress
+	if len(opts.StreetAddress) > 0 {
+		subject.StreetAddress = opts.StreetAddress
 	}
-	if len(options.PostalCode) > 0 {
-		subject.PostalCode = options.PostalCode
+	if len(opts.PostalCode) > 0 {
+		subject.PostalCode = opts.PostalCode
 	}
 
 	return subject
