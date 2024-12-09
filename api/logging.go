@@ -5,6 +5,7 @@ package api
 
 import (
 	"context"
+	"crypto"
 	"crypto/x509"
 	"fmt"
 	"log/slog"
@@ -85,7 +86,7 @@ func (lm *loggingMiddleware) RetrieveCAToken(ctx context.Context) (tokenString s
 	return lm.svc.RetrieveCAToken(ctx)
 }
 
-func (lm *loggingMiddleware) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options certs.SubjectOptions, privKey ...any) (cert certs.Certificate, err error) {
+func (lm *loggingMiddleware) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options certs.SubjectOptions, privKey ...crypto.PrivateKey) (cert certs.Certificate, err error) {
 	defer func(begin time.Time) {
 		message := fmt.Sprintf("Method issue_cert for took %s to complete", time.Since(begin))
 		if err != nil {

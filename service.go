@@ -98,8 +98,8 @@ func NewService(ctx context.Context, repo Repository, config *Config) (Service, 
 // using the provided template and the generated private key.
 // The certificate is then stored in the repository using the CreateCert method.
 // If the root CA is not found, it returns an error.
-func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options SubjectOptions, key ...any) (Certificate, error) {
-	var privKey any
+func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options SubjectOptions, key ...crypto.PrivateKey) (Certificate, error) {
+	var privKey crypto.PrivateKey
 	var pubKey crypto.PublicKey
 	var err error
 
