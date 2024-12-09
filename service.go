@@ -55,6 +55,7 @@ var (
 	ErrCertInvalidType        = errors.New("invalid cert type")
 	ErrInvalidLength          = errors.New("invalid length of serial numbers")
 	ErrPrivKeyType            = errors.New("unsupported private key type")
+	ErrPubKeyType             = errors.New("unsupported public key type")
 	ErrFailedParse            = errors.New("failed to parse key PEM")
 )
 
@@ -95,49 +96,45 @@ func NewService(ctx context.Context, repo Repository, config *Config) (Service, 
 // using the provided template and the generated private key.
 // The certificate is then stored in the repository using the CreateCert method.
 // If the root CA is not found, it returns an error.
-// issueCert generates and issues a certificate for a given backendID.
-// It uses the RSA algorithm to generate a private key, and then creates a certificate
-// using the provided template and the generated private key.
-// The certificate is then stored in the repository using the CreateCert method.
-// If the root CA is not found, it returns an error.
-func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options SubjectOptions, key crypto.PrivateKey) (Certificate, error) {
-	var privKey crypto.PrivateKey
-	var pubKey crypto.PublicKey
-	var err error
-
-	if key == nil {
-		pKey, err := rsa.GenerateKey(rand.Reader, PrivateKeyBytes)
-		if err != nil {
-			return Certificate{}, err
-		}
-		privKey = pKey
-		pubKey = pKey.Public()
-	} else {
-		switch k := key.(type) {
-		case *rsa.PrivateKey:
-			privKey = k
-			pubKey = k.Public()
-		case *ecdsa.PrivateKey:
-			privKey = k
-			pubKey = k.Public()
-		case ed25519.PrivateKey:
-			privKey = k
-			pubKey = k.Public()
-		case *rsa.PublicKey, *ecdsa.PublicKey, ed25519.PublicKey:
-			pubKey = k
-			privKey = nil
-		default:
-			return Certificate{}, errors.Wrap(ErrCreateEntity, errors.New("unsupported key type"))
-		}
-	}
-
-	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
+func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options SubjectOptions) (Certificate, error) {
+	pKey, err := rsa.GenerateKey(rand.Reader, PrivateKeyBytes)
 	if err != nil {
 		return Certificate{}, err
 	}
 
 	if s.intermediateCA.Certificate == nil || s.intermediateCA.PrivateKey == nil {
 		return Certificate{}, ErrIntermediateCANotFound
+	}
+
+	cert, err := s.issue(ctx, entityID, ttl, ipAddrs, options, pKey.Public(), pKey)
+	if err != nil {
+		return Certificate{}, err
+	}
+
+	return cert, nil
+}
+
+func (s *service) issue(ctx context.Context, entityID, ttl string, ipAddrs []string, options SubjectOptions, pubKey crypto.PublicKey, privKey crypto.PrivateKey) (Certificate, error) {
+	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
+	if err != nil {
+		return Certificate{}, err
+	}
+
+	subject := s.getSubject(options)
+	if privKey != nil {
+		switch privKey.(type) {
+		case *rsa.PrivateKey, *ecdsa.PrivateKey, *ed25519.PrivateKey:
+			break
+		default:
+			return Certificate{}, errors.Wrap(ErrCreateEntity, ErrPrivKeyType)
+		}
+	}
+
+	switch pubKey.(type) {
+	case *rsa.PublicKey, *ecdsa.PublicKey, *ed25519.PublicKey:
+		break
+	default:
+		return Certificate{}, errors.Wrap(ErrCreateEntity, ErrPubKeyType)
 	}
 
 	// Parse the TTL if provided, otherwise use the default certValidityPeriod.
@@ -148,8 +145,6 @@ func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs [
 			return Certificate{}, errors.Wrap(ErrMalformedEntity, err)
 		}
 	}
-
-	subject := s.getSubject(options)
 
 	template := x509.Certificate{
 		SerialNumber:          serialNumber,
@@ -476,7 +471,7 @@ func (s *service) IssueFromCSR(ctx context.Context, entityID, ttl string, csr CS
 		return Certificate{}, errors.Wrap(ErrMalformedEntity, err)
 	}
 
-	cert, err := s.IssueCert(ctx, entityID, ttl, nil, SubjectOptions{
+	cert, err := s.issue(ctx, entityID, ttl, nil, SubjectOptions{
 		CommonName:         parsedCSR.Subject.CommonName,
 		Organization:       parsedCSR.Subject.Organization,
 		OrganizationalUnit: parsedCSR.Subject.OrganizationalUnit,
@@ -485,7 +480,7 @@ func (s *service) IssueFromCSR(ctx context.Context, entityID, ttl string, csr CS
 		Locality:           parsedCSR.Subject.Locality,
 		StreetAddress:      parsedCSR.Subject.StreetAddress,
 		PostalCode:         parsedCSR.Subject.PostalCode,
-	}, parsedCSR.PublicKey)
+	}, parsedCSR.PublicKey, nil)
 	if err != nil {
 		return Certificate{}, errors.Wrap(ErrCreateEntity, err)
 	}

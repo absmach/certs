@@ -106,7 +106,7 @@ func issueCertEndpoint(svc certs.Service) endpoint.Endpoint {
 			return issueCertRes{}, err
 		}
 
-		cert, err := svc.IssueCert(ctx, req.entityID, req.TTL, req.IpAddrs, req.Options, nil)
+		cert, err := svc.IssueCert(ctx, req.entityID, req.TTL, req.IpAddrs, req.Options)
 		if err != nil {
 			return issueCertRes{}, err
 		}

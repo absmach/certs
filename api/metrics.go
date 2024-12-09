@@ -5,7 +5,6 @@ package api
 
 import (
 	"context"
-	"crypto"
 	"crypto/x509"
 	"time"
 
@@ -72,12 +71,12 @@ func (mm *metricsMiddleware) RetrieveCAToken(ctx context.Context) (string, error
 	return mm.svc.RetrieveCAToken(ctx)
 }
 
-func (mm *metricsMiddleware) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options certs.SubjectOptions, privKey crypto.PrivateKey) (certs.Certificate, error) {
+func (mm *metricsMiddleware) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options certs.SubjectOptions) (certs.Certificate, error) {
 	defer func(begin time.Time) {
 		mm.counter.With("method", "issue_certificate").Add(1)
 		mm.latency.With("method", "issue_certificate").Observe(time.Since(begin).Seconds())
 	}(time.Now())
-	return mm.svc.IssueCert(ctx, entityID, ttl, ipAddrs, options, privKey)
+	return mm.svc.IssueCert(ctx, entityID, ttl, ipAddrs, options)
 }
 
 func (mm *metricsMiddleware) ListCerts(ctx context.Context, pm certs.PageMetadata) (certs.CertificatePage, error) {

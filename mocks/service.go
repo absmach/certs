@@ -10,8 +10,6 @@ import (
 
 	certs "github.com/absmach/certs"
 
-	crypto "crypto"
-
 	mock "github.com/stretchr/testify/mock"
 
 	x509 "crypto/x509"
@@ -203,9 +201,9 @@ func (_c *MockService_GetEntityID_Call) RunAndReturn(run func(context.Context, s
 	return _c
 }
 
-// IssueCert provides a mock function with given fields: ctx, entityID, ttl, ipAddrs, option, privKey
-func (_m *MockService) IssueCert(ctx context.Context, entityID string, ttl string, ipAddrs []string, option certs.SubjectOptions, privKey crypto.PrivateKey) (certs.Certificate, error) {
-	ret := _m.Called(ctx, entityID, ttl, ipAddrs, option, privKey)
+// IssueCert provides a mock function with given fields: ctx, entityID, ttl, ipAddrs, option
+func (_m *MockService) IssueCert(ctx context.Context, entityID string, ttl string, ipAddrs []string, option certs.SubjectOptions) (certs.Certificate, error) {
+	ret := _m.Called(ctx, entityID, ttl, ipAddrs, option)
 
 	if len(ret) == 0 {
 		panic("no return value specified for IssueCert")
@@ -213,17 +211,17 @@ func (_m *MockService) IssueCert(ctx context.Context, entityID string, ttl strin
 
 	var r0 certs.Certificate
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, []string, certs.SubjectOptions, crypto.PrivateKey) (certs.Certificate, error)); ok {
-		return rf(ctx, entityID, ttl, ipAddrs, option, privKey)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, []string, certs.SubjectOptions) (certs.Certificate, error)); ok {
+		return rf(ctx, entityID, ttl, ipAddrs, option)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, []string, certs.SubjectOptions, crypto.PrivateKey) certs.Certificate); ok {
-		r0 = rf(ctx, entityID, ttl, ipAddrs, option, privKey)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, []string, certs.SubjectOptions) certs.Certificate); ok {
+		r0 = rf(ctx, entityID, ttl, ipAddrs, option)
 	} else {
 		r0 = ret.Get(0).(certs.Certificate)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string, string, []string, certs.SubjectOptions, crypto.PrivateKey) error); ok {
-		r1 = rf(ctx, entityID, ttl, ipAddrs, option, privKey)
+	if rf, ok := ret.Get(1).(func(context.Context, string, string, []string, certs.SubjectOptions) error); ok {
+		r1 = rf(ctx, entityID, ttl, ipAddrs, option)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -242,14 +240,13 @@ type MockService_IssueCert_Call struct {
 //   - ttl string
 //   - ipAddrs []string
 //   - option certs.SubjectOptions
-//   - privKey crypto.PrivateKey
-func (_e *MockService_Expecter) IssueCert(ctx interface{}, entityID interface{}, ttl interface{}, ipAddrs interface{}, option interface{}, privKey interface{}) *MockService_IssueCert_Call {
-	return &MockService_IssueCert_Call{Call: _e.mock.On("IssueCert", ctx, entityID, ttl, ipAddrs, option, privKey)}
+func (_e *MockService_Expecter) IssueCert(ctx interface{}, entityID interface{}, ttl interface{}, ipAddrs interface{}, option interface{}) *MockService_IssueCert_Call {
+	return &MockService_IssueCert_Call{Call: _e.mock.On("IssueCert", ctx, entityID, ttl, ipAddrs, option)}
 }
 
-func (_c *MockService_IssueCert_Call) Run(run func(ctx context.Context, entityID string, ttl string, ipAddrs []string, option certs.SubjectOptions, privKey crypto.PrivateKey)) *MockService_IssueCert_Call {
+func (_c *MockService_IssueCert_Call) Run(run func(ctx context.Context, entityID string, ttl string, ipAddrs []string, option certs.SubjectOptions)) *MockService_IssueCert_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].([]string), args[4].(certs.SubjectOptions), args[5].(crypto.PrivateKey))
+		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].([]string), args[4].(certs.SubjectOptions))
 	})
 	return _c
 }
@@ -259,7 +256,7 @@ func (_c *MockService_IssueCert_Call) Return(_a0 certs.Certificate, _a1 error) *
 	return _c
 }
 
-func (_c *MockService_IssueCert_Call) RunAndReturn(run func(context.Context, string, string, []string, certs.SubjectOptions, crypto.PrivateKey) (certs.Certificate, error)) *MockService_IssueCert_Call {
+func (_c *MockService_IssueCert_Call) RunAndReturn(run func(context.Context, string, string, []string, certs.SubjectOptions) (certs.Certificate, error)) *MockService_IssueCert_Call {
 	_c.Call.Return(run)
 	return _c
 }
