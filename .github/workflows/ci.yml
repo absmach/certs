@@ -87,7 +87,7 @@ jobs:
         run: go test --race -v -count=1 -coverprofile=coverage/sdk.out ./sdk/...
 
       - name: Upload coverage
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV }}
           files: ./coverage/*.out
