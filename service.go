@@ -58,6 +58,7 @@ var (
 	ErrPrivKeyType            = errors.New("unsupported private key type")
 	ErrPubKeyType             = errors.New("unsupported public key type")
 	ErrFailedParse            = errors.New("failed to parse key PEM")
+	ErrInvalidIP              = errors.New("invalid IP address")
 )
 
 type service struct {
@@ -149,7 +150,11 @@ func (s *service) issue(ctx context.Context, entityID, ttl string, ipAddrs []str
 
 	var ipArray []net.IP
 	for _, ip := range ipAddrs {
-		ipArray = append(ipArray, net.ParseIP(ip))
+		parsedIP := net.ParseIP(ip)
+		if parsedIP == nil {
+			return Certificate{}, errors.Wrap(ErrMalformedEntity, ErrInvalidIP)
+		}
+		ipArray = append(ipArray, parsedIP)
 	}
 
 	template := x509.Certificate{
