@@ -15,6 +15,7 @@ import (
 	"encoding/asn1"
 	"encoding/pem"
 	"math/big"
+	"net"
 	"time"
 
 	"github.com/absmach/certs/errors"
@@ -146,6 +147,11 @@ func (s *service) issue(ctx context.Context, entityID, ttl string, ipAddrs []str
 		}
 	}
 
+	var ipArray []net.IP
+	for _, ip := range ipAddrs {
+		ipArray = append(ipArray, net.ParseIP(ip))
+	}
+
 	template := x509.Certificate{
 		SerialNumber:          serialNumber,
 		Subject:               subject,
@@ -156,6 +162,7 @@ func (s *service) issue(ctx context.Context, entityID, ttl string, ipAddrs []str
 		BasicConstraintsValid: true,
 		IsCA:                  false,
 		DNSNames:              append(s.intermediateCA.Certificate.DNSNames, ipAddrs...),
+		IPAddresses:           ipArray,
 	}
 
 	var privKeyBytes []byte
