@@ -161,7 +161,7 @@ func (s *service) issue(ctx context.Context, entityID, ttl string, ipAddrs []str
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
 		BasicConstraintsValid: true,
 		IsCA:                  false,
-		DNSNames:              append(s.intermediateCA.Certificate.DNSNames, append(ipAddrs, options.DnsNames...)...),
+		DNSNames:              append(s.intermediateCA.Certificate.DNSNames, options.DnsNames...),
 		IPAddresses:           ipArray,
 	}
 
