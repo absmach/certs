@@ -28,7 +28,7 @@ require (
 	golang.org/x/crypto v0.29.0
 	golang.org/x/sync v0.9.0
 	google.golang.org/grpc v1.68.0
-	google.golang.org/protobuf v1.35.2
+	google.golang.org/protobuf v1.36.5
 	gopkg.in/yaml.v2 v2.4.0
 	moul.io/http2curl v1.0.0
 )
