@@ -16,10 +16,10 @@ packages:
         config:
           dir: "{{.InterfaceDir}}/mocks"
           filename: "repository.go"
-      CSRRepository:
+      CertsServiceClient:
         config:
           dir: "{{.InterfaceDir}}/mocks"
-          filename: "csr.go"
+          filename: "certs_client.go"
   github.com/absmach/certs/sdk:
     interfaces:
       SDK:
