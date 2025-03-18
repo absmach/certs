@@ -149,6 +149,8 @@ func (s *service) issue(ctx context.Context, entityID, ttl string, ipAddrs []str
 	}
 
 	var ipArray []net.IP
+	ipArray = append(ipArray, s.intermediateCA.Certificate.IPAddresses...)
+	ipArray = append(ipArray, options.IpAddresses...)
 	for _, ip := range ipAddrs {
 		parsedIP := net.ParseIP(ip)
 		if parsedIP == nil {
@@ -492,6 +494,7 @@ func (s *service) IssueFromCSR(ctx context.Context, entityID, ttl string, csr CS
 		Locality:           parsedCSR.Subject.Locality,
 		StreetAddress:      parsedCSR.Subject.StreetAddress,
 		PostalCode:         parsedCSR.Subject.PostalCode,
+		IpAddresses:        parsedCSR.IPAddresses,
 	}, parsedCSR.PublicKey, nil)
 	if err != nil {
 		return Certificate{}, errors.Wrap(ErrCreateEntity, err)

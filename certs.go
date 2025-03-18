@@ -118,6 +118,7 @@ type SubjectOptions struct {
 	StreetAddress      []string `json:"street_address"`
 	PostalCode         []string `json:"postal_code"`
 	DnsNames           []string `json:"dns_names"`
+	IpAddresses        []net.IP `json:"ip_addresses"`
 }
 
 type Config struct {
