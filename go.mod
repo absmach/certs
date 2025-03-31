@@ -2,6 +2,8 @@ module github.com/absmach/certs
 
 go 1.23.0
 
+toolchain go1.24.1
+
 require (
 	github.com/caarlos0/env/v10 v10.0.0
 	github.com/fatih/color v1.18.0
@@ -10,7 +12,7 @@ require (
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/hokaccha/go-prettyjson v0.0.0-20211117102719-0474bc63780f
-	github.com/jackc/pgx/v5 v5.7.2
+	github.com/jackc/pgx/v5 v5.7.4
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/ory/dockertest/v3 v3.11.0
 	github.com/pelletier/go-toml v1.9.5
