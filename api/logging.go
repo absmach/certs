@@ -192,3 +192,15 @@ func (lm *loggingMiddleware) IssueFromCSR(ctx context.Context, entityID, ttl str
 	}(time.Now())
 	return lm.svc.IssueFromCSR(ctx, entityID, ttl, csr)
 }
+
+func (lm *loggingMiddleware) RevokeCerts(ctx context.Context, entityID string) (err error) {
+	defer func(begin time.Time) {
+		message := fmt.Sprintf("Method revoke_certs for entity %s took %s to complete", entityID, time.Since(begin))
+		if err != nil {
+			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
+			return
+		}
+		lm.logger.Info(message)
+	}(time.Now())
+	return lm.svc.RevokeCerts(ctx, entityID)
+}

@@ -143,3 +143,11 @@ func (mm *metricsMiddleware) IssueFromCSR(ctx context.Context, entityID, ttl str
 	}(time.Now())
 	return mm.svc.IssueFromCSR(ctx, entityID, ttl, csr)
 }
+
+func (mm *metricsMiddleware) RevokeCerts(ctx context.Context, entityID string) error {
+	defer func(begin time.Time) {
+		mm.counter.With("method", "revoke_certificates").Add(1)
+		mm.latency.With("method", "revoke_certificates").Observe(time.Since(begin).Seconds())
+	}(time.Now())
+	return mm.svc.RevokeCerts(ctx, entityID)
+}

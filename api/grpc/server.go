@@ -12,12 +12,14 @@ import (
 	kitgrpc "github.com/go-kit/kit/transport/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 var _ certs.CertsServiceServer = (*grpcServer)(nil)
 
 type grpcServer struct {
-	getEntity kitgrpc.Handler
+	getEntity   kitgrpc.Handler
+	revokeCerts kitgrpc.Handler
 	certs.UnimplementedCertsServiceServer
 }
 
@@ -27,6 +29,11 @@ func NewServer(svc certs.Service) certs.CertsServiceServer {
 			(getEntityEndpoint(svc)),
 			decodeGetEntityReq,
 			encodeGetEntityRes,
+		),
+		revokeCerts: kitgrpc.NewServer(
+			(revokeCertsEndpoint(svc)),
+			decodeRevokeCertsReq,
+			encodeRevokeCertsRes,
 		),
 	}
 }
@@ -39,6 +46,14 @@ func encodeGetEntityRes(_ context.Context, res interface{}) (interface{}, error)
 	return res.(*certs.EntityRes), nil
 }
 
+func decodeRevokeCertsReq(_ context.Context, req interface{}) (interface{}, error) {
+	return req.(*certs.RevokeReq), nil
+}
+
+func encodeRevokeCertsRes(_ context.Context, res interface{}) (interface{}, error) {
+	return res.(*emptypb.Empty), nil
+}
+
 // GetEntityID returns the entity ID for the given entity request.
 func (g *grpcServer) GetEntityID(ctx context.Context, req *certs.EntityReq) (*certs.EntityRes, error) {
 	_, res, err := g.getEntity.ServeGRPC(context.Background(), req)
@@ -46,6 +61,14 @@ func (g *grpcServer) GetEntityID(ctx context.Context, req *certs.EntityReq) (*ce
 		return &certs.EntityRes{}, encodeError(err)
 	}
 	return res.(*certs.EntityRes), nil
+}
+
+func (g *grpcServer) RevokeCerts(ctx context.Context, req *certs.RevokeReq) (*emptypb.Empty, error) {
+	_, res, err := g.getEntity.ServeGRPC(ctx, req)
+	if err != nil {
+		return &emptypb.Empty{}, encodeError(err)
+	}
+	return res.(*emptypb.Empty), nil
 }
 
 func encodeError(err error) error {

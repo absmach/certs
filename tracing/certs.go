@@ -106,3 +106,9 @@ func (tm *tracingMiddleware) IssueFromCSR(ctx context.Context, entityID, ttl str
 	defer span.End()
 	return tm.svc.IssueFromCSR(ctx, entityID, ttl, csr)
 }
+
+func (tm *tracingMiddleware) RevokeCerts(ctx context.Context, entityID string) error {
+	ctx, span := tm.tracer.Start(ctx, "revoke_certs")
+	defer span.End()
+	return tm.svc.RevokeCerts(ctx, entityID)
+}
