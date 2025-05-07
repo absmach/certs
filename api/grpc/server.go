@@ -64,7 +64,7 @@ func (g *grpcServer) GetEntityID(ctx context.Context, req *certs.EntityReq) (*ce
 }
 
 func (g *grpcServer) RevokeCerts(ctx context.Context, req *certs.RevokeReq) (*emptypb.Empty, error) {
-	_, res, err := g.getEntity.ServeGRPC(ctx, req)
+	_, res, err := g.revokeCerts.ServeGRPC(ctx, req)
 	if err != nil {
 		return &emptypb.Empty{}, encodeError(err)
 	}
