@@ -205,4 +205,7 @@ type Repository interface {
 
 	// RemoveCert deletes cert from database.
 	RemoveCert(ctx context.Context, entityId string) error
+
+	// RevokeCertsByEntityID revokes all certificates for a given entity ID.
+	RevokeCertsByEntityID(ctx context.Context, entityID string) error
 }

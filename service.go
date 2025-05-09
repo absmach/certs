@@ -504,30 +504,7 @@ func (s *service) IssueFromCSR(ctx context.Context, entityID, ttl string, csr CS
 }
 
 func (s *service) RevokeCerts(ctx context.Context, entityID string) error {
-	offset := 0
-	limit := 100
-
-	for {
-		certs, err := s.repo.ListCerts(ctx, PageMetadata{Offset: uint64(offset), Limit: uint64(limit), EntityID: entityID})
-		if err != nil {
-			return errors.Wrap(ErrViewEntity, err)
-		}
-
-		for _, cert := range certs.Certificates {
-			if !cert.Revoked {
-				if err := s.RevokeCert(ctx, cert.SerialNumber); err != nil {
-					return errors.Wrap(ErrUpdateEntity, err)
-				}
-			}
-		}
-
-		if certs.Total < uint64(limit) {
-			break
-		}
-		offset += limit
-	}
-
-	return nil
+	return s.repo.RevokeCertsByEntityID(ctx, entityID)
 }
 
 func (s *service) getConcatCAs(ctx context.Context) (Certificate, error) {

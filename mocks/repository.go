@@ -365,6 +365,53 @@ func (_c *MockRepository_RetrieveCert_Call) RunAndReturn(run func(context.Contex
 	return _c
 }
 
+// RevokeCertsByEntityID provides a mock function with given fields: ctx, entityID
+func (_m *MockRepository) RevokeCertsByEntityID(ctx context.Context, entityID string) error {
+	ret := _m.Called(ctx, entityID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RevokeCertsByEntityID")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) error); ok {
+		r0 = rf(ctx, entityID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockRepository_RevokeCertsByEntityID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RevokeCertsByEntityID'
+type MockRepository_RevokeCertsByEntityID_Call struct {
+	*mock.Call
+}
+
+// RevokeCertsByEntityID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - entityID string
+func (_e *MockRepository_Expecter) RevokeCertsByEntityID(ctx interface{}, entityID interface{}) *MockRepository_RevokeCertsByEntityID_Call {
+	return &MockRepository_RevokeCertsByEntityID_Call{Call: _e.mock.On("RevokeCertsByEntityID", ctx, entityID)}
+}
+
+func (_c *MockRepository_RevokeCertsByEntityID_Call) Run(run func(ctx context.Context, entityID string)) *MockRepository_RevokeCertsByEntityID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *MockRepository_RevokeCertsByEntityID_Call) Return(_a0 error) *MockRepository_RevokeCertsByEntityID_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockRepository_RevokeCertsByEntityID_Call) RunAndReturn(run func(context.Context, string) error) *MockRepository_RevokeCertsByEntityID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // UpdateCert provides a mock function with given fields: ctx, cert
 func (_m *MockRepository) UpdateCert(ctx context.Context, cert certs.Certificate) error {
 	ret := _m.Called(ctx, cert)
