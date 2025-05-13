@@ -202,12 +202,12 @@ func ocspEndpoint(svc certs.Service) endpoint.Endpoint {
 		template := ocsp.Response{
 			Status:       status,
 			SerialNumber: req.req.SerialNumber,
-			ThisUpdate:   time.Now(),
-			NextUpdate:   time.Now(),
+			ThisUpdate:   time.Now().UTC(),
+			NextUpdate:   time.Now().UTC(),
 			IssuerHash:   req.req.HashAlgorithm,
 		}
 		if template.Status == ocsp.Revoked {
-			template.RevokedAt = time.Now()
+			template.RevokedAt = time.Now().UTC()
 		}
 		var signer crypto.Signer
 
@@ -228,7 +228,7 @@ func ocspEndpoint(svc certs.Service) endpoint.Endpoint {
 				return nil, err
 			}
 			signer = privKey
-			if !parsedCert.NotAfter.After(time.Now()) {
+			if !parsedCert.NotAfter.After(time.Now().UTC()) {
 				template.Status = ocsp.Revoked
 				template.RevocationReason = ocsp.CessationOfOperation
 			}

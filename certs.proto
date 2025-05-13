@@ -3,12 +3,15 @@
 
 syntax = "proto3";
 
+import "google/protobuf/empty.proto";
+
 package absmach.certs;
 
 option go_package = "./certs";
 
 service CertsService {
   rpc GetEntityID(entityReq) returns (entityRes) {}
+  rpc RevokeCerts(revokeReq) returns (google.protobuf.Empty) {}
 }
 
 message entityReq {
@@ -16,5 +19,9 @@ message entityReq {
 }
 
 message entityRes {
+  string entity_id = 1;
+}
+
+message revokeReq {
   string entity_id = 1;
 }

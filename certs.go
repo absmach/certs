@@ -179,6 +179,9 @@ type Service interface {
 
 	// IssueFromCSR creates a certificate from a given CSR.
 	IssueFromCSR(ctx context.Context, entityID, ttl string, csr CSR) (Certificate, error)
+
+	// RevokeCerts revokes all certificates for a given entity ID.
+	RevokeCerts(ctx context.Context, entityID string) error
 }
 
 type Repository interface {
@@ -202,4 +205,7 @@ type Repository interface {
 
 	// RemoveCert deletes cert from database.
 	RemoveCert(ctx context.Context, entityId string) error
+
+	// RevokeCertsByEntityID revokes all certificates for a given entity ID.
+	RevokeCertsByEntityID(ctx context.Context, entityID string) error
 }
