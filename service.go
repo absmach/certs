@@ -162,8 +162,8 @@ func (s *service) issue(ctx context.Context, entityID, ttl string, ipAddrs []str
 	template := x509.Certificate{
 		SerialNumber:          serialNumber,
 		Subject:               subject,
-		NotBefore:             time.Now(),
-		NotAfter:              time.Now().Add(validity),
+		NotBefore:             time.Now().UTC(),
+		NotAfter:              time.Now().UTC().Add(validity),
 		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
 		BasicConstraintsValid: true,
@@ -234,7 +234,7 @@ func (s *service) RevokeCert(ctx context.Context, serialNumber string) error {
 		return errors.Wrap(ErrViewEntity, err)
 	}
 	cert.Revoked = true
-	cert.ExpiryTime = time.Now()
+	cert.ExpiryTime = time.Now().UTC()
 	if err != s.repo.UpdateCert(ctx, cert) {
 		return errors.Wrap(ErrUpdateEntity, err)
 	}
@@ -303,7 +303,7 @@ func (s *service) ViewCA(ctx context.Context) (Certificate, error) {
 //   - string: the signed JWT token string
 //   - error: an error if the authentication fails or any other error occurs
 func (s *service) RetrieveCertDownloadToken(ctx context.Context, serialNumber string) (string, error) {
-	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{ExpiresAt: time.Now().Add(downloadTokenExpiry).Unix(), Issuer: Organization, Subject: "certs"})
+	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{ExpiresAt: time.Now().UTC().Add(downloadTokenExpiry).Unix(), Issuer: Organization, Subject: "certs"})
 	token, err := jwtToken.SignedString([]byte(serialNumber))
 	if err != nil {
 		return "", errors.Wrap(ErrGetToken, err)
@@ -322,7 +322,7 @@ func (s *service) RetrieveCertDownloadToken(ctx context.Context, serialNumber st
 //   - string: the signed JWT token string
 //   - error: an error if the authentication fails or any other error occurs
 func (s *service) RetrieveCAToken(ctx context.Context) (string, error) {
-	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{ExpiresAt: time.Now().Add(downloadTokenExpiry).Unix(), Issuer: Organization, Subject: "certs"})
+	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{ExpiresAt: time.Now().UTC().Add(downloadTokenExpiry).Unix(), Issuer: Organization, Subject: "certs"})
 	token, err := jwtToken.SignedString([]byte(s.intermediateCA.SerialNumber))
 	if err != nil {
 		return "", errors.Wrap(ErrGetToken, err)
@@ -348,11 +348,11 @@ func (s *service) RenewCert(ctx context.Context, serialNumber string) error {
 	if err != nil {
 		return err
 	}
-	if !oldCert.NotAfter.After(time.Now()) {
+	if !oldCert.NotAfter.After(time.Now().UTC()) {
 		return ErrCertExpired
 	}
-	oldCert.NotBefore = time.Now()
-	oldCert.NotAfter = time.Now().Add(certValidityPeriod)
+	oldCert.NotBefore = time.Now().UTC()
+	oldCert.NotAfter = time.Now().UTC().Add(certValidityPeriod)
 	keyBlock, _ := pem.Decode(cert.Key)
 	privKey, err := x509.ParsePKCS1PrivateKey(keyBlock.Bytes)
 	if err != nil {
@@ -436,7 +436,7 @@ func (s *service) GenerateCRL(ctx context.Context, caType CertType) ([]byte, err
 	}
 
 	// CRL valid for 24 hours
-	now := time.Now()
+	now := time.Now().UTC()
 	expiry := now.Add(24 * time.Hour)
 
 	crlTemplate := &x509.RevocationList{
@@ -556,8 +556,8 @@ func (s *service) generateRootCA(ctx context.Context, config Config) (*CA, error
 				},
 			},
 		},
-		NotBefore:             time.Now(),
-		NotAfter:              time.Now().Add(RootCAValidityPeriod),
+		NotBefore:             time.Now().UTC(),
+		NotAfter:              time.Now().UTC().Add(RootCAValidityPeriod),
 		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageCRLSign,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
 		BasicConstraintsValid: true,
@@ -632,8 +632,8 @@ func (s *service) createIntermediateCA(ctx context.Context, rootCA *CA, config C
 				},
 			},
 		},
-		NotBefore:             time.Now(),
-		NotAfter:              time.Now().Add(IntermediateCAVAlidityPeriod),
+		NotBefore:             time.Now().UTC(),
+		NotAfter:              time.Now().UTC().Add(IntermediateCAVAlidityPeriod),
 		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageCRLSign,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
 		BasicConstraintsValid: true,
@@ -748,7 +748,7 @@ func (s *service) shouldRotate(ctype CertType) bool {
 		if s.rootCA == nil {
 			return true
 		}
-		now := time.Now()
+		now := time.Now().UTC()
 
 		// Check if the certificate is expiring soon i.e., within 30 days.
 		if now.Add(rCertExpiryThreshold).After(s.rootCA.Certificate.NotAfter) {
@@ -758,7 +758,7 @@ func (s *service) shouldRotate(ctype CertType) bool {
 		if s.intermediateCA == nil {
 			return true
 		}
-		now := time.Now()
+		now := time.Now().UTC()
 
 		// Check if the certificate is expiring soon i.e., within 10 days.
 		if now.Add(iCertExpiryThreshold).After(s.intermediateCA.Certificate.NotAfter) {

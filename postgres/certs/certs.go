@@ -218,7 +218,7 @@ func (repo certsRepo) RemoveCert(ctx context.Context, backendId string) error {
 func (repo certsRepo) RevokeCertsByEntityID(ctx context.Context, entityID string) error {
 	q := `UPDATE certs SET revoked = true, expiry_time = $1 WHERE entity_id = $2`
 
-	result, err := repo.db.ExecContext(ctx, q, time.Now(), entityID)
+	result, err := repo.db.ExecContext(ctx, q, time.Now().UTC(), entityID)
 	if err != nil {
 		return errors.Wrap(certs.ErrUpdateEntity, err)
 	}
