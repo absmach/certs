@@ -403,17 +403,6 @@ func encodeCADownloadResponse(_ context.Context, w http.ResponseWriter, response
 		return err
 	}
 
-	if len(resp.PrivateKey) > 0 {
-		f, err = zw.Create("ca.key")
-		if err != nil {
-			return err
-		}
-
-		if _, err = f.Write(resp.PrivateKey); err != nil {
-			return err
-		}
-	}
-
 	if err := zw.Close(); err != nil {
 		return err
 	}
