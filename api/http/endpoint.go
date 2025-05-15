@@ -284,7 +284,6 @@ func downloadCAEndpoint(svc certs.Service) endpoint.Endpoint {
 
 		return fileDownloadRes{
 			Certificate: cert.Certificate,
-			PrivateKey:  cert.Key,
 			Filename:    "ca.zip",
 			ContentType: "application/zip",
 		}, nil

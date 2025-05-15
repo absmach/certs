@@ -521,7 +521,6 @@ func (s *service) getConcatCAs(ctx context.Context) (Certificate, error) {
 	concat := string(intermediateCert.Certificate) + string(rootCert.Certificate)
 	return Certificate{
 		Certificate: []byte(concat),
-		Key:         intermediateCert.Key,
 		ExpiryTime:  intermediateCert.ExpiryTime,
 	}, nil
 }
