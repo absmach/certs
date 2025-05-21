@@ -15,7 +15,7 @@ require (
 	github.com/ory/dockertest/v3 v3.12.0
 	github.com/pelletier/go-toml v1.9.5
 	github.com/prometheus/client_golang v1.22.0
-	github.com/rubenv/sql-migrate v1.7.1
+	github.com/rubenv/sql-migrate v1.8.0
 	github.com/spf13/cobra v1.9.1
 	github.com/stretchr/testify v1.10.0
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.60.0
