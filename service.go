@@ -19,7 +19,7 @@ import (
 	"time"
 
 	"github.com/absmach/certs/errors"
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/ocsp"
 )
 
@@ -246,7 +246,7 @@ func (s *service) RevokeCert(ctx context.Context, serialNumber string) error {
 // If the token is invalid or expired, an error is returned.
 // The function returns the retrieved certificate and any error encountered.
 func (s *service) RetrieveCert(ctx context.Context, token, serialNumber string) (Certificate, []byte, error) {
-	if _, err := jwt.ParseWithClaims(token, &jwt.StandardClaims{Issuer: Organization, Subject: "certs"}, func(token *jwt.Token) (interface{}, error) {
+	if _, err := jwt.ParseWithClaims(token, &jwt.RegisteredClaims{Issuer: Organization, Subject: "certs"}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(serialNumber), nil
 	}); err != nil {
 		return Certificate{}, []byte{}, errors.Wrap(err, ErrMalformedEntity)
@@ -303,7 +303,7 @@ func (s *service) ViewCA(ctx context.Context) (Certificate, error) {
 //   - string: the signed JWT token string
 //   - error: an error if the authentication fails or any other error occurs
 func (s *service) RetrieveCertDownloadToken(ctx context.Context, serialNumber string) (string, error) {
-	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{ExpiresAt: time.Now().UTC().Add(downloadTokenExpiry).Unix(), Issuer: Organization, Subject: "certs"})
+	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{ExpiresAt: jwt.NewNumericDate(time.Now().UTC().Add(downloadTokenExpiry)), Issuer: Organization, Subject: "certs"})
 	token, err := jwtToken.SignedString([]byte(serialNumber))
 	if err != nil {
 		return "", errors.Wrap(ErrGetToken, err)
@@ -322,7 +322,7 @@ func (s *service) RetrieveCertDownloadToken(ctx context.Context, serialNumber st
 //   - string: the signed JWT token string
 //   - error: an error if the authentication fails or any other error occurs
 func (s *service) RetrieveCAToken(ctx context.Context) (string, error) {
-	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{ExpiresAt: time.Now().UTC().Add(downloadTokenExpiry).Unix(), Issuer: Organization, Subject: "certs"})
+	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{ExpiresAt: jwt.NewNumericDate(time.Now().UTC().Add(downloadTokenExpiry)), Issuer: Organization, Subject: "certs"})
 	token, err := jwtToken.SignedString([]byte(s.intermediateCA.SerialNumber))
 	if err != nil {
 		return "", errors.Wrap(ErrGetToken, err)
@@ -461,7 +461,7 @@ func (s *service) GenerateCRL(ctx context.Context, caType CertType) ([]byte, err
 }
 
 func (s *service) GetChainCA(ctx context.Context, token string) (Certificate, error) {
-	if _, err := jwt.ParseWithClaims(token, &jwt.StandardClaims{Issuer: Organization, Subject: "certs"}, func(token *jwt.Token) (interface{}, error) {
+	if _, err := jwt.ParseWithClaims(token, &jwt.RegisteredClaims{Issuer: Organization, Subject: "certs"}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(s.intermediateCA.SerialNumber), nil
 	}); err != nil {
 		return Certificate{}, errors.Wrap(err, ErrMalformedEntity)
