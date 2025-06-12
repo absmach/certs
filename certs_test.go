@@ -17,7 +17,7 @@ import (
 	"github.com/absmach/certs"
 	"github.com/absmach/certs/errors"
 	"github.com/absmach/certs/mocks"
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -161,7 +161,7 @@ func TestGetCertDownloadToken(t *testing.T) {
 func TestGetCert(t *testing.T) {
 	cRepo := new(mocks.MockRepository)
 
-	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{ExpiresAt: time.Now().Add(time.Minute * 5).Unix(), Issuer: certs.Organization, Subject: "certs"})
+	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * 5).UTC()), Issuer: certs.Organization, Subject: "certs"})
 	validToken, err := jwtToken.SignedString([]byte(serialNumber))
 	require.NoError(t, err)
 
