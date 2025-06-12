@@ -161,7 +161,7 @@ func TestGetCertDownloadToken(t *testing.T) {
 func TestGetCert(t *testing.T) {
 	cRepo := new(mocks.MockRepository)
 
-	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * 5)), Issuer: certs.Organization, Subject: "certs"})
+	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * 5).UTC()), Issuer: certs.Organization, Subject: "certs"})
 	validToken, err := jwtToken.SignedString([]byte(serialNumber))
 	require.NoError(t, err)
 
