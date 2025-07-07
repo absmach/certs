@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/rsa"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"net"
 	"time"
 
@@ -85,17 +86,18 @@ type PageMetadata struct {
 }
 
 type CSRMetadata struct {
-	CommonName         string   `json:"common_name"`
-	Organization       []string `json:"organization"`
-	OrganizationalUnit []string `json:"organizational_unit"`
-	Country            []string `json:"country"`
-	Province           []string `json:"province"`
-	Locality           []string `json:"locality"`
-	StreetAddress      []string `json:"street_address"`
-	PostalCode         []string `json:"postal_code"`
-	DNSNames           []string `json:"dns_names"`
-	IPAddresses        []string `json:"ip_addresses"`
-	EmailAddresses     []string `json:"email_addresses"`
+	CommonName         string           `json:"common_name"`
+	Organization       []string         `json:"organization"`
+	OrganizationalUnit []string         `json:"organizational_unit"`
+	Country            []string         `json:"country"`
+	Province           []string         `json:"province"`
+	Locality           []string         `json:"locality"`
+	StreetAddress      []string         `json:"street_address"`
+	PostalCode         []string         `json:"postal_code"`
+	DNSNames           []string         `json:"dns_names"`
+	IPAddresses        []string         `json:"ip_addresses"`
+	EmailAddresses     []string         `json:"email_addresses"`
+	ExtraExtensions    []pkix.Extension `json:"extra_extensions"`
 }
 
 type CSR struct {

@@ -372,8 +372,9 @@ func CreateCSR(metadata certs.CSRMetadata, privKey any) (certs.CSR, errors.SDKEr
 			StreetAddress:      metadata.StreetAddress,
 			PostalCode:         metadata.PostalCode,
 		},
-		EmailAddresses: metadata.EmailAddresses,
-		DNSNames:       metadata.DNSNames,
+		EmailAddresses:  metadata.EmailAddresses,
+		DNSNames:        metadata.DNSNames,
+		ExtraExtensions: metadata.ExtraExtensions,
 	}
 
 	for _, ip := range metadata.IPAddresses {
