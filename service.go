@@ -108,7 +108,7 @@ func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs [
 		return Certificate{}, ErrIntermediateCANotFound
 	}
 
-	cert, err := s.issue(ctx, entityID, ttl, ipAddrs, options, pKey.Public(), pKey)
+	cert, err := s.issue(ctx, entityID, ttl, ipAddrs, options, pKey.Public(), pKey, nil)
 	if err != nil {
 		return Certificate{}, err
 	}
@@ -116,7 +116,7 @@ func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs [
 	return cert, nil
 }
 
-func (s *service) issue(ctx context.Context, entityID, ttl string, ipAddrs []string, options SubjectOptions, pubKey crypto.PublicKey, privKey crypto.PrivateKey) (Certificate, error) {
+func (s *service) issue(ctx context.Context, entityID, ttl string, ipAddrs []string, options SubjectOptions, pubKey crypto.PublicKey, privKey crypto.PrivateKey, exts []pkix.Extension) (Certificate, error) {
 	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
 	if err != nil {
 		return Certificate{}, err
@@ -170,6 +170,7 @@ func (s *service) issue(ctx context.Context, entityID, ttl string, ipAddrs []str
 		IsCA:                  false,
 		DNSNames:              append(s.intermediateCA.Certificate.DNSNames, options.DnsNames...),
 		IPAddresses:           ipArray,
+		ExtraExtensions:       exts,
 	}
 
 	var privKeyBytes []byte
@@ -495,7 +496,7 @@ func (s *service) IssueFromCSR(ctx context.Context, entityID, ttl string, csr CS
 		StreetAddress:      parsedCSR.Subject.StreetAddress,
 		PostalCode:         parsedCSR.Subject.PostalCode,
 		IpAddresses:        parsedCSR.IPAddresses,
-	}, parsedCSR.PublicKey, nil)
+	}, parsedCSR.PublicKey, nil, parsedCSR.ExtraExtensions)
 	if err != nil {
 		return Certificate{}, errors.Wrap(ErrCreateEntity, err)
 	}
