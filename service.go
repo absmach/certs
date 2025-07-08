@@ -496,7 +496,7 @@ func (s *service) IssueFromCSR(ctx context.Context, entityID, ttl string, csr CS
 		StreetAddress:      parsedCSR.Subject.StreetAddress,
 		PostalCode:         parsedCSR.Subject.PostalCode,
 		IpAddresses:        parsedCSR.IPAddresses,
-	}, parsedCSR.PublicKey, nil, parsedCSR.ExtraExtensions)
+	}, parsedCSR.PublicKey, nil, parsedCSR.Extensions)
 	if err != nil {
 		return Certificate{}, errors.Wrap(ErrCreateEntity, err)
 	}
