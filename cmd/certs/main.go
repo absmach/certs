@@ -43,7 +43,7 @@ const (
 	defDB          = "certs"
 	defSvcHTTPPort = "9010"
 	defSvcGRPCPort = "7012"
-	configFile     = "/config/config.yml"
+	configFile     = "/config/config.yaml"
 )
 
 type config struct {
