@@ -1,8 +1,9 @@
 module github.com/absmach/certs
 
-go 1.23.0
+go 1.24.5
 
 require (
+	github.com/absmach/supermq v0.17.1-0.20250808134836-bc7b988098de
 	github.com/caarlos0/env/v10 v10.0.0
 	github.com/fatih/color v1.18.0
 	github.com/go-chi/chi/v5 v5.2.2
@@ -54,7 +55,7 @@ require (
 	github.com/go-logfmt/logfmt v0.6.0 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/go-viper/mapstructure/v2 v2.1.0 // indirect
+	github.com/go-viper/mapstructure/v2 v2.3.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/google/uuid v1.6.0 // indirect

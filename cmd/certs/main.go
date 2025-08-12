@@ -22,10 +22,11 @@ import (
 	"github.com/absmach/certs/internal/prometheus"
 	"github.com/absmach/certs/internal/server"
 	grpcserver "github.com/absmach/certs/internal/server/grpc"
-	httpserver "github.com/absmach/certs/internal/server/http"
 	"github.com/absmach/certs/internal/uuid"
 	cpostgres "github.com/absmach/certs/postgres/certs"
 	"github.com/absmach/certs/tracing"
+	smq "github.com/absmach/supermq/pkg/server"
+	httpserver "github.com/absmach/supermq/pkg/server/http"
 	"github.com/caarlos0/env/v10"
 	"github.com/jmoiron/sqlx"
 	"go.opentelemetry.io/otel/trace"
@@ -96,7 +97,7 @@ func main() {
 	}()
 	tracer := tp.Tracer(svcName)
 
-	httpServerConfig := server.Config{Port: defSvcHTTPPort}
+	httpServerConfig := smq.Config{Port: defSvcHTTPPort}
 	if err := env.ParseWithOptions(&httpServerConfig, env.Options{Prefix: envPrefixHTTP}); err != nil {
 		logger.Error(fmt.Sprintf("failed to load %s gRPC server configuration : %s", svcName, err))
 	}
@@ -113,7 +114,7 @@ func main() {
 		return
 	}
 
-	grpcServerConfig := server.Config{Port: defSvcGRPCPort}
+	grpcServerConfig := smq.Config{Port: defSvcGRPCPort}
 	if err := env.ParseWithOptions(&grpcServerConfig, env.Options{Prefix: envPrefixGRPC}); err != nil {
 		log.Printf("failed to load %s gRPC server configuration : %s", svcName, err.Error())
 		return
