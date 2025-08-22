@@ -63,14 +63,14 @@ type CA struct {
 }
 
 type Certificate struct {
-	SerialNumber string    `db:"serial_number"`
-	Certificate  []byte    `db:"certificate"`
-	Key          []byte    `db:"key"`
-	Revoked      bool      `db:"revoked"`
-	ExpiryTime   time.Time `db:"expiry_time"`
-	EntityID     string    `db:"entity_id"`
-	Type         CertType  `db:"type"`
-	DownloadUrl  string    `db:"-"`
+	SerialNumber string    `json:"serial_number"`
+	Certificate  []byte    `json:"certificate"`
+	Key          []byte    `json:"key"`
+	Revoked      bool      `json:"revoked"`
+	ExpiryTime   time.Time `json:"expiry_time"`
+	EntityID     string    `json:"entity_id"`
+	Type         CertType  `json:"type"`
+	DownloadUrl  string    `json:"-"`
 }
 
 type CertificatePage struct {
@@ -184,30 +184,4 @@ type Service interface {
 
 	// RevokeCerts revokes all certificates for a given entity ID.
 	RevokeCerts(ctx context.Context, entityID string) error
-}
-
-type Repository interface {
-	// CreateCert adds a certificate record to the database.
-	CreateCert(ctx context.Context, cert Certificate) error
-
-	// RetrieveCert retrieves a certificate record from the database.
-	RetrieveCert(ctx context.Context, serialNumber string) (Certificate, error)
-
-	// UpdateCert updates a certificate record in the database.
-	UpdateCert(ctx context.Context, cert Certificate) error
-
-	// ListCerts retrieves the certificates from the database while applying filters.
-	ListCerts(ctx context.Context, pm PageMetadata) (CertificatePage, error)
-
-	// GetCAs retrieves rootCA and intermediateCA from database.
-	GetCAs(ctx context.Context, caType ...CertType) ([]Certificate, error)
-
-	// ListRevokedCerts retrieves revoked lists from database.
-	ListRevokedCerts(ctx context.Context) ([]Certificate, error)
-
-	// RemoveCert deletes cert from database.
-	RemoveCert(ctx context.Context, entityId string) error
-
-	// RevokeCertsByEntityID revokes all certificates for a given entity ID.
-	RevokeCertsByEntityID(ctx context.Context, entityID string) error
 }
