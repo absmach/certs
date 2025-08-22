@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net/http"
 	"time"
 
 	"github.com/absmach/certs"
@@ -442,36 +443,71 @@ func (va *openbaoPKIAgent) GetCA() ([]byte, error) {
 		return nil, err
 	}
 
-	req := va.client.NewRequest("GET", "/v1"+va.caURL)
-	if va.namespace != "" {
-		req.Headers.Set("X-Vault-Namespace", va.namespace)
+	url := va.host + "/v1/" + va.path + "/ca"
+	fmt.Printf("DEBUG: Making HTTP request to: %s\n", url)
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
 	}
 
-	resp, err := va.client.RawRequest(req)
+	if va.secret != nil && va.secret.Auth != nil && va.secret.Auth.ClientToken != "" {
+		req.Header.Set("X-Vault-Token", va.secret.Auth.ClientToken)
+	}
+
+	if va.namespace != "" {
+		req.Header.Set("X-Vault-Namespace", va.namespace)
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to make CA request: %w", err)
+		fmt.Printf("DEBUG: HTTP request failed: %v\n", err)
+		return nil, fmt.Errorf("failed to make HTTP request: %w", err)
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
+	fmt.Printf("DEBUG: HTTP response status: %d\n", resp.StatusCode)
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		fmt.Printf("DEBUG: HTTP response body: %s\n", string(body))
 		return nil, fmt.Errorf("failed to get CA certificate: HTTP %d", resp.StatusCode)
 	}
 
-	cert, err := io.ReadAll(resp.Body)
+	certData, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read CA response: %w", err)
 	}
 
-	if len(cert) == 0 {
+	fmt.Printf("DEBUG: Certificate data length: %d\n", len(certData))
+	
+	if len(certData) == 0 {
 		return nil, fmt.Errorf("CA certificate response is empty - PKI may not be initialized")
 	}
 
-	// Basic validation that it looks like PEM
-	if !bytes.Contains(cert, []byte("-----BEGIN CERTIFICATE-----")) {
-		return nil, fmt.Errorf("CA response does not contain valid PEM certificate")
+	if bytes.Contains(certData, []byte("-----BEGIN CERTIFICATE-----")) {
+		fmt.Printf("DEBUG: Certificate is already in PEM format\n")
+		return certData, nil
 	}
 
-	return cert, nil
+	fmt.Printf("DEBUG: Converting DER certificate to PEM format\n")
+	
+	_, err = x509.ParseCertificate(certData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse DER certificate: %w", err)
+	}
+
+	pemBlock := &pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: certData,
+	}
+
+	pemData := pem.EncodeToMemory(pemBlock)
+	fmt.Printf("DEBUG: Converted to PEM, length: %d\n", len(pemData))
+	fmt.Printf("DEBUG: PEM preview: %.100s...\n", string(pemData))
+
+	return pemData, nil
 }
 
 func (va *openbaoPKIAgent) GetCAChain() ([]byte, error) {
@@ -480,29 +516,38 @@ func (va *openbaoPKIAgent) GetCAChain() ([]byte, error) {
 		return nil, err
 	}
 
-	// The /ca_chain endpoint returns raw certificate chain data, not JSON
-	req := va.client.NewRequest("GET", "/v1"+va.caChainURL)
-	if va.namespace != "" {
-		req.Headers.Set("X-Vault-Namespace", va.namespace)
+	url := va.host + "/v1/" + va.path + "/ca_chain"
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
 	}
 
-	resp, err := va.client.RawRequest(req)
+	if va.secret != nil && va.secret.Auth != nil && va.secret.Auth.ClientToken != "" {
+		req.Header.Set("X-Vault-Token", va.secret.Auth.ClientToken)
+	}
+
+	if va.namespace != "" {
+		req.Header.Set("X-Vault-Namespace", va.namespace)
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to make HTTP request: %w", err)
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to get CA chain: HTTP %d", resp.StatusCode)
 	}
 
-	// Read the raw certificate chain data
-	chain, err := io.ReadAll(resp.Body)
+	chainData, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read CA chain response: %w", err)
 	}
 
-	return chain, nil
+	return chainData, nil
 }
 
 func (va *openbaoPKIAgent) GetCRL() ([]byte, error) {
@@ -511,29 +556,38 @@ func (va *openbaoPKIAgent) GetCRL() ([]byte, error) {
 		return nil, err
 	}
 
-	// The /crl endpoint returns raw CRL data, not JSON
-	req := va.client.NewRequest("GET", "/v1"+va.crlURL)
-	if va.namespace != "" {
-		req.Headers.Set("X-Vault-Namespace", va.namespace)
+	url := va.host + "/v1/" + va.path + "/crl"
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
 	}
 
-	resp, err := va.client.RawRequest(req)
+	if va.secret != nil && va.secret.Auth != nil && va.secret.Auth.ClientToken != "" {
+		req.Header.Set("X-Vault-Token", va.secret.Auth.ClientToken)
+	}
+
+	if va.namespace != "" {
+		req.Header.Set("X-Vault-Namespace", va.namespace)
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to make HTTP request: %w", err)
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to get CRL: HTTP %d", resp.StatusCode)
 	}
 
-	// Read the raw CRL data
-	crl, err := io.ReadAll(resp.Body)
+	crlData, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read CRL response: %w", err)
 	}
 
-	return crl, nil
+	return crlData, nil
 }
 
 func (va *openbaoPKIAgent) SignCSR(csr []byte, entityId, ttl string) (certs.Certificate, error) {

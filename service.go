@@ -144,14 +144,12 @@ func (s *service) ViewCA(ctx context.Context) (Certificate, error) {
 		return Certificate{}, errors.Wrap(ErrViewEntity, err)
 	}
 
-	// Debug: Check if CA PEM is empty or invalid
 	if len(caPEM) == 0 {
 		return Certificate{}, errors.New("CA certificate PEM is empty")
 	}
 
 	block, _ := pem.Decode(caPEM)
 	if block == nil {
-		// Debug: Log the first 100 characters of what we received
 		caPreview := string(caPEM)
 		if len(caPreview) > 100 {
 			caPreview = caPreview[:100] + "..."

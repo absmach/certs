@@ -148,7 +148,7 @@ if [ ! -f /opt/openbao/data/configured ]; then
     fi
   done
 
-   # Generate root CA certificate
+  # Generate root CA certificate
   bao write -field=certificate pki/root/generate/internal \
     common_name="$SMQ_OPENBAO_PKI_CA_CN" \
     organization="$SMQ_OPENBAO_PKI_CA_O" \
