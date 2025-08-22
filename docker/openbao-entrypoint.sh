@@ -116,14 +116,14 @@ if [ ! -f /opt/openbao/data/configured ]; then
   # Generate root CA certificate
   echo "Generating root CA certificate..."
   bao write -field=certificate pki/root/generate/internal \
-    common_name="${SMQ_OPENBAO_PKI_CA_CN:-Abstract Machines CA}" \
-    organization="${SMQ_OPENBAO_PKI_CA_O:-Abstract Machines}" \
-    ou="${SMQ_OPENBAO_PKI_CA_OU:-IT Department}" \
-    country="${SMQ_OPENBAO_PKI_CA_C:-US}" \
-    locality="${SMQ_OPENBAO_PKI_CA_L:-San Francisco}" \
-    province="${SMQ_OPENBAO_PKI_CA_ST:-California}" \
-    street_address="${SMQ_OPENBAO_PKI_CA_ADDR:-}" \
-    postal_code="${SMQ_OPENBAO_PKI_CA_PO:-}" \
+    common_name="$SMQ_OPENBAO_PKI_CA_CN" \
+    organization="$SMQ_OPENBAO_PKI_CA_O" \
+    ou="$SMQ_OPENBAO_PKI_CA_OU" \
+    country="$SMQ_OPENBAO_PKI_CA_C" \
+    locality="$SMQ_OPENBAO_PKI_CA_L" \
+    province="$SMQ_OPENBAO_PKI_CA_ST" \
+    street_address="$SMQ_OPENBAO_PKI_CA_ADDR" \
+    postal_code="$SMQ_OPENBAO_PKI_CA_PO" \
     ttl=87600h \
     key_bits=2048 \
     exclude_cn_from_sans=true
