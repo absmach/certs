@@ -5,10 +5,12 @@
 package pki
 
 import (
+	"bytes"
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"io"
 	"log/slog"
 	"time"
 
@@ -117,9 +119,6 @@ func (va *openbaoPKIAgent) Issue(entityId, ttl string, ipAddrs []string, options
 		"exclude_cn_from_sans": true,
 	}
 
-	if options.CommonName != "" {
-		secretValues["common_name"] = options.CommonName
-	}
 	if len(options.Organization) > 0 {
 		secretValues["organization"] = options.Organization
 	}
@@ -443,20 +442,36 @@ func (va *openbaoPKIAgent) GetCA() ([]byte, error) {
 		return nil, err
 	}
 
-	secret, err := va.client.Logical().Read(va.caURL)
+	req := va.client.NewRequest("GET", "/v1"+va.caURL)
+	if va.namespace != "" {
+		req.Headers.Set("X-Vault-Namespace", va.namespace)
+	}
+
+	resp, err := va.client.RawRequest(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to make CA request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("failed to get CA certificate: HTTP %d", resp.StatusCode)
 	}
 
-	if secret == nil || secret.Data == nil {
-		return nil, fmt.Errorf("no CA certificate data returned from OpenBao")
+	cert, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read CA response: %w", err)
 	}
 
-	if certData, ok := secret.Data["certificate"].(string); ok {
-		return []byte(certData), nil
+	if len(cert) == 0 {
+		return nil, fmt.Errorf("CA certificate response is empty - PKI may not be initialized")
 	}
 
-	return nil, fmt.Errorf("CA certificate not found in response")
+	// Basic validation that it looks like PEM
+	if !bytes.Contains(cert, []byte("-----BEGIN CERTIFICATE-----")) {
+		return nil, fmt.Errorf("CA response does not contain valid PEM certificate")
+	}
+
+	return cert, nil
 }
 
 func (va *openbaoPKIAgent) GetCAChain() ([]byte, error) {
@@ -465,20 +480,29 @@ func (va *openbaoPKIAgent) GetCAChain() ([]byte, error) {
 		return nil, err
 	}
 
-	secret, err := va.client.Logical().Read(va.caChainURL)
+	// The /ca_chain endpoint returns raw certificate chain data, not JSON
+	req := va.client.NewRequest("GET", "/v1"+va.caChainURL)
+	if va.namespace != "" {
+		req.Headers.Set("X-Vault-Namespace", va.namespace)
+	}
+
+	resp, err := va.client.RawRequest(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("failed to get CA chain: HTTP %d", resp.StatusCode)
+	}
+
+	// Read the raw certificate chain data
+	chain, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
 
-	if secret == nil || secret.Data == nil {
-		return nil, fmt.Errorf("no CA chain data returned from OpenBao")
-	}
-
-	if chainData, ok := secret.Data["certificate"].(string); ok {
-		return []byte(chainData), nil
-	}
-
-	return nil, fmt.Errorf("CA chain not found in response")
+	return chain, nil
 }
 
 func (va *openbaoPKIAgent) GetCRL() ([]byte, error) {
@@ -487,20 +511,29 @@ func (va *openbaoPKIAgent) GetCRL() ([]byte, error) {
 		return nil, err
 	}
 
-	secret, err := va.client.Logical().Read(va.crlURL)
+	// The /crl endpoint returns raw CRL data, not JSON
+	req := va.client.NewRequest("GET", "/v1"+va.crlURL)
+	if va.namespace != "" {
+		req.Headers.Set("X-Vault-Namespace", va.namespace)
+	}
+
+	resp, err := va.client.RawRequest(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("failed to get CRL: HTTP %d", resp.StatusCode)
+	}
+
+	// Read the raw CRL data
+	crl, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
 
-	if secret == nil || secret.Data == nil {
-		return nil, fmt.Errorf("no CRL data returned from OpenBao")
-	}
-
-	if crlData, ok := secret.Data["certificate"].(string); ok {
-		return []byte(crlData), nil
-	}
-
-	return nil, fmt.Errorf("CRL not found in response")
+	return crl, nil
 }
 
 func (va *openbaoPKIAgent) SignCSR(csr []byte, entityId, ttl string) (certs.Certificate, error) {

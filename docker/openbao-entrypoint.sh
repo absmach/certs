@@ -4,13 +4,11 @@
 
 set -e
 
-# Install jq for JSON parsing
 apk add --no-cache jq
 
-# Create necessary directories
+# Create required directories
 mkdir -p /opt/openbao/config /opt/openbao/data /opt/openbao/logs
 
-# Create OpenBao configuration file
 cat > /opt/openbao/config/config.hcl << 'EOF'
 storage "file" {
   path = "/opt/openbao/data"
@@ -72,7 +70,7 @@ else
     sleep 5
 
     # Check if OpenBao is sealed and unseal if necessary
-    if bao status | grep -q "Sealed.*true"; then
+    if bao status -format=json | jq -e '.sealed == true' >/dev/null; then
       echo "OpenBao is sealed, unsealing..."
       UNSEAL_KEY_1=$(cat /opt/openbao/data/init.json | jq -r '.unseal_keys_b64[0]')
       UNSEAL_KEY_2=$(cat /opt/openbao/data/init.json | jq -r '.unseal_keys_b64[1]')
@@ -97,24 +95,60 @@ if [ ! -f /opt/openbao/data/configured ]; then
   
   # Create namespace if specified
   if [ -n "$SMQ_OPENBAO_NAMESPACE" ]; then
-    if bao namespace create "$SMQ_OPENBAO_NAMESPACE" 2>/dev/null; then
+    if bao namespace create "$SMQ_OPENBAO_NAMESPACE" 2>/tmp/ns_error; then
       export BAO_NAMESPACE="$SMQ_OPENBAO_NAMESPACE"
       echo "$SMQ_OPENBAO_NAMESPACE" > /opt/openbao/data/namespace
       echo "Created namespace: $SMQ_OPENBAO_NAMESPACE"
     else
-      echo "Namespace $SMQ_OPENBAO_NAMESPACE already exists or failed to create"
+      if grep -q "namespace already exists" /tmp/ns_error; then
+        export BAO_NAMESPACE="$SMQ_OPENBAO_NAMESPACE"
+        echo "$SMQ_OPENBAO_NAMESPACE" > /opt/openbao/data/namespace
+        echo "Using existing namespace: $SMQ_OPENBAO_NAMESPACE"
+      else
+        echo "ERROR: Failed to create namespace $SMQ_OPENBAO_NAMESPACE:" >&2
+        cat /tmp/ns_error >&2
+        exit 1
+      fi
     fi
+    rm -f /tmp/ns_error
   fi
 
   # Enable authentication methods and secrets engines
-  bao auth enable approle || echo "AppRole already enabled"
-  bao secrets enable -path=pki pki || echo "PKI already enabled"
-  
+  if ! bao auth enable approle 2>/tmp/auth_error; then
+    if ! grep -q "already in use" /tmp/auth_error; then
+      echo "ERROR: Failed to enable AppRole auth method:" >&2
+      cat /tmp/auth_error >&2
+      exit 1
+    fi
+    echo "AppRole already enabled"
+  fi
+  rm -f /tmp/auth_error
+
+  # Enable PKI secrets engine
+  if ! bao secrets enable -path=pki pki 2>/tmp/pki_error; then
+    # If the failure wasn’t because the mount already exists, abort
+    if ! grep -q "already in use" /tmp/pki_error; then
+      echo "ERROR: Failed to enable PKI secrets engine:" >&2
+      cat /tmp/pki_error >&2
+      exit 1
+    fi
+    echo "PKI already enabled"
+  fi
+  rm -f /tmp/pki_error
+
   # Configure PKI engine
   bao secrets tune -max-lease-ttl=87600h pki
 
-  # Generate root CA certificate
-  echo "Generating root CA certificate..."
+  # Validate required CA environment variables
+  for var in SMQ_OPENBAO_PKI_CA_CN SMQ_OPENBAO_PKI_CA_O SMQ_OPENBAO_PKI_CA_C; do
+    eval "value=\$var"
+    if [ -z "$value" ]; then
+      echo "ERROR: Required environment variable $var is not set" >&2
+      exit 1
+    fi
+  done
+
+   # Generate root CA certificate
   bao write -field=certificate pki/root/generate/internal \
     common_name="$SMQ_OPENBAO_PKI_CA_CN" \
     organization="$SMQ_OPENBAO_PKI_CA_O" \
@@ -128,14 +162,20 @@ if [ ! -f /opt/openbao/data/configured ]; then
     key_bits=2048 \
     exclude_cn_from_sans=true
 
+  if [ $? -eq 0 ]; then
+    echo "Root CA certificate generated successfully!"
+  else
+    echo "ERROR: Failed to generate root CA certificate" >&2
+    exit 1
+  fi
+
   # Configure CA and CRL URLs
   bao write pki/config/urls \
     issuing_certificates='http://127.0.0.1:8200/v1/pki/ca' \
     crl_distribution_points='http://127.0.0.1:8200/v1/pki/crl'
 
-  # Create PKI role
-  echo "Creating PKI role: ${SMQ_OPENBAO_PKI_ROLE:-certs}"
-  bao write pki/roles/"${SMQ_OPENBAO_PKI_ROLE:-certs}" \
+  echo "Creating PKI role: ${SMQ_OPENBAO_PKI_ROLE}"
+  bao write pki/roles/"${SMQ_OPENBAO_PKI_ROLE}" \
     allow_any_name=true \
     enforce_hostnames=false \
     allow_ip_sans=true \
@@ -147,10 +187,10 @@ if [ ! -f /opt/openbao/data/configured ]; then
   # Create PKI policy
   cat > /opt/openbao/config/pki-policy.hcl << EOF
 # PKI certificate operations
-path "pki/issue/${SMQ_OPENBAO_PKI_ROLE:-certs}" {
+path "pki/issue/${SMQ_OPENBAO_PKI_ROLE}" {
   capabilities = ["create", "update"]
 }
-path "pki/sign/${SMQ_OPENBAO_PKI_ROLE:-certs}" {
+path "pki/sign/${SMQ_OPENBAO_PKI_ROLE}" {
   capabilities = ["create", "update"]
 }
 path "pki/certs" {
@@ -237,12 +277,17 @@ echo "OpenBao Production Setup Complete"
 echo "================================"
 echo "OpenBao Address: http://localhost:8200"
 echo "UI Available at: http://localhost:8200/ui"
-echo "PKI Role: ${SMQ_OPENBAO_PKI_ROLE:-certs}"
-echo "AppRole: ${SMQ_OPENBAO_APP_ROLE:-auto-generated}"
+echo "PKI Role: ${SMQ_OPENBAO_PKI_ROLE}"
 echo "================================"
 echo "IMPORTANT: Store the init.json file securely!"
 echo "It contains unseal keys and root token!"
 echo "================================"
 
 echo "OpenBao is ready for certs service on port 8200"
-wait $BAO_PID
+
+if [ -n "$BAO_PID" ]; then
+  wait $BAO_PID
+else
+  echo "ERROR: OpenBao server process ID not available" >&2
+  exit 1
+fi

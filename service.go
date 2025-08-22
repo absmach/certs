@@ -56,9 +56,7 @@ var (
 )
 
 type service struct {
-	rootCA         *CA
-	intermediateCA *CA
-	pki            Agent
+	pki Agent
 }
 
 var _ Service = (*service)(nil)
@@ -67,6 +65,7 @@ func NewService(ctx context.Context, pki Agent) (Service, error) {
 	var svc service
 
 	svc.pki = pki
+
 	return &svc, nil
 }
 
@@ -145,9 +144,19 @@ func (s *service) ViewCA(ctx context.Context) (Certificate, error) {
 		return Certificate{}, errors.Wrap(ErrViewEntity, err)
 	}
 
+	// Debug: Check if CA PEM is empty or invalid
+	if len(caPEM) == 0 {
+		return Certificate{}, errors.New("CA certificate PEM is empty")
+	}
+
 	block, _ := pem.Decode(caPEM)
 	if block == nil {
-		return Certificate{}, errors.New("failed to decode CA certificate PEM")
+		// Debug: Log the first 100 characters of what we received
+		caPreview := string(caPEM)
+		if len(caPreview) > 100 {
+			caPreview = caPreview[:100] + "..."
+		}
+		return Certificate{}, errors.New("failed to decode CA certificate PEM - received: " + caPreview)
 	}
 
 	cert, err := x509.ParseCertificate(block.Bytes)
@@ -196,8 +205,13 @@ func (s *service) RetrieveCertDownloadToken(ctx context.Context, serialNumber st
 //   - string: the signed JWT token string
 //   - error: an error if the authentication fails or any other error occurs
 func (s *service) RetrieveCAToken(ctx context.Context) (string, error) {
+	caCert, err := s.ViewCA(ctx)
+	if err != nil {
+		return "", errors.Wrap(ErrGetToken, err)
+	}
+	
 	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{ExpiresAt: jwt.NewNumericDate(time.Now().UTC().Add(downloadTokenExpiry)), Issuer: Organization, Subject: "certs"})
-	token, err := jwtToken.SignedString([]byte(s.intermediateCA.SerialNumber))
+	token, err := jwtToken.SignedString([]byte(caCert.SerialNumber))
 	if err != nil {
 		return "", errors.Wrap(ErrGetToken, err)
 	}
@@ -242,17 +256,32 @@ func (s *service) RenewCert(ctx context.Context, serialNumber string) error {
 // If the server fails to retrieve the certificate, it returns an OCSP status of ServerFailed.
 // Otherwise, it returns an OCSP status of Good.
 func (s *service) OCSP(ctx context.Context, serialNumber string) (*Certificate, int, *x509.Certificate, error) {
+	caCert, err := s.ViewCA(ctx)
+	if err != nil {
+		return nil, ocsp.ServerFailed, nil, err
+	}
+	
+	block, _ := pem.Decode(caCert.Certificate)
+	if block == nil {
+		return nil, ocsp.ServerFailed, nil, errors.New("failed to decode CA certificate PEM")
+	}
+	
+	x509CA, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return nil, ocsp.ServerFailed, nil, errors.Wrap(ErrViewEntity, err)
+	}
+
 	cert, err := s.pki.View(serialNumber)
 	if err != nil {
 		if errors.Contains(err, ErrNotFound) {
-			return nil, ocsp.Unknown, s.intermediateCA.Certificate, nil
+			return nil, ocsp.Unknown, x509CA, nil
 		}
-		return nil, ocsp.ServerFailed, s.intermediateCA.Certificate, err
+		return nil, ocsp.ServerFailed, x509CA, err
 	}
 	if cert.Revoked {
-		return &cert, ocsp.Revoked, s.intermediateCA.Certificate, nil
+		return &cert, ocsp.Revoked, x509CA, nil
 	}
-	return &cert, ocsp.Good, s.intermediateCA.Certificate, nil
+	return &cert, ocsp.Good, x509CA, nil
 }
 
 func (s *service) GetEntityID(ctx context.Context, serialNumber string) (string, error) {
@@ -272,8 +301,13 @@ func (s *service) GenerateCRL(ctx context.Context, caType CertType) ([]byte, err
 }
 
 func (s *service) GetChainCA(ctx context.Context, token string) (Certificate, error) {
+	caCert, err := s.ViewCA(ctx)
+	if err != nil {
+		return Certificate{}, errors.Wrap(ErrViewEntity, err)
+	}
+	
 	if _, err := jwt.ParseWithClaims(token, &jwt.RegisteredClaims{Issuer: Organization, Subject: "certs"}, func(token *jwt.Token) (interface{}, error) {
-		return []byte(s.intermediateCA.SerialNumber), nil
+		return []byte(caCert.SerialNumber), nil
 	}); err != nil {
 		return Certificate{}, errors.Wrap(err, ErrMalformedEntity)
 	}
