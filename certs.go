@@ -79,10 +79,10 @@ type CertificatePage struct {
 }
 
 type PageMetadata struct {
-	Total    uint64 `json:"total" db:"total"`
-	Offset   uint64 `json:"offset,omitempty" db:"offset"`
-	Limit    uint64 `json:"limit" db:"limit"`
-	EntityID string `json:"entity_id,omitempty" db:"entity_id"`
+	Total    uint64 `json:"total"`
+	Offset   uint64 `json:"offset,omitempty"`
+	Limit    uint64 `json:"limit,omitempty"`
+	EntityID string `json:"entity_id,omitempty"`
 }
 
 type CSRMetadata struct {
@@ -141,8 +141,11 @@ type Service interface {
 	// RenewCert renews a certificate from the database.
 	RenewCert(ctx context.Context, serialNumber string) error
 
-	// RevokeCert revokes a certificate from the database.
-	RevokeCert(ctx context.Context, serialNumber string) error
+	// RevokeBySerial revokes a single certificate by its serial number.
+	RevokeBySerial(ctx context.Context, serialNumber string) error
+
+	// RevokeAll revokes all certificates for a given entity ID.
+	RevokeAll(ctx context.Context, entityID string) error
 
 	// RetrieveCert retrieves a certificate record from the database.
 	RetrieveCert(ctx context.Context, token, serialNumber string) (Certificate, []byte, error)
@@ -176,12 +179,6 @@ type Service interface {
 	// GetChainCA retrieves the chain of CA i.e. root and intermediate cert concat together.
 	GetChainCA(ctx context.Context, token string) (Certificate, error)
 
-	// RemoveCert deletes a cert for a provided  entityID.
-	RemoveCert(ctx context.Context, entityId string) error
-
 	// IssueFromCSR creates a certificate from a given CSR.
 	IssueFromCSR(ctx context.Context, entityID, ttl string, csr CSR) (Certificate, error)
-
-	// RevokeCerts revokes all certificates for a given entity ID.
-	RevokeCerts(ctx context.Context, entityID string) error
 }

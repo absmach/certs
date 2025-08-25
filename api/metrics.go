@@ -45,14 +45,6 @@ func (mm *metricsMiddleware) RetrieveCert(ctx context.Context, token, serialNumb
 	return mm.svc.RetrieveCert(ctx, token, serialNumber)
 }
 
-func (mm *metricsMiddleware) RevokeCert(ctx context.Context, serialNumber string) error {
-	defer func(begin time.Time) {
-		mm.counter.With("method", "revoke_certificate").Add(1)
-		mm.latency.With("method", "revoke_certificate").Observe(time.Since(begin).Seconds())
-	}(time.Now())
-	return mm.svc.RevokeCert(ctx, serialNumber)
-}
-
 func (mm *metricsMiddleware) RetrieveCertDownloadToken(ctx context.Context, serialNumber string) (string, error) {
 	defer func(begin time.Time) {
 		mm.counter.With("method", "get_certificate_download_token").Add(1)
@@ -87,12 +79,20 @@ func (mm *metricsMiddleware) ListCerts(ctx context.Context, pm certs.PageMetadat
 	return mm.svc.ListCerts(ctx, pm)
 }
 
-func (mm *metricsMiddleware) RemoveCert(ctx context.Context, entityId string) error {
+func (mm *metricsMiddleware) RevokeBySerial(ctx context.Context, serialNumber string) error {
 	defer func(begin time.Time) {
-		mm.counter.With("method", "remove_certificate").Add(1)
-		mm.latency.With("method", "remove_certificate").Observe(time.Since(begin).Seconds())
+		mm.counter.With("method", "revoke_by_serial").Add(1)
+		mm.latency.With("method", "revoke_by_serial").Observe(time.Since(begin).Seconds())
 	}(time.Now())
-	return mm.svc.RemoveCert(ctx, entityId)
+	return mm.svc.RevokeBySerial(ctx, serialNumber)
+}
+
+func (mm *metricsMiddleware) RevokeAll(ctx context.Context, entityId string) error {
+	defer func(begin time.Time) {
+		mm.counter.With("method", "revoke_all").Add(1)
+		mm.latency.With("method", "revoke_all").Observe(time.Since(begin).Seconds())
+	}(time.Now())
+	return mm.svc.RevokeAll(ctx, entityId)
 }
 
 func (mm *metricsMiddleware) ViewCert(ctx context.Context, serialNumber string) (certs.Certificate, error) {
@@ -144,10 +144,3 @@ func (mm *metricsMiddleware) IssueFromCSR(ctx context.Context, entityID, ttl str
 	return mm.svc.IssueFromCSR(ctx, entityID, ttl, csr)
 }
 
-func (mm *metricsMiddleware) RevokeCerts(ctx context.Context, entityID string) error {
-	defer func(begin time.Time) {
-		mm.counter.With("method", "revoke_certificates").Add(1)
-		mm.latency.With("method", "revoke_certificates").Observe(time.Since(begin).Seconds())
-	}(time.Now())
-	return mm.svc.RevokeCerts(ctx, entityID)
-}

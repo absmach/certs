@@ -28,7 +28,7 @@ func revokeCertsEndpoint(svc certs.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(*certs.RevokeReq)
 
-		err := svc.RevokeCerts(ctx, req.EntityId)
+		err := svc.RevokeAll(ctx, req.EntityId)
 		if err != nil {
 			return nil, err
 		}

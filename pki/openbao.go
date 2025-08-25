@@ -5,7 +5,6 @@
 package pki
 
 import (
-	"bytes"
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
@@ -221,6 +220,11 @@ func (va *openbaoPKIAgent) View(serialNumber string) (certs.Certificate, error) 
 		cert.Certificate = []byte(certData)
 	}
 
+	cert.Revoked = false
+	if revokedTimeStr, ok := secret.Data["revocation_time_rfc3339"].(string); ok && revokedTimeStr != "" {
+		cert.Revoked = true
+	}
+
 	if len(cert.Certificate) > 0 {
 		if expiry, err := va.parseCertificateExpiry(string(cert.Certificate)); err == nil {
 			cert.ExpiryTime = expiry
@@ -230,7 +234,7 @@ func (va *openbaoPKIAgent) View(serialNumber string) (certs.Certificate, error) 
 			cert.EntityID = entityID
 		}
 	}
-
+	fmt.Printf("Viewed certificate: %+v\n", cert)
 	return cert, nil
 }
 
@@ -287,7 +291,7 @@ func (va *openbaoPKIAgent) Renew(serialNumber string, increment string) (certs.C
 		if expiry, err := va.parseCertificateExpiry(certData); err == nil {
 			cert.ExpiryTime = expiry
 		}
-		
+
 		if entityID, err := va.parseCertificateEntityID(certData); err == nil {
 			cert.EntityID = entityID
 		}
@@ -444,7 +448,6 @@ func (va *openbaoPKIAgent) GetCA() ([]byte, error) {
 	}
 
 	url := va.host + "/v1/" + va.path + "/ca"
-	fmt.Printf("DEBUG: Making HTTP request to: %s\n", url)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -462,17 +465,13 @@ func (va *openbaoPKIAgent) GetCA() ([]byte, error) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Printf("DEBUG: HTTP request failed: %v\n", err)
 		return nil, fmt.Errorf("failed to make HTTP request: %w", err)
 	}
 	defer resp.Body.Close()
 
-	fmt.Printf("DEBUG: HTTP response status: %d\n", resp.StatusCode)
-
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		fmt.Printf("DEBUG: HTTP response body: %s\n", string(body))
-		return nil, fmt.Errorf("failed to get CA certificate: HTTP %d", resp.StatusCode)
+		return nil, fmt.Errorf("failed to get CA certificate: HTTP %d - %s", resp.StatusCode, string(body))
 	}
 
 	certData, err := io.ReadAll(resp.Body)
@@ -480,19 +479,10 @@ func (va *openbaoPKIAgent) GetCA() ([]byte, error) {
 		return nil, fmt.Errorf("failed to read CA response: %w", err)
 	}
 
-	fmt.Printf("DEBUG: Certificate data length: %d\n", len(certData))
-	
 	if len(certData) == 0 {
 		return nil, fmt.Errorf("CA certificate response is empty - PKI may not be initialized")
 	}
 
-	if bytes.Contains(certData, []byte("-----BEGIN CERTIFICATE-----")) {
-		fmt.Printf("DEBUG: Certificate is already in PEM format\n")
-		return certData, nil
-	}
-
-	fmt.Printf("DEBUG: Converting DER certificate to PEM format\n")
-	
 	_, err = x509.ParseCertificate(certData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse DER certificate: %w", err)
@@ -504,9 +494,6 @@ func (va *openbaoPKIAgent) GetCA() ([]byte, error) {
 	}
 
 	pemData := pem.EncodeToMemory(pemBlock)
-	fmt.Printf("DEBUG: Converted to PEM, length: %d\n", len(pemData))
-	fmt.Printf("DEBUG: PEM preview: %.100s...\n", string(pemData))
-
 	return pemData, nil
 }
 

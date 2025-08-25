@@ -29,10 +29,16 @@ func (tm *tracingMiddleware) RenewCert(ctx context.Context, serialNumber string)
 	return tm.svc.RenewCert(ctx, serialNumber)
 }
 
-func (tm *tracingMiddleware) RevokeCert(ctx context.Context, serialNumber string) error {
-	ctx, span := tm.tracer.Start(ctx, "revoke_cert")
+func (tm *tracingMiddleware) RevokeBySerial(ctx context.Context, serialNumber string) error {
+	ctx, span := tm.tracer.Start(ctx, "revoke_by_serial")
 	defer span.End()
-	return tm.svc.RevokeCert(ctx, serialNumber)
+	return tm.svc.RevokeBySerial(ctx, serialNumber)
+}
+
+func (tm *tracingMiddleware) RevokeAll(ctx context.Context, entityID string) error {
+	ctx, span := tm.tracer.Start(ctx, "revoke_all")
+	defer span.End()
+	return tm.svc.RevokeAll(ctx, entityID)
 }
 
 func (tm *tracingMiddleware) RetrieveCert(ctx context.Context, token, serialNumber string) (certs.Certificate, []byte, error) {
@@ -63,12 +69,6 @@ func (tm *tracingMiddleware) ListCerts(ctx context.Context, pm certs.PageMetadat
 	ctx, span := tm.tracer.Start(ctx, "list_certs")
 	defer span.End()
 	return tm.svc.ListCerts(ctx, pm)
-}
-
-func (tm *tracingMiddleware) RemoveCert(ctx context.Context, entityId string) (err error) {
-	ctx, span := tm.tracer.Start(ctx, "remove_cert")
-	defer span.End()
-	return tm.svc.RemoveCert(ctx, entityId)
 }
 
 func (s *tracingMiddleware) ViewCert(ctx context.Context, serialNumber string) (certs.Certificate, error) {
@@ -105,10 +105,4 @@ func (tm *tracingMiddleware) IssueFromCSR(ctx context.Context, entityID, ttl str
 	ctx, span := tm.tracer.Start(ctx, "issue_from_csr")
 	defer span.End()
 	return tm.svc.IssueFromCSR(ctx, entityID, ttl, csr)
-}
-
-func (tm *tracingMiddleware) RevokeCerts(ctx context.Context, entityID string) error {
-	ctx, span := tm.tracer.Start(ctx, "revoke_certs")
-	defer span.End()
-	return tm.svc.RevokeCerts(ctx, entityID)
 }

@@ -122,9 +122,9 @@ func (res issueCertRes) Empty() bool {
 
 type listCertsRes struct {
 	Total        uint64        `json:"total"`
-	Offset       uint64        `json:"offset"`
-	Limit        uint64        `json:"limit"`
-	Certificates []viewCertRes `json:"certificates"`
+	Offset       uint64        `json:"offset,omitempty"`
+	Limit        uint64        `json:"limit,omitempty"`
+	Certificates []viewCertRes `json:"certificates,omitempty"`
 }
 
 func (res listCertsRes) Code() int {
@@ -143,7 +143,7 @@ type viewCertRes struct {
 	SerialNumber string    `json:"serial_number,omitempty"`
 	Certificate  string    `json:"certificate,omitempty"`
 	Key          string    `json:"key,omitempty"`
-	Revoked      bool      `json:"revoked,omitempty"`
+	Revoked      bool      `json:"revoked"`
 	ExpiryTime   time.Time `json:"expiry_time,omitempty"`
 	EntityID     string    `json:"entity_id,omitempty"`
 }

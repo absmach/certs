@@ -39,7 +39,7 @@ func revokeCertEndpoint(svc certs.Service) endpoint.Endpoint {
 			return revokeCertRes{revoked: false}, err
 		}
 
-		if err = svc.RevokeCert(ctx, req.id); err != nil {
+		if err = svc.RevokeBySerial(ctx, req.id); err != nil {
 			return revokeCertRes{revoked: false}, err
 		}
 
@@ -54,7 +54,7 @@ func deleteCertEndpoint(svc certs.Service) endpoint.Endpoint {
 			return deleteCertRes{deleted: false}, err
 		}
 
-		if err = svc.RemoveCert(ctx, req.entityID); err != nil {
+		if err = svc.RevokeAll(ctx, req.entityID); err != nil {
 			return deleteCertRes{deleted: false}, err
 		}
 
@@ -303,8 +303,11 @@ func viewCAEndpoint(svc certs.Service) endpoint.Endpoint {
 		}
 
 		return viewCertRes{
-			Certificate: string(cert.Certificate),
-			Key:         string(cert.Key),
+			SerialNumber: cert.SerialNumber,
+			Certificate:  string(cert.Certificate),
+			Revoked:      cert.Revoked,
+			ExpiryTime:   cert.ExpiryTime,
+			EntityID:     cert.EntityID,
 		}, nil
 	}
 }

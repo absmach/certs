@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"fmt"
 	"math/big"
 	"time"
 
@@ -81,16 +82,6 @@ func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs [
 	return cert, nil
 }
 
-// RevokeCert revokes a certificate identified by its serial number.
-// It uses the PKI agent to revoke the certificate in OpenBao PKI.
-func (s *service) RevokeCert(ctx context.Context, serialNumber string) error {
-	err := s.pki.Revoke(serialNumber)
-	if err != nil {
-		return errors.Wrap(ErrUpdateEntity, err)
-	}
-	return nil
-}
-
 // RetrieveCert retrieves a certificate with the specified serial number.
 // It requires a valid authentication token to be provided.
 // If the token is invalid or expired, an error is returned.
@@ -122,11 +113,33 @@ func (s *service) ListCerts(ctx context.Context, pm PageMetadata) (CertificatePa
 	return certPg, nil
 }
 
-func (s *service) RemoveCert(ctx context.Context, serialNo string) error {
-	err := s.pki.Revoke(serialNo)
+func (s *service) RevokeBySerial(ctx context.Context, serialNumber string) error {
+	err := s.pki.Revoke(serialNumber)
 	if err != nil {
 		return errors.Wrap(ErrUpdateEntity, err)
 	}
+	return nil
+}
+
+// RevokeAll revokes all certificates for a given entity ID.
+// It first finds all certificates for the entity ID, then revokes each one.
+func (s *service) RevokeAll(ctx context.Context, entityID string) error {
+	pm := PageMetadata{EntityID: entityID}
+	certPage, err := s.pki.ListCerts(pm)
+	if err != nil {
+		return errors.Wrap(ErrViewEntity, err)
+	}
+
+	if len(certPage.Certificates) == 0 {
+		return errors.Wrap(ErrNotFound, fmt.Errorf("no certificates found for entity ID: %s", entityID))
+	}
+
+	for _, cert := range certPage.Certificates {
+		if err := s.pki.Revoke(cert.SerialNumber); err != nil {
+			return errors.Wrap(ErrUpdateEntity, err)
+		}
+	}
+
 	return nil
 }
 
@@ -207,7 +220,7 @@ func (s *service) RetrieveCAToken(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", errors.Wrap(ErrGetToken, err)
 	}
-	
+
 	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{ExpiresAt: jwt.NewNumericDate(time.Now().UTC().Add(downloadTokenExpiry)), Issuer: Organization, Subject: "certs"})
 	token, err := jwtToken.SignedString([]byte(caCert.SerialNumber))
 	if err != nil {
@@ -239,7 +252,7 @@ func (s *service) RenewCert(ctx context.Context, serialNumber string) error {
 	if !x509Cert.NotAfter.After(time.Now().UTC()) {
 		return ErrCertExpired
 	}
-	_, err = s.pki.Renew(serialNumber, "")
+	_, err = s.pki.Renew(serialNumber, certValidityPeriod.String())
 	if err != nil {
 		return errors.Wrap(ErrUpdateEntity, err)
 	}
@@ -258,12 +271,12 @@ func (s *service) OCSP(ctx context.Context, serialNumber string) (*Certificate, 
 	if err != nil {
 		return nil, ocsp.ServerFailed, nil, err
 	}
-	
+
 	block, _ := pem.Decode(caCert.Certificate)
 	if block == nil {
 		return nil, ocsp.ServerFailed, nil, errors.New("failed to decode CA certificate PEM")
 	}
-	
+
 	x509CA, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
 		return nil, ocsp.ServerFailed, nil, errors.Wrap(ErrViewEntity, err)
@@ -303,7 +316,7 @@ func (s *service) GetChainCA(ctx context.Context, token string) (Certificate, er
 	if err != nil {
 		return Certificate{}, errors.Wrap(ErrViewEntity, err)
 	}
-	
+
 	if _, err := jwt.ParseWithClaims(token, &jwt.RegisteredClaims{Issuer: Organization, Subject: "certs"}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(caCert.SerialNumber), nil
 	}); err != nil {
@@ -320,22 +333,6 @@ func (s *service) IssueFromCSR(ctx context.Context, entityID, ttl string, csr CS
 	}
 
 	return cert, nil
-}
-
-func (s *service) RevokeCerts(ctx context.Context, entityID string) error {
-	pm := PageMetadata{EntityID: entityID}
-	certPage, err := s.pki.ListCerts(pm)
-	if err != nil {
-		return errors.Wrap(ErrViewEntity, err)
-	}
-
-	for _, cert := range certPage.Certificates {
-		if err := s.pki.Revoke(cert.SerialNumber); err != nil {
-			return errors.Wrap(ErrUpdateEntity, err)
-		}
-	}
-
-	return nil
 }
 
 func (s *service) getConcatCAs(ctx context.Context) (Certificate, error) {
