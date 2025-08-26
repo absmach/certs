@@ -6,22 +6,17 @@ package sdk
 import (
 	"archive/zip"
 	"bytes"
-	"crypto"
 	"crypto/tls"
-	"crypto/x509"
 	"encoding/json"
-	"encoding/pem"
 	"fmt"
 	"io"
 	"log"
-	"math/big"
 	"net/http"
 	"net/url"
 	"strconv"
 	"time"
 
 	"github.com/absmach/certs/errors"
-	"golang.org/x/crypto/ocsp"
 	"moul.io/http2curl"
 )
 
@@ -29,7 +24,6 @@ const (
 	certsEndpoint     = "certs"
 	csrEndpoint       = "csrs"
 	issueCertEndpoint = "certs/issue"
-	emptyOCSPbody     = 22
 )
 
 const (
@@ -155,7 +149,7 @@ type CertificateBundle struct {
 
 type OCSPResponse struct {
 	Status       CertStatus `json:"status"`
-	SerialNumber *big.Int   `json:"serial_number"`
+	SerialNumber string     `json:"serial_number"`
 	RevokedAt    *time.Time `json:"revoked_at,omitempty"`
 	ProducedAt   *time.Time `json:"produced_at,omitempty"`
 	Certificate  []byte     `json:"certificate,omitempty"`
@@ -401,41 +395,21 @@ func (sdk mgSDK) RetrieveCertDownloadToken(serialNumber string) (Token, errors.S
 }
 
 func (sdk mgSDK) OCSP(serialNumber, cert string) (OCSPResponse, errors.SDKError) {
-	var sn *big.Int
-	var ok bool
-
 	if serialNumber == "" && cert == "" {
 		return OCSPResponse{}, errors.NewSDKError(errors.New("either serial number or certificate must be provided"))
 	}
 
+	ocspReq := map[string]string{}
+
 	if serialNumber != "" {
-		sn, ok = new(big.Int).SetString(serialNumber, 10)
-		if !ok {
-			return OCSPResponse{}, errors.NewSDKError(errors.New("invalid serial number"))
-		}
+		ocspReq["serial_number"] = serialNumber
 	}
 
 	if cert != "" {
-		block, _ := pem.Decode([]byte(cert))
-		if block == nil {
-			return OCSPResponse{}, errors.NewSDKError(errors.New("failed to decode PEM block"))
-		}
-
-		parsedCert, err := x509.ParseCertificate(block.Bytes)
-		if err != nil {
-			return OCSPResponse{}, errors.NewSDKError(err)
-		}
-		sn = parsedCert.SerialNumber
+		ocspReq["cert_content"] = cert
 	}
 
-	req := ocsp.Request{
-		SerialNumber:   sn,
-		HashAlgorithm:  crypto.SHA256,
-		IssuerNameHash: nil,
-		IssuerKeyHash:  nil,
-	}
-
-	requestBody, err := req.Marshal()
+	requestBody, err := json.Marshal(ocspReq)
 	if err != nil {
 		return OCSPResponse{}, errors.NewSDKError(err)
 	}
@@ -446,27 +420,44 @@ func (sdk mgSDK) OCSP(serialNumber, cert string) (OCSPResponse, errors.SDKError)
 		return OCSPResponse{}, sdkerr
 	}
 
-	if len(body) == emptyOCSPbody {
-		return OCSPResponse{
-			Status:       CertStatus(Unknown),
-			SerialNumber: sn,
-		}, nil
+	var jsonResponse struct {
+		Status       int    `json:"status"`
+		SerialNumber string `json:"serial_number"`
+		Revoked      bool   `json:"revoked"`
 	}
-	res, err := ocsp.ParseResponse(body, nil)
-	if err != nil {
+
+	if err := json.Unmarshal(body, &jsonResponse); err != nil {
 		return OCSPResponse{}, errors.NewSDKError(err)
 	}
 
+	var status CertStatus
+	switch jsonResponse.Status {
+	case 0: // ocsp.Good
+		status = Valid
+	case 1: // ocsp.Revoked
+		status = Revoked
+	case 2: // ocsp.Unknown
+		status = Unknown
+	default:
+		status = Unknown
+	}
+
 	resp := OCSPResponse{
-		Status:       CertStatus(res.Status),
-		SerialNumber: res.SerialNumber,
-		Certificate:  res.Certificate.Raw,
-		RevokedAt:    &res.RevokedAt,
-		IssuerHash:   res.IssuerHash.String(),
-		ProducedAt:   &res.ProducedAt,
+		Status:       status,
+		SerialNumber: jsonResponse.SerialNumber,
 	}
 
 	return resp, nil
+}
+
+func removeColons(s string) string {
+	result := ""
+	for _, char := range s {
+		if char != ':' {
+			result += string(char)
+		}
+	}
+	return result
 }
 
 func (sdk mgSDK) ViewCA(token string) (Certificate, errors.SDKError) {

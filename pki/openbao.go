@@ -18,6 +18,7 @@ import (
 	"github.com/absmach/certs/errors"
 	"github.com/mitchellh/mapstructure"
 	"github.com/openbao/openbao/api/v2"
+	"golang.org/x/crypto/ocsp"
 )
 
 const (
@@ -28,7 +29,7 @@ const (
 	ca        = "ca"
 	caChain   = "ca_chain"
 	crl       = "crl"
-	ocsp      = "ocsp"
+	ocspPath  = "ocsp"
 	certsList = "certs"
 )
 
@@ -37,19 +38,6 @@ var (
 	errNoAuthInfo    = errors.New("no auth information from OpenBao")
 	errRenewWatcher  = errors.New("unable to initialize new lifetime watcher for renewing auth token")
 )
-
-// Agent represents the OpenBao PKI interface.
-type Agent interface {
-	Issue(entityId, ttl string, ipAddrs []string, options certs.SubjectOptions) (certs.Certificate, error)
-	View(serialNumber string) (certs.Certificate, error)
-	Revoke(serialNumber string) error
-	ListCerts(pm certs.PageMetadata) (certs.CertificatePage, error)
-	GetCA() ([]byte, error)
-	GetCAChain() ([]byte, error)
-	GetCRL() ([]byte, error)
-	SignCSR(csr []byte, entityId, ttl string) (certs.Certificate, error)
-	Renew(serialNumber string, increment string) (certs.Certificate, error)
-}
 
 type openbaoPKIAgent struct {
 	appRole    string
@@ -101,7 +89,7 @@ func NewAgent(appRole, appSecret, host, namespace, path, role string, logger *sl
 		caURL:      "/" + path + "/" + ca,
 		caChainURL: "/" + path + "/" + caChain,
 		crlURL:     "/" + path + "/" + crl,
-		ocspURL:    "/" + path + "/" + ocsp,
+		ocspURL:    "/" + path + "/" + ocspPath,
 		certsURL:   "/" + path + "/" + certsList,
 	}
 	return &p, nil
@@ -113,7 +101,7 @@ func (va *openbaoPKIAgent) Issue(entityId, ttl string, ipAddrs []string, options
 		return certs.Certificate{}, err
 	}
 
-	secretValues := map[string]interface{}{
+	secretValues := map[string]any{
 		"common_name":          entityId,
 		"ttl":                  ttl,
 		"exclude_cn_from_sans": true,
@@ -234,7 +222,6 @@ func (va *openbaoPKIAgent) View(serialNumber string) (certs.Certificate, error) 
 			cert.EntityID = entityID
 		}
 	}
-	fmt.Printf("Viewed certificate: %+v\n", cert)
 	return cert, nil
 }
 
@@ -306,7 +293,7 @@ func (va *openbaoPKIAgent) Revoke(serialNumber string) error {
 		return err
 	}
 
-	secretValues := map[string]interface{}{
+	secretValues := map[string]any{
 		"serial_number": serialNumber,
 	}
 
@@ -393,7 +380,7 @@ func (va *openbaoPKIAgent) LoginAndRenew() error {
 		}
 	}
 
-	authData := map[string]interface{}{
+	authData := map[string]any{
 		"role_id":   va.appRole,
 		"secret_id": va.appSecret,
 	}
@@ -583,7 +570,7 @@ func (va *openbaoPKIAgent) SignCSR(csr []byte, entityId, ttl string) (certs.Cert
 		return certs.Certificate{}, err
 	}
 
-	secretValues := map[string]interface{}{
+	secretValues := map[string]any{
 		"csr": string(csr),
 		"ttl": ttl,
 	}
@@ -641,4 +628,56 @@ func (va *openbaoPKIAgent) matchesCommonName(certPEM []byte, expectedCommonName 
 	}
 
 	return cert.Subject.CommonName == expectedCommonName
+}
+
+func (va *openbaoPKIAgent) OCSP(serialNumber string) ([]byte, error) {
+	err := va.LoginAndRenew()
+	if err != nil {
+		return nil, err
+	}
+
+	secret, err := va.client.Logical().Read(va.readURL + serialNumber)
+	if err != nil {
+		response := map[string]any{
+			"status":        ocsp.Unknown,
+			"serial_number": serialNumber,
+			"revoked":       false,
+		}
+		responseBytes, _ := json.Marshal(response)
+		return responseBytes, nil
+	}
+
+	if secret == nil || secret.Data == nil {
+		response := map[string]any{
+			"status":        ocsp.Unknown,
+			"serial_number": serialNumber,
+			"revoked":       false,
+		}
+		responseBytes, _ := json.Marshal(response)
+		return responseBytes, nil
+	}
+
+	var status int
+	var revoked bool
+
+	if revokedTimeStr, ok := secret.Data["revocation_time_rfc3339"].(string); ok && revokedTimeStr != "" {
+		status = ocsp.Revoked
+		revoked = true
+	} else {
+		status = ocsp.Good
+		revoked = false
+	}
+
+	response := map[string]any{
+		"status":        status,
+		"serial_number": serialNumber,
+		"revoked":       revoked,
+	}
+
+	responseBytes, err := json.Marshal(response)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal OCSP response: %w", err)
+	}
+
+	return responseBytes, nil
 }

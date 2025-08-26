@@ -341,6 +341,68 @@ func (_c *Agent_ListCerts_Call) RunAndReturn(run func(pm certs.PageMetadata) (ce
 	return _c
 }
 
+// OCSP provides a mock function for the type Agent
+func (_mock *Agent) OCSP(serialNumber string) ([]byte, error) {
+	ret := _mock.Called(serialNumber)
+
+	if len(ret) == 0 {
+		panic("no return value specified for OCSP")
+	}
+
+	var r0 []byte
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(string) ([]byte, error)); ok {
+		return returnFunc(serialNumber)
+	}
+	if returnFunc, ok := ret.Get(0).(func(string) []byte); ok {
+		r0 = returnFunc(serialNumber)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]byte)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(string) error); ok {
+		r1 = returnFunc(serialNumber)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// Agent_OCSP_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'OCSP'
+type Agent_OCSP_Call struct {
+	*mock.Call
+}
+
+// OCSP is a helper method to define mock.On call
+//   - serialNumber string
+func (_e *Agent_Expecter) OCSP(serialNumber interface{}) *Agent_OCSP_Call {
+	return &Agent_OCSP_Call{Call: _e.mock.On("OCSP", serialNumber)}
+}
+
+func (_c *Agent_OCSP_Call) Run(run func(serialNumber string)) *Agent_OCSP_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *Agent_OCSP_Call) Return(bytes []byte, err error) *Agent_OCSP_Call {
+	_c.Call.Return(bytes, err)
+	return _c
+}
+
+func (_c *Agent_OCSP_Call) RunAndReturn(run func(serialNumber string) ([]byte, error)) *Agent_OCSP_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Renew provides a mock function for the type Agent
 func (_mock *Agent) Renew(serialNumber string, increment string) (certs.Certificate, error) {
 	ret := _mock.Called(serialNumber, increment)

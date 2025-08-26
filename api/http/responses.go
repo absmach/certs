@@ -4,19 +4,15 @@
 package http
 
 import (
-	"crypto"
-	"crypto/x509"
 	"net/http"
 	"time"
-
-	"golang.org/x/crypto/ocsp"
 )
 
 var (
 	_ Response = (*revokeCertRes)(nil)
 	_ Response = (*issueCertRes)(nil)
 	_ Response = (*renewCertRes)(nil)
-	_ Response = (*ocspRes)(nil)
+	_ Response = (*ocspRawRes)(nil)
 )
 
 type renewCertRes struct {
@@ -176,21 +172,19 @@ func (res crlRes) Empty() bool {
 	return false
 }
 
-type ocspRes struct {
-	template   ocsp.Response
-	signer     crypto.Signer
-	issuerCert *x509.Certificate
+type ocspRawRes struct {
+	responseBytes []byte
 }
 
-func (res ocspRes) Code() int {
+func (res ocspRawRes) Code() int {
 	return http.StatusOK
 }
 
-func (res ocspRes) Headers() map[string]string {
+func (res ocspRawRes) Headers() map[string]string {
 	return map[string]string{}
 }
 
-func (res ocspRes) Empty() bool {
+func (res ocspRawRes) Empty() bool {
 	return false
 }
 

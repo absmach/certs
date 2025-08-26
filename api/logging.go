@@ -5,7 +5,6 @@ package api
 
 import (
 	"context"
-	"crypto/x509"
 	"fmt"
 	"log/slog"
 	"time"
@@ -133,7 +132,7 @@ func (lm *loggingMiddleware) ViewCert(ctx context.Context, serialNumber string) 
 	return lm.svc.ViewCert(ctx, serialNumber)
 }
 
-func (lm *loggingMiddleware) OCSP(ctx context.Context, serialNumber string) (cert *certs.Certificate, ocspStatus int, rootCACert *x509.Certificate, err error) {
+func (lm *loggingMiddleware) OCSP(ctx context.Context, serialNumber string) (ocspBytes []byte, err error) {
 	defer func(begin time.Time) {
 		message := fmt.Sprintf("Method ocsp for serial number %s took %s to complete", serialNumber, time.Since(begin))
 		if err != nil {

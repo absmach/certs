@@ -5,7 +5,6 @@ package tracing
 
 import (
 	"context"
-	"crypto/x509"
 
 	"github.com/absmach/certs"
 	"go.opentelemetry.io/otel/trace"
@@ -77,7 +76,7 @@ func (s *tracingMiddleware) ViewCert(ctx context.Context, serialNumber string) (
 	return s.svc.ViewCert(ctx, serialNumber)
 }
 
-func (tm *tracingMiddleware) OCSP(ctx context.Context, serialNumber string) (*certs.Certificate, int, *x509.Certificate, error) {
+func (tm *tracingMiddleware) OCSP(ctx context.Context, serialNumber string) ([]byte, error) {
 	ctx, span := tm.tracer.Start(ctx, "ocsp")
 	defer span.End()
 	return tm.svc.OCSP(ctx, serialNumber)

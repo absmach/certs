@@ -12,7 +12,7 @@ import (
 )
 
 func getEntityEndpoint(svc certs.Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
+	return func(ctx context.Context, request any) (any, error) {
 		req := request.(*certs.EntityReq)
 
 		entityID, err := svc.GetEntityID(ctx, req.SerialNumber)
@@ -25,7 +25,7 @@ func getEntityEndpoint(svc certs.Service) endpoint.Endpoint {
 }
 
 func revokeCertsEndpoint(svc certs.Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
+	return func(ctx context.Context, request any) (any, error) {
 		req := request.(*certs.RevokeReq)
 
 		err := svc.RevokeAll(ctx, req.EntityId)

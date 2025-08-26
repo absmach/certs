@@ -14,7 +14,6 @@ import (
 
 	"github.com/absmach/certs/errors"
 	"github.com/golang-jwt/jwt/v5"
-	"golang.org/x/crypto/ocsp"
 )
 
 const (
@@ -87,7 +86,7 @@ func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs [
 // If the token is invalid or expired, an error is returned.
 // The function returns the retrieved certificate and any error encountered.
 func (s *service) RetrieveCert(ctx context.Context, token, serialNumber string) (Certificate, []byte, error) {
-	if _, err := jwt.ParseWithClaims(token, &jwt.RegisteredClaims{Issuer: Organization, Subject: "certs"}, func(token *jwt.Token) (interface{}, error) {
+	if _, err := jwt.ParseWithClaims(token, &jwt.RegisteredClaims{Issuer: Organization, Subject: "certs"}, func(token *jwt.Token) (any, error) {
 		return []byte(serialNumber), nil
 	}); err != nil {
 		return Certificate{}, []byte{}, errors.Wrap(err, ErrMalformedEntity)
@@ -259,40 +258,10 @@ func (s *service) RenewCert(ctx context.Context, serialNumber string) error {
 	return nil
 }
 
-// OCSP retrieves the OCSP response for a certificate.
-// It takes a context and serialNumber as input parameters.
-// It returns the OCSP status, the root CA certificate, the root CA private key, and an error if any issue occurs.
-// If the certificate is not found, it returns an OCSP status of Unknown.
-// If the certificate is revoked, it returns an OCSP status of Revoked.
-// If the server fails to retrieve the certificate, it returns an OCSP status of ServerFailed.
-// Otherwise, it returns an OCSP status of Good.
-func (s *service) OCSP(ctx context.Context, serialNumber string) (*Certificate, int, *x509.Certificate, error) {
-	caCert, err := s.ViewCA(ctx)
-	if err != nil {
-		return nil, ocsp.ServerFailed, nil, err
-	}
-
-	block, _ := pem.Decode(caCert.Certificate)
-	if block == nil {
-		return nil, ocsp.ServerFailed, nil, errors.New("failed to decode CA certificate PEM")
-	}
-
-	x509CA, err := x509.ParseCertificate(block.Bytes)
-	if err != nil {
-		return nil, ocsp.ServerFailed, nil, errors.Wrap(ErrViewEntity, err)
-	}
-
-	cert, err := s.pki.View(serialNumber)
-	if err != nil {
-		if errors.Contains(err, ErrNotFound) {
-			return nil, ocsp.Unknown, x509CA, nil
-		}
-		return nil, ocsp.ServerFailed, x509CA, err
-	}
-	if cert.Revoked {
-		return &cert, ocsp.Revoked, x509CA, nil
-	}
-	return &cert, ocsp.Good, x509CA, nil
+// OCSP forwards OCSP requests to OpenBao's OCSP endpoint
+// This method bypasses the custom OCSP implementation and proxies directly to OpenBao
+func (s *service) OCSP(ctx context.Context, serialNumber string) ([]byte, error) {
+	return s.pki.OCSP(serialNumber)
 }
 
 func (s *service) GetEntityID(ctx context.Context, serialNumber string) (string, error) {
@@ -317,7 +286,7 @@ func (s *service) GetChainCA(ctx context.Context, token string) (Certificate, er
 		return Certificate{}, errors.Wrap(ErrViewEntity, err)
 	}
 
-	if _, err := jwt.ParseWithClaims(token, &jwt.RegisteredClaims{Issuer: Organization, Subject: "certs"}, func(token *jwt.Token) (interface{}, error) {
+	if _, err := jwt.ParseWithClaims(token, &jwt.RegisteredClaims{Issuer: Organization, Subject: "certs"}, func(token *jwt.Token) (any, error) {
 		return []byte(caCert.SerialNumber), nil
 	}); err != nil {
 		return Certificate{}, errors.Wrap(err, ErrMalformedEntity)
