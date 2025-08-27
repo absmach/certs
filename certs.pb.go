@@ -162,15 +162,15 @@ var File_certs_proto protoreflect.FileDescriptor
 const file_certs_proto_rawDesc = "" +
 	"\n" +
 	"\vcerts.proto\x12\rabsmach.certs\x1a\x1bgoogle/protobuf/empty.proto\"0\n" +
-	"\tentityReq\x12#\n" +
+	"\tEntityReq\x12#\n" +
 	"\rserial_number\x18\x01 \x01(\tR\fserialNumber\"(\n" +
-	"\tentityRes\x12\x1b\n" +
+	"\tEntityRes\x12\x1b\n" +
 	"\tentity_id\x18\x01 \x01(\tR\bentityId\"(\n" +
-	"\trevokeReq\x12\x1b\n" +
+	"\tRevokeReq\x12\x1b\n" +
 	"\tentity_id\x18\x01 \x01(\tR\bentityId2\x96\x01\n" +
 	"\fCertsService\x12C\n" +
-	"\vGetEntityID\x12\x18.absmach.certs.entityReq\x1a\x18.absmach.certs.entityRes\"\x00\x12A\n" +
-	"\vRevokeCerts\x12\x18.absmach.certs.revokeReq\x1a\x16.google.protobuf.Empty\"\x00B\tZ\a./certsb\x06proto3"
+	"\vGetEntityID\x12\x18.absmach.certs.EntityReq\x1a\x18.absmach.certs.EntityRes\"\x00\x12A\n" +
+	"\vRevokeCerts\x12\x18.absmach.certs.RevokeReq\x1a\x16.google.protobuf.Empty\"\x00B\tZ\a./certsb\x06proto3"
 
 var (
 	file_certs_proto_rawDescOnce sync.Once
@@ -186,15 +186,15 @@ func file_certs_proto_rawDescGZIP() []byte {
 
 var file_certs_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_certs_proto_goTypes = []any{
-	(*EntityReq)(nil),     // 0: absmach.certs.entityReq
-	(*EntityRes)(nil),     // 1: absmach.certs.entityRes
-	(*RevokeReq)(nil),     // 2: absmach.certs.revokeReq
+	(*EntityReq)(nil),     // 0: absmach.certs.EntityReq
+	(*EntityRes)(nil),     // 1: absmach.certs.EntityRes
+	(*RevokeReq)(nil),     // 2: absmach.certs.RevokeReq
 	(*emptypb.Empty)(nil), // 3: google.protobuf.Empty
 }
 var file_certs_proto_depIdxs = []int32{
-	0, // 0: absmach.certs.CertsService.GetEntityID:input_type -> absmach.certs.entityReq
-	2, // 1: absmach.certs.CertsService.RevokeCerts:input_type -> absmach.certs.revokeReq
-	1, // 2: absmach.certs.CertsService.GetEntityID:output_type -> absmach.certs.entityRes
+	0, // 0: absmach.certs.CertsService.GetEntityID:input_type -> absmach.certs.EntityReq
+	2, // 1: absmach.certs.CertsService.RevokeCerts:input_type -> absmach.certs.RevokeReq
+	1, // 2: absmach.certs.CertsService.GetEntityID:output_type -> absmach.certs.EntityRes
 	3, // 3: absmach.certs.CertsService.RevokeCerts:output_type -> google.protobuf.Empty
 	2, // [2:4] is the sub-list for method output_type
 	0, // [0:2] is the sub-list for method input_type
