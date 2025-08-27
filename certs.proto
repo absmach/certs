@@ -1,11 +1,11 @@
 // Copyright (c) Abstract Machines
 // SPDX-License-Identifier: Apache-2.0
 
+package absmach.certs;
+
 syntax = "proto3";
 
 import "google/protobuf/empty.proto";
-
-package absmach.certs;
 
 option go_package = "./certs";
 
