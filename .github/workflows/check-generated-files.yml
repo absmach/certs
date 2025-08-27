@@ -16,13 +16,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install Go
         uses: actions/setup-go@v5
         with:
-          go-version: 1.23.x
+          go-version: 1.25.x
           cache-dependency-path: "go.sum"
+
+      - name: Set GOBIN
+        run: echo "GOBIN=$HOME/.local/bin" >> $GITHUB_ENV
+
+      - name: Add GOBIN to PATH
+        run: echo "$HOME/.local/bin" >> $GITHUB_PATH
+
 
       - name: Check for changes in go.mod
         run: |
@@ -47,8 +54,8 @@ jobs:
       - name: Set up protoc
         if: steps.changes.outputs.proto == 'true'
         run: |
-          PROTOC_VERSION=29.0
-          PROTOC_GEN_VERSION=v1.36.5
+          PROTOC_VERSION=32.0
+          PROTOC_GEN_VERSION=v1.36.8
           PROTOC_GRPC_VERSION=v1.5.1
 
           # Download and install protoc
@@ -86,10 +93,10 @@ jobs:
       - name: Check Mocks are up to Date
         if: steps.changes.outputs.mocks == 'true'
         run: |
-          MOCKERY_VERSION=v2.53.3
+          MOCKERY_VERSION=v3.50.3
           STRINGER_VERSION=v0.19.0
 
-          go install github.com/vektra/mockery/v2@$MOCKERY_VERSION
+          go install github.com/vektra/mockery/v3@$MOCKERY_VERSION
           go install golang.org/x/tools/cmd/stringer@$STRINGER_VERSION
 
           mv ./sdk/mocks/sdk.go ./sdk/mocks/sdk.go.tmp

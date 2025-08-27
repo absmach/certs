@@ -15,7 +15,7 @@ empty:=
 space:= $(empty) $(empty)
 # Docker compose project name should follow this guidelines: https://docs.docker.com/compose/reference/#use--p-to-specify-a-project-name
 DOCKER_PROJECT ?= $(shell echo $(subst $(space),,$(USER_REPO)) | tr -c -s '[:alnum:][=-=]' '_' | tr '[:upper:]' '[:lower:]')
-MOCKERY_VERSION=v2.43.2
+MOCKERY_VERSION=v3.5.3
 
 define compile_service
 	CGO_ENABLED=$(CGO_ENABLED) GOOS=$(GOOS) GOARCH=$(GOARCH) GOARM=$(GOARM) \
@@ -64,7 +64,7 @@ install:
 	done
 
 mocks:
-	@which mockery > /dev/null || go install github.com/vektra/mockery/v2@$(MOCKERY_VERSION)
+	@which mockery > /dev/null || go install github.com/vektra/mockery/v3@$(MOCKERY_VERSION)
 	mockery --config ./mockery.yaml
 
 test: mocks
