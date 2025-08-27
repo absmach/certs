@@ -450,16 +450,6 @@ func (sdk mgSDK) OCSP(serialNumber, cert string) (OCSPResponse, errors.SDKError)
 	return resp, nil
 }
 
-func removeColons(s string) string {
-	result := ""
-	for _, char := range s {
-		if char != ':' {
-			result += string(char)
-		}
-	}
-	return result
-}
-
 func (sdk mgSDK) ViewCA(token string) (Certificate, errors.SDKError) {
 	pm := PageMetadata{
 		Token: token,

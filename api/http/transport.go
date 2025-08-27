@@ -195,13 +195,11 @@ func decodeOCSPRequest(_ context.Context, r *http.Request) (any, error) {
 	var request ocspCheckReq
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-
 		return nil, errors.Wrap(certs.ErrMalformedEntity, err)
 	}
 	defer r.Body.Close()
 
 	if err := json.Unmarshal(body, &request); err != nil {
-
 		return nil, errors.Wrap(certs.ErrMalformedEntity, err)
 	}
 	return request, nil

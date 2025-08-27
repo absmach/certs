@@ -6,10 +6,8 @@ package certs
 import (
 	"context"
 	"crypto/x509"
-	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
-	"math/big"
 	"time"
 
 	"github.com/absmach/certs/errors"
@@ -34,7 +32,6 @@ const (
 )
 
 var (
-	serialNumberLimit         = new(big.Int).Lsh(big.NewInt(1), 128)
 	ErrNotFound               = errors.New("entity not found")
 	ErrConflict               = errors.New("entity already exists")
 	ErrCreateEntity           = errors.New("failed to create entity")
@@ -258,8 +255,8 @@ func (s *service) RenewCert(ctx context.Context, serialNumber string) error {
 	return nil
 }
 
-// OCSP forwards OCSP requests to OpenBao's OCSP endpoint
-// This method bypasses the custom OCSP implementation and proxies directly to OpenBao
+// OCSP forwards OCSP requests to OpenBao's OCSP endpoint.
+// This method bypasses the custom OCSP implementation and proxies directly to OpenBao.
 func (s *service) OCSP(ctx context.Context, serialNumber string) ([]byte, error) {
 	return s.pki.OCSP(serialNumber)
 }
@@ -324,34 +321,4 @@ func (s *service) getConcatCAs(ctx context.Context) (Certificate, error) {
 		Certificate: caChain,
 		ExpiryTime:  cert.NotAfter,
 	}, nil
-}
-
-func subjectFromOpts(opts SubjectOptions) pkix.Name {
-	subject := pkix.Name{
-		CommonName: opts.CommonName,
-	}
-
-	if len(opts.Organization) > 0 {
-		subject.Organization = opts.Organization
-	}
-	if len(opts.OrganizationalUnit) > 0 {
-		subject.OrganizationalUnit = opts.OrganizationalUnit
-	}
-	if len(opts.Country) > 0 {
-		subject.Country = opts.Country
-	}
-	if len(opts.Province) > 0 {
-		subject.Province = opts.Province
-	}
-	if len(opts.Locality) > 0 {
-		subject.Locality = opts.Locality
-	}
-	if len(opts.StreetAddress) > 0 {
-		subject.StreetAddress = opts.StreetAddress
-	}
-	if len(opts.PostalCode) > 0 {
-		subject.PostalCode = opts.PostalCode
-	}
-
-	return subject
 }

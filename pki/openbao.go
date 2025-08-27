@@ -612,24 +612,6 @@ func (va *openbaoPKIAgent) SignCSR(csr []byte, entityId, ttl string) (certs.Cert
 	return cert, nil
 }
 
-func (va *openbaoPKIAgent) matchesCommonName(certPEM []byte, expectedCommonName string) bool {
-	if len(certPEM) == 0 || expectedCommonName == "" {
-		return false
-	}
-
-	block, _ := pem.Decode(certPEM)
-	if block == nil {
-		return false
-	}
-
-	cert, err := x509.ParseCertificate(block.Bytes)
-	if err != nil {
-		return false
-	}
-
-	return cert.Subject.CommonName == expectedCommonName
-}
-
 func (va *openbaoPKIAgent) OCSP(serialNumber string) ([]byte, error) {
 	err := va.LoginAndRenew()
 	if err != nil {
@@ -643,7 +625,10 @@ func (va *openbaoPKIAgent) OCSP(serialNumber string) ([]byte, error) {
 			"serial_number": serialNumber,
 			"revoked":       false,
 		}
-		responseBytes, _ := json.Marshal(response)
+		responseBytes, err := json.Marshal(response)
+		if err != nil {
+			return nil, err
+		}
 		return responseBytes, nil
 	}
 
@@ -653,7 +638,10 @@ func (va *openbaoPKIAgent) OCSP(serialNumber string) ([]byte, error) {
 			"serial_number": serialNumber,
 			"revoked":       false,
 		}
-		responseBytes, _ := json.Marshal(response)
+		responseBytes, err := json.Marshal(response)
+		if err != nil {
+			return nil, err
+		}
 		return responseBytes, nil
 	}
 
@@ -676,7 +664,7 @@ func (va *openbaoPKIAgent) OCSP(serialNumber string) ([]byte, error) {
 
 	responseBytes, err := json.Marshal(response)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal OCSP response: %w", err)
+		return nil, err
 	}
 
 	return responseBytes, nil
