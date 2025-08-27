@@ -43,7 +43,7 @@ var (
 )
 
 func TestIssueCertCmd(t *testing.T) {
-	sdkMock := new(sdkmocks.MockSDK)
+	sdkMock := new(sdkmocks.SDK)
 	cli.SetSDK(sdkMock)
 	certCmd := cli.NewCertsCmd()
 	rootCmd := setFlags(certCmd)
@@ -121,7 +121,7 @@ func TestIssueCertCmd(t *testing.T) {
 }
 
 func TestRevokeCertCmd(t *testing.T) {
-	sdkMock := new(sdkmocks.MockSDK)
+	sdkMock := new(sdkmocks.SDK)
 	cli.SetSDK(sdkMock)
 	certCmd := cli.NewCertsCmd()
 	rootCmd := setFlags(certCmd)
@@ -177,7 +177,7 @@ func TestRevokeCertCmd(t *testing.T) {
 }
 
 func TestDeleteCertCmd(t *testing.T) {
-	sdkMock := new(sdkmocks.MockSDK)
+	sdkMock := new(sdkmocks.SDK)
 	cli.SetSDK(sdkMock)
 	certCmd := cli.NewCertsCmd()
 	rootCmd := setFlags(certCmd)
@@ -233,7 +233,7 @@ func TestDeleteCertCmd(t *testing.T) {
 }
 
 func TestRenewCertCmd(t *testing.T) {
-	sdkMock := new(sdkmocks.MockSDK)
+	sdkMock := new(sdkmocks.SDK)
 	cli.SetSDK(sdkMock)
 	certCmd := cli.NewCertsCmd()
 	rootCmd := setFlags(certCmd)
@@ -289,7 +289,7 @@ func TestRenewCertCmd(t *testing.T) {
 }
 
 func TestListCertsCmd(t *testing.T) {
-	sdkMock := new(sdkmocks.MockSDK)
+	sdkMock := new(sdkmocks.SDK)
 	cli.SetSDK(sdkMock)
 	certCmd := cli.NewCertsCmd()
 	rootCmd := setFlags(certCmd)
@@ -385,7 +385,7 @@ func TestListCertsCmd(t *testing.T) {
 }
 
 func TestGetTokenCmd(t *testing.T) {
-	sdkMock := new(sdkmocks.MockSDK)
+	sdkMock := new(sdkmocks.SDK)
 	cli.SetSDK(sdkMock)
 	certCmd := cli.NewCertsCmd()
 	rootCmd := setFlags(certCmd)
@@ -451,7 +451,7 @@ func TestGetTokenCmd(t *testing.T) {
 }
 
 func TestDownloadCertCmd(t *testing.T) {
-	sdkMock := new(sdkmocks.MockSDK)
+	sdkMock := new(sdkmocks.SDK)
 	cli.SetSDK(sdkMock)
 	certCmd := cli.NewCertsCmd()
 	rootCmd := setFlags(certCmd)
@@ -524,7 +524,7 @@ func TestDownloadCertCmd(t *testing.T) {
 }
 
 func TestGetCATokenCmd(t *testing.T) {
-	sdkMock := new(sdkmocks.MockSDK)
+	sdkMock := new(sdkmocks.SDK)
 	cli.SetSDK(sdkMock)
 	certCmd := cli.NewCertsCmd()
 	rootCmd := setFlags(certCmd)
@@ -585,7 +585,7 @@ func TestGetCATokenCmd(t *testing.T) {
 }
 
 func TestDownloadCACmd(t *testing.T) {
-	sdkMock := new(sdkmocks.MockSDK)
+	sdkMock := new(sdkmocks.SDK)
 	cli.SetSDK(sdkMock)
 	certCmd := cli.NewCertsCmd()
 	rootCmd := setFlags(certCmd)
@@ -653,7 +653,7 @@ func TestDownloadCACmd(t *testing.T) {
 }
 
 func TestViewCACmd(t *testing.T) {
-	sdkMock := new(sdkmocks.MockSDK)
+	sdkMock := new(sdkmocks.SDK)
 	cli.SetSDK(sdkMock)
 	certCmd := cli.NewCertsCmd()
 	rootCmd := setFlags(certCmd)

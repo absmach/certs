@@ -14,14 +14,14 @@ service CertsService {
   rpc RevokeCerts(revokeReq) returns (google.protobuf.Empty) {}
 }
 
-message entityReq {
+message EntityReq {
   string serial_number = 1;
 }
 
-message entityRes {
+message EntityRes {
   string entity_id = 1;
 }
 
-message revokeReq {
+message RevokeReq {
   string entity_id = 1;
 }
