@@ -29,8 +29,8 @@ const (
 	token       = "token"
 )
 
-func setupCerts() (*httptest.Server, *mocks.MockService) {
-	svc := new(mocks.MockService)
+func setupCerts() (*httptest.Server, *mocks.Service) {
+	svc := new(mocks.Service)
 	logger := logger.NewMock()
 	mux := httpapi.MakeHandler(svc, logger, instanceID)
 

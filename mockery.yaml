@@ -1,28 +1,36 @@
 # Copyright (c) Abstract Machines
 # SPDX-License-Identifier: Apache-2.0 
 
-with-expecter: true
+pkgname: mocks
+structname: "{{.InterfaceName}}"
 filename: "{{.InterfaceName}}.go"
-outpkg: "mocks"
-boilerplate-file: "./boilerplate.txt"
+dir: "{{.InterfaceDirRelative}}/mocks"
+template-data:
+  boilerplate-file: ./boilerplate.txt
+force-file-write: true
+
 packages:
   github.com/absmach/certs:
     interfaces:
       Service:
         config:
-          dir: "{{.InterfaceDir}}/mocks"
+          dir: "./mocks"
+          structname: "Service"
           filename: "service.go"
       Repository:
         config:
-          dir: "{{.InterfaceDir}}/mocks"
+          dir: "./mocks"
+          structname: "Repository"
           filename: "repository.go"
       CertsServiceClient:
         config:
-          dir: "{{.InterfaceDir}}/mocks"
+          dir: "./mocks"
+          structname: "CertsServiceClient"
           filename: "certs_client.go"
   github.com/absmach/certs/sdk:
     interfaces:
       SDK:
         config:
-          dir: "{{.InterfaceDir}}/mocks"
+          dir: "./sdk/mocks"
+          structname: "SDK"
           filename: "sdk.go"

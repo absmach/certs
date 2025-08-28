@@ -15,7 +15,8 @@ empty:=
 space:= $(empty) $(empty)
 # Docker compose project name should follow this guidelines: https://docs.docker.com/compose/reference/#use--p-to-specify-a-project-name
 DOCKER_PROJECT ?= $(shell echo $(subst $(space),,$(USER_REPO)) | tr -c -s '[:alnum:][=-=]' '_' | tr '[:upper:]' '[:lower:]')
-MOCKERY_VERSION=v2.43.2
+MOCKERY = $(GOBIN)/mockery
+MOCKERY_VERSION=3.5.3
 
 define compile_service
 	CGO_ENABLED=$(CGO_ENABLED) GOOS=$(GOOS) GOARCH=$(GOARCH) GOARM=$(GOARM) \
@@ -63,9 +64,16 @@ install:
 		cp $$file $(GOBIN)/certs-`basename $$file`; \
 	done
 
-mocks:
-	@which mockery > /dev/null || go install github.com/vektra/mockery/v2@$(MOCKERY_VERSION)
-	mockery --config ./mockery.yaml
+mocks: $(MOCKERY)
+	@$(MOCKERY) --config ./mockery.yaml
+
+$(MOCKERY):
+	@mkdir -p $(GOBIN)
+	@mkdir -p mockery
+	@echo ">> downloading mockery $(MOCKERY_VERSION)..."
+	@curl -sL https://github.com/vektra/mockery/releases/download/v$(MOCKERY_VERSION)/mockery_$(MOCKERY_VERSION)_Linux_x86_64.tar.gz | tar -xz -C mockery
+	@mv mockery/mockery $(GOBIN)
+	@rm -r mockery
 
 test: mocks
 	go test -v -race -count 1 -tags test $(shell go list ./... | grep -v 'vendor\|cmd')

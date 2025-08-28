@@ -33,7 +33,7 @@ var (
 )
 
 func TestIssueCert(t *testing.T) {
-	cRepo := new(mocks.MockRepository)
+	cRepo := new(mocks.Repository)
 
 	repoCall := cRepo.On("GetCAs", mock.Anything).Return([]certs.Certificate{}, nil)
 	repoCall1 := cRepo.On("CreateCert", mock.Anything, mock.Anything).Return(nil)
@@ -75,7 +75,7 @@ func TestIssueCert(t *testing.T) {
 }
 
 func TestRevokeCert(t *testing.T) {
-	cRepo := new(mocks.MockRepository)
+	cRepo := new(mocks.Repository)
 
 	invalidSerialNumber := "invalid serial number"
 
@@ -129,7 +129,7 @@ func TestRevokeCert(t *testing.T) {
 }
 
 func TestGetCertDownloadToken(t *testing.T) {
-	cRepo := new(mocks.MockRepository)
+	cRepo := new(mocks.Repository)
 
 	repoCall := cRepo.On("GetCAs", mock.Anything).Return([]certs.Certificate{}, nil)
 	repoCall1 := cRepo.On("CreateCert", mock.Anything, mock.Anything).Return(nil)
@@ -159,7 +159,7 @@ func TestGetCertDownloadToken(t *testing.T) {
 }
 
 func TestGetCert(t *testing.T) {
-	cRepo := new(mocks.MockRepository)
+	cRepo := new(mocks.Repository)
 
 	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * 5).UTC()), Issuer: certs.Organization, Subject: "certs"})
 	validToken, err := jwtToken.SignedString([]byte(serialNumber))
@@ -210,7 +210,7 @@ func TestGetCert(t *testing.T) {
 }
 
 func TestRenewCert(t *testing.T) {
-	cRepo := new(mocks.MockRepository)
+	cRepo := new(mocks.Repository)
 
 	serialNumber := big.NewInt(1)
 	expiredSerialNumber := big.NewInt(2)
@@ -350,7 +350,7 @@ func TestRenewCert(t *testing.T) {
 }
 
 func TestGetEntityID(t *testing.T) {
-	cRepo := new(mocks.MockRepository)
+	cRepo := new(mocks.Repository)
 
 	repoCall := cRepo.On("GetCAs", mock.Anything).Return([]certs.Certificate{}, nil)
 	repoCall1 := cRepo.On("CreateCert", mock.Anything, mock.Anything).Return(nil)
@@ -381,7 +381,7 @@ func TestGetEntityID(t *testing.T) {
 }
 
 func TestListCerts(t *testing.T) {
-	cRepo := new(mocks.MockRepository)
+	cRepo := new(mocks.Repository)
 
 	repoCall := cRepo.On("GetCAs", mock.Anything).Return([]certs.Certificate{}, nil)
 	repoCall1 := cRepo.On("CreateCert", mock.Anything, mock.Anything).Return(nil)
@@ -418,7 +418,7 @@ func TestListCerts(t *testing.T) {
 }
 
 func TestGenerateCRL(t *testing.T) {
-	cRepo := new(mocks.MockRepository)
+	cRepo := new(mocks.Repository)
 
 	privateKey, _ := rsa.GenerateKey(rand.Reader, 2048)
 	template := &x509.Certificate{
