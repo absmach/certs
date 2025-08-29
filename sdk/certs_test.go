@@ -796,3 +796,266 @@ func TestGetCAToken(t *testing.T) {
 		})
 	}
 }
+
+func TestGenerateCRL(t *testing.T) {
+	ts, svc := setupCerts()
+	defer ts.Close()
+
+	sdkConfig := sdk.Config{
+		CertsURL:        ts.URL,
+		MsgContentType:  contentType,
+		TLSVerification: false,
+	}
+
+	ctsdk := sdk.NewSDK(sdkConfig)
+
+	crlData := []byte("mock-crl-data")
+
+	cases := []struct {
+		desc     string
+		certType sdk.CertType
+		svcresp  []byte
+		svcerr   error
+		err      errors.SDKError
+	}{
+		{
+			desc:     "GenerateCRL success for RootCA",
+			certType: sdk.RootCA,
+			svcresp:  crlData,
+			svcerr:   nil,
+			err:      nil,
+		},
+		{
+			desc:     "GenerateCRL success for IntermediateCA",
+			certType: sdk.IntermediateCA,
+			svcresp:  crlData,
+			svcerr:   nil,
+			err:      nil,
+		},
+		{
+			desc:     "GenerateCRL failure",
+			certType: sdk.RootCA,
+			svcresp:  nil,
+			svcerr:   certs.ErrFailedCertCreation,
+			err:      errors.NewSDKErrorWithStatus(certs.ErrFailedCertCreation, http.StatusUnprocessableEntity),
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			svcCall := svc.On("GenerateCRL", mock.Anything, mock.Anything).Return(tc.svcresp, tc.svcerr)
+
+			resp, err := ctsdk.GenerateCRL(tc.certType)
+			assert.Equal(t, tc.err, err)
+			if tc.err == nil {
+				assert.Equal(t, tc.svcresp, resp)
+				ok := svcCall.Parent.AssertCalled(t, "GenerateCRL", mock.Anything, mock.Anything)
+				assert.True(t, ok)
+			}
+			svcCall.Unset()
+		})
+	}
+}
+
+func TestRevokeAll(t *testing.T) {
+	ts, svc := setupCerts()
+	defer ts.Close()
+
+	sdkConfig := sdk.Config{
+		CertsURL:        ts.URL,
+		MsgContentType:  contentType,
+		TLSVerification: false,
+	}
+
+	ctsdk := sdk.NewSDK(sdkConfig)
+
+	cases := []struct {
+		desc     string
+		entityID string
+		svcerr   error
+		err      errors.SDKError
+	}{
+		{
+			desc:     "RevokeAll success",
+			entityID: id,
+			svcerr:   nil,
+			err:      nil,
+		},
+		{
+			desc:     "RevokeAll failure",
+			entityID: id,
+			svcerr:   certs.ErrUpdateEntity,
+			err:      errors.NewSDKErrorWithStatus(certs.ErrUpdateEntity, http.StatusUnprocessableEntity),
+		},
+		{
+			desc:     "RevokeAll with empty entityID",
+			entityID: "",
+			svcerr:   certs.ErrMalformedEntity,
+			err:      errors.NewSDKErrorWithStatus(certs.ErrMalformedEntity, http.StatusBadRequest),
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			svcCall := svc.On("RevokeAll", mock.Anything, tc.entityID).Return(tc.svcerr)
+
+			err := ctsdk.RevokeAll(tc.entityID)
+			assert.Equal(t, tc.err, err)
+			if tc.desc != "RevokeAll with empty entityID" {
+				ok := svcCall.Parent.AssertCalled(t, "RevokeAll", mock.Anything, tc.entityID)
+				assert.True(t, ok)
+			}
+			svcCall.Unset()
+		})
+	}
+}
+
+func TestGetEntityID(t *testing.T) {
+	ts, svc := setupCerts()
+	defer ts.Close()
+
+	sdkConfig := sdk.Config{
+		CertsURL:        ts.URL,
+		MsgContentType:  contentType,
+		TLSVerification: false,
+	}
+
+	ctsdk := sdk.NewSDK(sdkConfig)
+
+	entityID := "test-entity-id"
+
+	cases := []struct {
+		desc     string
+		serial   string
+		svcresp  certs.Certificate
+		svcerr   error
+		err      errors.SDKError
+		expected string
+	}{
+		{
+			desc:   "GetEntityID success",
+			serial: serialNum,
+			svcresp: certs.Certificate{
+				SerialNumber: serialNum,
+				EntityID:     entityID,
+			},
+			svcerr:   nil,
+			err:      nil,
+			expected: entityID,
+		},
+		{
+			desc:     "GetEntityID failure",
+			serial:   serialNum,
+			svcresp:  certs.Certificate{},
+			svcerr:   certs.ErrViewEntity,
+			err:      errors.NewSDKErrorWithStatus(certs.ErrViewEntity, http.StatusUnprocessableEntity),
+			expected: "",
+		},
+		{
+			desc:     "GetEntityID with empty serial",
+			serial:   "",
+			svcresp:  certs.Certificate{},
+			svcerr:   certs.ErrMalformedEntity,
+			err:      errors.NewSDKErrorWithStatus(certs.ErrMalformedEntity, http.StatusBadRequest),
+			expected: "",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			svcCall := svc.On("ViewCert", mock.Anything, tc.serial).Return(tc.svcresp, tc.svcerr)
+
+			resp, err := ctsdk.GetEntityID(tc.serial)
+			assert.Equal(t, tc.err, err)
+			assert.Equal(t, tc.expected, resp)
+			if tc.desc != "GetEntityID with empty serial" {
+				ok := svcCall.Parent.AssertCalled(t, "ViewCert", mock.Anything, tc.serial)
+				assert.True(t, ok)
+			}
+			svcCall.Unset()
+		})
+	}
+}
+
+func TestGetCA(t *testing.T) {
+	ts, svc := setupCerts()
+	defer ts.Close()
+
+	sdkConfig := sdk.Config{
+		CertsURL:        ts.URL,
+		MsgContentType:  contentType,
+		TLSVerification: false,
+	}
+
+	ctsdk := sdk.NewSDK(sdkConfig)
+
+	cases := []struct {
+		desc         string
+		tokenResp    string
+		tokenErr     error
+		caResp       certs.Certificate
+		caErr        error
+		expectedCert sdk.Certificate
+		err          errors.SDKError
+	}{
+		{
+			desc:      "GetCA success",
+			tokenResp: token,
+			tokenErr:  nil,
+			caResp: certs.Certificate{
+				SerialNumber: serialNum,
+				Certificate:  []byte("ca-cert"),
+			},
+			caErr: nil,
+			expectedCert: sdk.Certificate{
+				SerialNumber: serialNum,
+				Certificate:  "ca-cert",
+			},
+			err: nil,
+		},
+		{
+			desc:      "GetCA token failure",
+			tokenResp: "",
+			tokenErr:  certs.ErrGetToken,
+			caResp:    certs.Certificate{},
+			caErr:     nil,
+			expectedCert: sdk.Certificate{},
+			err:       errors.NewSDKErrorWithStatus(certs.ErrGetToken, http.StatusUnprocessableEntity),
+		},
+		{
+			desc:      "GetCA view CA failure",
+			tokenResp: token,
+			tokenErr:  nil,
+			caResp:    certs.Certificate{},
+			caErr:     certs.ErrViewEntity,
+			expectedCert: sdk.Certificate{},
+			err:       errors.NewSDKErrorWithStatus(certs.ErrViewEntity, http.StatusUnprocessableEntity),
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			tokenCall := svc.On("RetrieveCAToken", mock.Anything).Return(tc.tokenResp, tc.tokenErr)
+			caCall := svc.On("GetChainCA", mock.Anything, tc.tokenResp).Return(tc.caResp, tc.caErr)
+
+			resp, err := ctsdk.GetCA()
+			assert.Equal(t, tc.err, err)
+			assert.Equal(t, tc.expectedCert, resp)
+			
+			if tc.desc == "GetCA success" {
+				ok := tokenCall.Parent.AssertCalled(t, "RetrieveCAToken", mock.Anything)
+				assert.True(t, ok)
+				ok = caCall.Parent.AssertCalled(t, "GetChainCA", mock.Anything, tc.tokenResp)
+				assert.True(t, ok)
+			} else if tc.desc == "GetCA view CA failure" {
+				ok := tokenCall.Parent.AssertCalled(t, "RetrieveCAToken", mock.Anything)
+				assert.True(t, ok)
+				ok = caCall.Parent.AssertCalled(t, "GetChainCA", mock.Anything, tc.tokenResp)
+				assert.True(t, ok)
+			}
+			
+			tokenCall.Unset()
+			caCall.Unset()
+		})
+	}
+}

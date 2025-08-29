@@ -222,6 +222,125 @@ func (_c *SDK_DownloadCert_Call) RunAndReturn(run func(token string, serialNumbe
 	return _c
 }
 
+// GenerateCRL provides a mock function for the type SDK
+func (_mock *SDK) GenerateCRL(certType sdk.CertType) ([]byte, errors.SDKError) {
+	ret := _mock.Called(certType)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GenerateCRL")
+	}
+
+	var r0 []byte
+	var r1 errors.SDKError
+	if returnFunc, ok := ret.Get(0).(func(sdk.CertType) ([]byte, errors.SDKError)); ok {
+		return returnFunc(certType)
+	}
+	if returnFunc, ok := ret.Get(0).(func(sdk.CertType) []byte); ok {
+		r0 = returnFunc(certType)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]byte)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(sdk.CertType) errors.SDKError); ok {
+		r1 = returnFunc(certType)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(errors.SDKError)
+		}
+	}
+	return r0, r1
+}
+
+// SDK_GenerateCRL_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GenerateCRL'
+type SDK_GenerateCRL_Call struct {
+	*mock.Call
+}
+
+// GenerateCRL is a helper method to define mock.On call
+//   - certType sdk.CertType
+func (_e *SDK_Expecter) GenerateCRL(certType interface{}) *SDK_GenerateCRL_Call {
+	return &SDK_GenerateCRL_Call{Call: _e.mock.On("GenerateCRL", certType)}
+}
+
+func (_c *SDK_GenerateCRL_Call) Run(run func(certType sdk.CertType)) *SDK_GenerateCRL_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 sdk.CertType
+		if args[0] != nil {
+			arg0 = args[0].(sdk.CertType)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *SDK_GenerateCRL_Call) Return(bytes []byte, sDKError errors.SDKError) *SDK_GenerateCRL_Call {
+	_c.Call.Return(bytes, sDKError)
+	return _c
+}
+
+func (_c *SDK_GenerateCRL_Call) RunAndReturn(run func(certType sdk.CertType) ([]byte, errors.SDKError)) *SDK_GenerateCRL_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetCA provides a mock function for the type SDK
+func (_mock *SDK) GetCA() (sdk.Certificate, errors.SDKError) {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetCA")
+	}
+
+	var r0 sdk.Certificate
+	var r1 errors.SDKError
+	if returnFunc, ok := ret.Get(0).(func() (sdk.Certificate, errors.SDKError)); ok {
+		return returnFunc()
+	}
+	if returnFunc, ok := ret.Get(0).(func() sdk.Certificate); ok {
+		r0 = returnFunc()
+	} else {
+		r0 = ret.Get(0).(sdk.Certificate)
+	}
+	if returnFunc, ok := ret.Get(1).(func() errors.SDKError); ok {
+		r1 = returnFunc()
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(errors.SDKError)
+		}
+	}
+	return r0, r1
+}
+
+// SDK_GetCA_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetCA'
+type SDK_GetCA_Call struct {
+	*mock.Call
+}
+
+// GetCA is a helper method to define mock.On call
+func (_e *SDK_Expecter) GetCA() *SDK_GetCA_Call {
+	return &SDK_GetCA_Call{Call: _e.mock.On("GetCA")}
+}
+
+func (_c *SDK_GetCA_Call) Run(run func()) *SDK_GetCA_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *SDK_GetCA_Call) Return(certificate sdk.Certificate, sDKError errors.SDKError) *SDK_GetCA_Call {
+	_c.Call.Return(certificate, sDKError)
+	return _c
+}
+
+func (_c *SDK_GetCA_Call) RunAndReturn(run func() (sdk.Certificate, errors.SDKError)) *SDK_GetCA_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetCAToken provides a mock function for the type SDK
 func (_mock *SDK) GetCAToken() (sdk.Token, errors.SDKError) {
 	ret := _mock.Called()
@@ -273,6 +392,68 @@ func (_c *SDK_GetCAToken_Call) Return(token sdk.Token, sDKError errors.SDKError)
 }
 
 func (_c *SDK_GetCAToken_Call) RunAndReturn(run func() (sdk.Token, errors.SDKError)) *SDK_GetCAToken_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetEntityID provides a mock function for the type SDK
+func (_mock *SDK) GetEntityID(serialNumber string) (string, errors.SDKError) {
+	ret := _mock.Called(serialNumber)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetEntityID")
+	}
+
+	var r0 string
+	var r1 errors.SDKError
+	if returnFunc, ok := ret.Get(0).(func(string) (string, errors.SDKError)); ok {
+		return returnFunc(serialNumber)
+	}
+	if returnFunc, ok := ret.Get(0).(func(string) string); ok {
+		r0 = returnFunc(serialNumber)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	if returnFunc, ok := ret.Get(1).(func(string) errors.SDKError); ok {
+		r1 = returnFunc(serialNumber)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(errors.SDKError)
+		}
+	}
+	return r0, r1
+}
+
+// SDK_GetEntityID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetEntityID'
+type SDK_GetEntityID_Call struct {
+	*mock.Call
+}
+
+// GetEntityID is a helper method to define mock.On call
+//   - serialNumber string
+func (_e *SDK_Expecter) GetEntityID(serialNumber interface{}) *SDK_GetEntityID_Call {
+	return &SDK_GetEntityID_Call{Call: _e.mock.On("GetEntityID", serialNumber)}
+}
+
+func (_c *SDK_GetEntityID_Call) Run(run func(serialNumber string)) *SDK_GetEntityID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *SDK_GetEntityID_Call) Return(s string, sDKError errors.SDKError) *SDK_GetEntityID_Call {
+	_c.Call.Return(s, sDKError)
+	return _c
+}
+
+func (_c *SDK_GetEntityID_Call) RunAndReturn(run func(serialNumber string) (string, errors.SDKError)) *SDK_GetEntityID_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -681,6 +862,59 @@ func (_c *SDK_RetrieveCertDownloadToken_Call) Return(token sdk.Token, sDKError e
 }
 
 func (_c *SDK_RetrieveCertDownloadToken_Call) RunAndReturn(run func(serialNumber string) (sdk.Token, errors.SDKError)) *SDK_RetrieveCertDownloadToken_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RevokeAll provides a mock function for the type SDK
+func (_mock *SDK) RevokeAll(entityID string) errors.SDKError {
+	ret := _mock.Called(entityID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RevokeAll")
+	}
+
+	var r0 errors.SDKError
+	if returnFunc, ok := ret.Get(0).(func(string) errors.SDKError); ok {
+		r0 = returnFunc(entityID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(errors.SDKError)
+		}
+	}
+	return r0
+}
+
+// SDK_RevokeAll_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RevokeAll'
+type SDK_RevokeAll_Call struct {
+	*mock.Call
+}
+
+// RevokeAll is a helper method to define mock.On call
+//   - entityID string
+func (_e *SDK_Expecter) RevokeAll(entityID interface{}) *SDK_RevokeAll_Call {
+	return &SDK_RevokeAll_Call{Call: _e.mock.On("RevokeAll", entityID)}
+}
+
+func (_c *SDK_RevokeAll_Call) Run(run func(entityID string)) *SDK_RevokeAll_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *SDK_RevokeAll_Call) Return(sDKError errors.SDKError) *SDK_RevokeAll_Call {
+	_c.Call.Return(sDKError)
+	return _c
+}
+
+func (_c *SDK_RevokeAll_Call) RunAndReturn(run func(entityID string) errors.SDKError) *SDK_RevokeAll_Call {
 	_c.Call.Return(run)
 	return _c
 }

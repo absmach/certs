@@ -62,7 +62,7 @@ func (lm *loggingMiddleware) RetrieveCertDownloadToken(ctx context.Context, seri
 
 func (lm *loggingMiddleware) RetrieveCAToken(ctx context.Context) (tokenString string, err error) {
 	defer func(begin time.Time) {
-		message := fmt.Sprintf("Method get_cert_download_token for cert took %s to complete", time.Since(begin))
+		message := fmt.Sprintf("Method get_ca_token took %s to complete", time.Since(begin))
 		if err != nil {
 			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
 			return
@@ -72,16 +72,16 @@ func (lm *loggingMiddleware) RetrieveCAToken(ctx context.Context) (tokenString s
 	return lm.svc.RetrieveCAToken(ctx)
 }
 
-func (lm *loggingMiddleware) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options certs.SubjectOptions) (cert certs.Certificate, err error) {
+func (lm *loggingMiddleware) IssueCert(ctx context.Context, entityID, entityType, ttl string, ipAddrs []string, options certs.SubjectOptions) (cert certs.Certificate, err error) {
 	defer func(begin time.Time) {
-		message := fmt.Sprintf("Method issue_cert for took %s to complete", time.Since(begin))
+		message := fmt.Sprintf("Method issue_cert for entity %s took %s to complete", entityID, time.Since(begin))
 		if err != nil {
 			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
 			return
 		}
 		lm.logger.Info(message)
 	}(time.Now())
-	return lm.svc.IssueCert(ctx, entityID, ttl, ipAddrs, options)
+	return lm.svc.IssueCert(ctx, entityID, entityType, ttl, ipAddrs, options)
 }
 
 func (lm *loggingMiddleware) ListCerts(ctx context.Context, pm certs.PageMetadata) (cp certs.CertificatePage, err error) {
@@ -194,4 +194,16 @@ func (lm *loggingMiddleware) IssueFromCSR(ctx context.Context, entityID, ttl str
 		lm.logger.Info(message)
 	}(time.Now())
 	return lm.svc.IssueFromCSR(ctx, entityID, ttl, csr)
+}
+
+func (lm *loggingMiddleware) GetCA(ctx context.Context) (cert certs.Certificate, err error) {
+	defer func(begin time.Time) {
+		message := fmt.Sprintf("Method get_ca took %s to complete", time.Since(begin))
+		if err != nil {
+			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
+			return
+		}
+		lm.logger.Info(message)
+	}(time.Now())
+	return lm.svc.GetCA(ctx)
 }

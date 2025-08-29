@@ -5,6 +5,7 @@ package grpc
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/absmach/certs"
@@ -16,10 +17,19 @@ import (
 
 const svcName = "certs.ClientService"
 
+var (
+	errResponse = errors.New("invalid response type")
+	errRequest  = errors.New("invalid request type")
+)
+
 type grpcClient struct {
-	timeout     time.Duration
-	getEntityID endpoint.Endpoint
-	revokeCerts endpoint.Endpoint
+	timeout               time.Duration
+	getEntityID           endpoint.Endpoint
+	revokeCerts           endpoint.Endpoint
+	retrieveCert          endpoint.Endpoint
+	retrieveDownloadToken endpoint.Endpoint
+	issueCert             endpoint.Endpoint
+	getCA                 endpoint.Endpoint
 }
 
 func NewClient(conn *grpc.ClientConn, timeout time.Duration) certs.CertsServiceClient {
@@ -40,6 +50,39 @@ func NewClient(conn *grpc.ClientConn, timeout time.Duration) certs.CertsServiceC
 			encodeRevokeCertsRequest,
 			decodeRevokeCertsResponse,
 			emptypb.Empty{},
+		).Endpoint(),
+		retrieveCert: kitgrpc.NewClient(
+			conn,
+			svcName,
+			"RetrieveCert",
+			encodeRetrieveCertRequest,
+			decodeRetrieveCertResponse,
+			certs.CertificateBundle{},
+		).Endpoint(),
+
+		retrieveDownloadToken: kitgrpc.NewClient(
+			conn,
+			svcName,
+			"RetrieveCertDownloadToken",
+			encodeRetrieveDownloadTokenRequest,
+			decodeRetrieveDownloadTokenResponse,
+			certs.RetrieveCertDownloadTokenRes{},
+		).Endpoint(),
+		issueCert: kitgrpc.NewClient(
+			conn,
+			svcName,
+			"IssueCert",
+			encodeIssueCertRequest,
+			decodeIssueCertResponse,
+			certs.IssueCertRes{},
+		).Endpoint(),
+		getCA: kitgrpc.NewClient(
+			conn,
+			svcName,
+			"GetCA",
+			encodeGetCARequest,
+			decodeGetCAResponse,
+			certs.Cert{},
 		).Endpoint(),
 
 		timeout: timeout,
@@ -66,6 +109,53 @@ func (c *grpcClient) RevokeCerts(ctx context.Context, req *certs.RevokeReq, _ ..
 	return res.(*emptypb.Empty), nil
 }
 
+func (client *grpcClient) RetrieveCertDownloadToken(ctx context.Context, req *certs.RetrieveCertDownloadTokenReq, opts ...grpc.CallOption) (*certs.RetrieveCertDownloadTokenRes, error) {
+	ctx, cancel := context.WithTimeout(ctx, client.timeout)
+	defer cancel()
+
+	res, err := client.retrieveDownloadToken(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return &certs.RetrieveCertDownloadTokenRes{
+		Token: res.(*certs.RetrieveCertDownloadTokenRes).Token,
+	}, nil
+}
+
+func (client *grpcClient) RetrieveCert(ctx context.Context, req *certs.RetrieveCertReq, opts ...grpc.CallOption) (*certs.CertificateBundle, error) {
+	ctx, cancel := context.WithTimeout(ctx, client.timeout)
+	defer cancel()
+
+	res, err := client.retrieveCert(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	return res.(*certs.CertificateBundle), nil
+}
+
+func (client *grpcClient) IssueCert(ctx context.Context, req *certs.IssueCertReq, opts ...grpc.CallOption) (*certs.IssueCertRes, error) {
+	ctx, cancel := context.WithTimeout(ctx, client.timeout)
+	defer cancel()
+
+	res, err := client.issueCert(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	return res.(*certs.IssueCertRes), nil
+}
+
+func (client *grpcClient) GetCA(ctx context.Context, req *certs.GetCAReq, opts ...grpc.CallOption) (*certs.Cert, error) {
+	ctx, cancel := context.WithTimeout(ctx, client.timeout)
+	defer cancel()
+
+	res, err := client.getCA(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	return res.(*certs.Cert), nil
+}
+
 func encodeGetEntityIDRequest(_ context.Context, request any) (any, error) {
 	req := request.(*certs.EntityReq)
 	return &certs.EntityReq{
@@ -89,4 +179,68 @@ func encodeRevokeCertsRequest(_ context.Context, request any) (any, error) {
 
 func decodeRevokeCertsResponse(_ context.Context, response any) (any, error) {
 	return &emptypb.Empty{}, nil
+}
+
+func encodeRetrieveCertRequest(ctx context.Context, request interface{}) (interface{}, error) {
+	req, ok := request.(*certs.RetrieveCertReq)
+	if !ok {
+		return nil, errRequest
+	}
+	return req, nil
+}
+
+func encodeRetrieveDownloadTokenRequest(ctx context.Context, request interface{}) (interface{}, error) {
+	req, ok := request.(*certs.RetrieveCertDownloadTokenReq)
+	if !ok {
+		return nil, errRequest
+	}
+	return req, nil
+}
+
+func encodeIssueCertRequest(ctx context.Context, request interface{}) (interface{}, error) {
+	req, ok := request.(*certs.IssueCertReq)
+	if !ok {
+		return nil, errRequest
+	}
+	return req, nil
+}
+
+func encodeGetCARequest(ctx context.Context, request interface{}) (interface{}, error) {
+	req, ok := request.(*certs.GetCAReq)
+	if !ok {
+		return nil, errRequest
+	}
+	return req, nil
+}
+
+func decodeRetrieveCertResponse(ctx context.Context, response interface{}) (interface{}, error) {
+	res, ok := response.(*certs.CertificateBundle)
+	if !ok {
+		return nil, errResponse
+	}
+	return res, nil
+}
+
+func decodeRetrieveDownloadTokenResponse(ctx context.Context, response interface{}) (interface{}, error) {
+	res, ok := response.(*certs.RetrieveCertDownloadTokenRes)
+	if !ok {
+		return nil, errResponse
+	}
+	return res, nil
+}
+
+func decodeIssueCertResponse(ctx context.Context, response interface{}) (interface{}, error) {
+	res, ok := response.(*certs.IssueCertRes)
+	if !ok {
+		return nil, errResponse
+	}
+	return res, nil
+}
+
+func decodeGetCAResponse(ctx context.Context, response interface{}) (interface{}, error) {
+	res, ok := response.(*certs.Cert)
+	if !ok {
+		return nil, errResponse
+	}
+	return res, nil
 }

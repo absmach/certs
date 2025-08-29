@@ -60,10 +60,11 @@ func (req crlReq) validate() error {
 }
 
 type issueCertReq struct {
-	entityID string               `json:"-"`
-	TTL      string               `json:"ttl"`
-	IpAddrs  []string             `json:"ip_addresses"`
-	Options  certs.SubjectOptions `json:"options"`
+	entityID   string               `json:"-"`
+	entityType string               `json:"entity_type"`
+	TTL        string               `json:"ttl"`
+	IpAddrs    []string             `json:"ip_addresses"`
+	Options    certs.SubjectOptions `json:"options"`
 }
 
 func (req issueCertReq) validate() error {

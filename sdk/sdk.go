@@ -25,6 +25,7 @@ const (
 	certsEndpoint     = "certs"
 	csrEndpoint       = "csrs"
 	issueCertEndpoint = "certs/issue"
+	crlEndpoint       = "crl"
 )
 
 const (
@@ -68,6 +69,24 @@ func (c CertStatus) String() string {
 
 func (c CertStatus) MarshalJSON() ([]byte, error) {
 	return json.Marshal(c.String())
+}
+
+type CertType int
+
+const (
+	RootCA CertType = iota
+	IntermediateCA
+)
+
+func (c CertType) String() string {
+	switch c {
+	case RootCA:
+		return "root"
+	case IntermediateCA:
+		return "intermediate"
+	default:
+		return "unknown"
+	}
 }
 
 type PageMetadata struct {
@@ -270,6 +289,34 @@ type SDK interface {
 	//	certs, err := sdk.IssueFromCSR( "entityID", "ttl", "csrFile")
 	//	fmt.Println(err)
 	IssueFromCSR(entityID, ttl string, csr string) (Certificate, errors.SDKError)
+
+	// GenerateCRL generates a Certificate Revocation List
+	//
+	// example:
+	//	crlBytes, err := sdk.GenerateCRL(sdk.RootCA)
+	//	fmt.Println(err)
+	GenerateCRL(certType CertType) ([]byte, errors.SDKError)
+
+	// RevokeAll revokes all certificates for an entity ID
+	//
+	// example:
+	//	err := sdk.RevokeAll("entityID")
+	//	fmt.Println(err)
+	RevokeAll(entityID string) errors.SDKError
+
+	// GetEntityID gets the entity ID for a certificate by serial number
+	//
+	// example:
+	//	entityID, err := sdk.GetEntityID("serialNumber")
+	//	fmt.Println(entityID)
+	GetEntityID(serialNumber string) (string, errors.SDKError)
+
+	// GetCA gets the CA certificate
+	//
+	// example:
+	//	ca, err := sdk.GetCA()
+	//	fmt.Println(ca)
+	GetCA() (Certificate, errors.SDKError)
 }
 
 func (sdk mgSDK) IssueCert(entityID, ttl string, ipAddrs []string, opts Options) (Certificate, errors.SDKError) {
@@ -583,6 +630,37 @@ func (sdk mgSDK) IssueFromCSR(entityID, ttl string, csr string) (Certificate, er
 		return Certificate{}, errors.NewSDKError(err)
 	}
 	return cert, nil
+}
+
+func (sdk mgSDK) GenerateCRL(certType CertType) ([]byte, errors.SDKError) {
+	url := fmt.Sprintf("%s/%s/%s", sdk.certsURL, certsEndpoint, crlEndpoint)
+	_, body, sdkerr := sdk.processRequest(http.MethodGet, url, nil, nil, http.StatusOK)
+	if sdkerr != nil {
+		return nil, sdkerr
+	}
+	return body, nil
+}
+
+func (sdk mgSDK) RevokeAll(entityID string) errors.SDKError {
+	url := fmt.Sprintf("%s/%s/%s/delete", sdk.certsURL, certsEndpoint, entityID)
+	_, _, sdkerr := sdk.processRequest(http.MethodDelete, url, nil, nil, http.StatusNoContent)
+	return sdkerr
+}
+
+func (sdk mgSDK) GetEntityID(serialNumber string) (string, errors.SDKError) {
+	cert, err := sdk.ViewCert(serialNumber)
+	if err != nil {
+		return "", err
+	}
+	return cert.EntityID, nil
+}
+
+func (sdk mgSDK) GetCA() (Certificate, errors.SDKError) {
+	token, err := sdk.GetCAToken()
+	if err != nil {
+		return Certificate{}, err
+	}
+	return sdk.ViewCA(token.Token)
 }
 
 func NewSDK(conf Config) SDK {
