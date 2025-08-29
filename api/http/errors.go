@@ -9,6 +9,9 @@ var (
 	// ErrEmptySerialNo indicates that the serial number is empty.
 	ErrEmptySerialNo = errors.New("empty serial number provided")
 
+	// ErrEmptyTTL indicates that the TTL is empty.
+	ErrEmptyTTL = errors.New("empty TTL provided")
+
 	// ErrEmptyToken indicates that the token is empty.
 	ErrEmptyToken = errors.New("empty token provided")
 

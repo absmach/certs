@@ -17,18 +17,15 @@ import (
 	certsgrpc "github.com/absmach/certs/api/grpc"
 	httpapi "github.com/absmach/certs/api/http"
 	jaegerClient "github.com/absmach/certs/internal/jaeger"
-	"github.com/absmach/certs/internal/postgres"
-	pgClient "github.com/absmach/certs/internal/postgres"
 	"github.com/absmach/certs/internal/prometheus"
 	"github.com/absmach/certs/internal/server"
 	grpcserver "github.com/absmach/certs/internal/server/grpc"
 	"github.com/absmach/certs/internal/uuid"
-	cpostgres "github.com/absmach/certs/postgres/certs"
+	"github.com/absmach/certs/pki"
 	"github.com/absmach/certs/tracing"
 	smq "github.com/absmach/supermq/pkg/server"
 	httpserver "github.com/absmach/supermq/pkg/server/http"
 	"github.com/caarlos0/env/v10"
-	"github.com/jmoiron/sqlx"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
@@ -37,14 +34,11 @@ import (
 
 const (
 	svcName        = "certs"
-	envPrefix      = "AM_CERTS_DB_"
 	envPrefixHTTP  = "AM_CERTS_HTTP_"
 	envPrefixGRPC  = "AM_CERTS_GRPC_"
 	envPrefixAuth  = "AM_AUTH_GRPC_"
-	defDB          = "certs"
 	defSvcHTTPPort = "9010"
 	defSvcGRPCPort = "7012"
-	configFile     = "/config/config.yaml"
 )
 
 type config struct {
@@ -52,6 +46,14 @@ type config struct {
 	JaegerURL  url.URL `env:"AM_JAEGER_URL"                 envDefault:"http://jaeger:4318"`
 	InstanceID string  `env:"AM_COMPUTATIONS_INSTANCE_ID"   envDefault:""`
 	TraceRatio float64 `env:"AM_JAEGER_TRACE_RATIO"         envDefault:"1.0"`
+
+	// OpenBao PKI settings
+	OpenBaoHost      string `env:"AM_CERTS_OPENBAO_HOST"         envDefault:"http://localhost:8200"`
+	OpenBaoAppRole   string `env:"AM_CERTS_OPENBAO_APP_ROLE"     envDefault:""`
+	OpenBaoAppSecret string `env:"AM_CERTS_OPENBAO_APP_SECRET"   envDefault:""`
+	OpenBaoNamespace string `env:"AM_CERTS_OPENBAO_NAMESPACE"    envDefault:""`
+	OpenBaoPKIPath   string `env:"AM_CERTS_OPENBAO_PKI_PATH"     envDefault:"pki"`
+	OpenBaoRole      string `env:"AM_CERTS_OPENBAO_ROLE"         envDefault:"certs"`
 }
 
 func main() {
@@ -75,16 +77,21 @@ func main() {
 		}
 	}
 
-	dbConfig := pgClient.Config{Name: defDB}
-	if err := env.ParseWithOptions(&dbConfig, env.Options{Prefix: envPrefix}); err != nil {
-		logger.Error(err.Error())
+	if cfg.OpenBaoHost == "" {
+		logger.Error("No host specified for OpenBao PKI engine")
+		return
 	}
-	cm := cpostgres.Migration()
-	db, err := pgClient.Setup(dbConfig, *cm)
+
+	if cfg.OpenBaoAppRole == "" || cfg.OpenBaoAppSecret == "" {
+		logger.Error("OpenBao AppRole credentials not specified")
+		return
+	}
+
+	pkiAgent, err := pki.NewAgent(cfg.OpenBaoAppRole, cfg.OpenBaoAppSecret, cfg.OpenBaoHost, cfg.OpenBaoNamespace, cfg.OpenBaoPKIPath, cfg.OpenBaoRole, logger)
 	if err != nil {
-		log.Fatalf(fmt.Sprintf("Failed to connect to %s database: %s", svcName, err))
+		logger.Error("failed to configure client for OpenBao PKI engine")
+		return
 	}
-	defer db.Close()
 
 	tp, err := jaegerClient.NewProvider(ctx, svcName, cfg.JaegerURL, cfg.InstanceID, cfg.TraceRatio)
 	if err != nil {
@@ -102,17 +109,7 @@ func main() {
 		logger.Error(fmt.Sprintf("failed to load %s gRPC server configuration : %s", svcName, err))
 	}
 
-	config, err := certs.LoadConfig(configFile)
-	if err != nil {
-		logger.Error(fmt.Sprintf("failed to load CA config file : %s", err))
-		return
-	}
-
-	svc, err := newService(ctx, db, tracer, logger, dbConfig, config)
-	if err != nil {
-		logger.Error(fmt.Sprintf("failed to create %s service: %s", svcName, err))
-		return
-	}
+	svc := newService(ctx, tracer, logger, pkiAgent)
 
 	grpcServerConfig := smq.Config{Port: defSvcGRPCPort}
 	if err := env.ParseWithOptions(&grpcServerConfig, env.Options{Prefix: envPrefixGRPC}); err != nil {
@@ -145,19 +142,18 @@ func main() {
 	}
 }
 
-func newService(ctx context.Context, db *sqlx.DB, tracer trace.Tracer, logger *slog.Logger, dbConfig pgClient.Config, config *certs.Config) (certs.Service, error) {
-	database := postgres.NewDatabase(db, dbConfig, tracer)
-	repo := cpostgres.NewRepository(database)
-	svc, err := certs.NewService(ctx, repo, config)
+func newService(ctx context.Context, tracer trace.Tracer, logger *slog.Logger, pkiAgent certs.Agent) certs.Service {
+	svc, err := certs.NewService(ctx, pkiAgent)
 	if err != nil {
-		return nil, err
+		logger.Error(fmt.Sprintf("failed to create service: %s", err))
+		return nil
 	}
 	svc = api.LoggingMiddleware(svc, logger)
 	counter, latency := prometheus.MakeMetrics(svcName, "api")
 	svc = api.MetricsMiddleware(svc, counter, latency)
 	svc = tracing.New(svc, tracer)
 
-	return svc, nil
+	return svc
 }
 
 func initLogger(levelText string) (*slog.Logger, error) {

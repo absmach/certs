@@ -66,27 +66,27 @@ func (c *grpcClient) RevokeCerts(ctx context.Context, req *certs.RevokeReq, _ ..
 	return res.(*emptypb.Empty), nil
 }
 
-func encodeGetEntityIDRequest(_ context.Context, request interface{}) (interface{}, error) {
+func encodeGetEntityIDRequest(_ context.Context, request any) (any, error) {
 	req := request.(*certs.EntityReq)
 	return &certs.EntityReq{
 		SerialNumber: req.GetSerialNumber(),
 	}, nil
 }
 
-func decodeGetEntityIDResponse(_ context.Context, response interface{}) (interface{}, error) {
+func decodeGetEntityIDResponse(_ context.Context, response any) (any, error) {
 	res := response.(*certs.EntityRes)
 	return &certs.EntityRes{
 		EntityId: res.EntityId,
 	}, nil
 }
 
-func encodeRevokeCertsRequest(_ context.Context, request interface{}) (interface{}, error) {
+func encodeRevokeCertsRequest(_ context.Context, request any) (any, error) {
 	req := request.(*certs.RevokeReq)
 	return &certs.RevokeReq{
 		EntityId: req.GetEntityId(),
 	}, nil
 }
 
-func decodeRevokeCertsResponse(_ context.Context, response interface{}) (interface{}, error) {
+func decodeRevokeCertsResponse(_ context.Context, response any) (any, error) {
 	return &emptypb.Empty{}, nil
 }

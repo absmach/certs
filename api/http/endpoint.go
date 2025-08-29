@@ -5,20 +5,13 @@ package http
 
 import (
 	"context"
-	"crypto"
-	"crypto/x509"
-	"encoding/pem"
-	"math/rand"
-	"strings"
-	"time"
 
 	"github.com/absmach/certs"
 	"github.com/go-kit/kit/endpoint"
-	"golang.org/x/crypto/ocsp"
 )
 
 func renewCertEndpoint(svc certs.Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+	return func(ctx context.Context, request any) (response any, err error) {
 		req := request.(viewReq)
 		if err := req.validate(); err != nil {
 			return renewCertRes{}, err
@@ -33,13 +26,13 @@ func renewCertEndpoint(svc certs.Service) endpoint.Endpoint {
 }
 
 func revokeCertEndpoint(svc certs.Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+	return func(ctx context.Context, request any) (response any, err error) {
 		req := request.(viewReq)
 		if err := req.validate(); err != nil {
 			return revokeCertRes{revoked: false}, err
 		}
 
-		if err = svc.RevokeCert(ctx, req.id); err != nil {
+		if err = svc.RevokeBySerial(ctx, req.id); err != nil {
 			return revokeCertRes{revoked: false}, err
 		}
 
@@ -48,13 +41,13 @@ func revokeCertEndpoint(svc certs.Service) endpoint.Endpoint {
 }
 
 func deleteCertEndpoint(svc certs.Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+	return func(ctx context.Context, request any) (response any, err error) {
 		req := request.(deleteReq)
 		if err := req.validate(); err != nil {
 			return deleteCertRes{deleted: false}, err
 		}
 
-		if err = svc.RemoveCert(ctx, req.entityID); err != nil {
+		if err = svc.RevokeAll(ctx, req.entityID); err != nil {
 			return deleteCertRes{deleted: false}, err
 		}
 
@@ -63,7 +56,7 @@ func deleteCertEndpoint(svc certs.Service) endpoint.Endpoint {
 }
 
 func requestCertDownloadTokenEndpoint(svc certs.Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+	return func(ctx context.Context, request any) (response any, err error) {
 		req := request.(viewReq)
 		if err := req.validate(); err != nil {
 			return requestCertDownloadTokenRes{}, err
@@ -79,7 +72,7 @@ func requestCertDownloadTokenEndpoint(svc certs.Service) endpoint.Endpoint {
 }
 
 func downloadCertEndpoint(svc certs.Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+	return func(ctx context.Context, request any) (response any, err error) {
 		req := request.(downloadReq)
 		if err := req.validate(); err != nil {
 			return fileDownloadRes{}, err
@@ -100,7 +93,7 @@ func downloadCertEndpoint(svc certs.Service) endpoint.Endpoint {
 }
 
 func issueCertEndpoint(svc certs.Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+	return func(ctx context.Context, request any) (response any, err error) {
 		req := request.(issueCertReq)
 		if err := req.validate(); err != nil {
 			return issueCertRes{}, err
@@ -123,7 +116,7 @@ func issueCertEndpoint(svc certs.Service) endpoint.Endpoint {
 }
 
 func listCertsEndpoint(svc certs.Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+	return func(ctx context.Context, request any) (response any, err error) {
 		req := request.(listCertsReq)
 		if err := req.validate(); err != nil {
 			return listCertsRes{}, err
@@ -154,7 +147,7 @@ func listCertsEndpoint(svc certs.Service) endpoint.Endpoint {
 }
 
 func viewCertEndpoint(svc certs.Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+	return func(ctx context.Context, request any) (response any, err error) {
 		req := request.(viewReq)
 		if err := req.validate(); err != nil {
 			return viewCertRes{}, err
@@ -176,74 +169,25 @@ func viewCertEndpoint(svc certs.Service) endpoint.Endpoint {
 }
 
 func ocspEndpoint(svc certs.Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
-		req := request.(ocspReq)
+	return func(ctx context.Context, request any) (response any, err error) {
+		req := request.(ocspCheckReq)
 		if err := req.validate(); err != nil {
 			return nil, err
 		}
 
-		cert, status, issuerCert, err := svc.OCSP(ctx, req.req.SerialNumber.String())
+		resBytes, err := svc.OCSP(ctx, req.SerialNumber)
 		if err != nil {
 			return nil, err
 		}
 
-		switch strings.ToUpper(req.statusParam) {
-		case "REVOKE":
-			status = ocsp.Revoked
-		case "GOOD":
-			status = ocsp.Good
-		case "SERVERFAILED":
-			status = ocsp.ServerFailed
-		case "RANDOM":
-			r := rand.New(rand.NewSource(int64(time.Now().Nanosecond())))
-			status = r.Intn(ocsp.ServerFailed)
-		}
-
-		template := ocsp.Response{
-			Status:       status,
-			SerialNumber: req.req.SerialNumber,
-			ThisUpdate:   time.Now().UTC(),
-			NextUpdate:   time.Now().UTC(),
-			IssuerHash:   req.req.HashAlgorithm,
-		}
-		if template.Status == ocsp.Revoked {
-			template.RevokedAt = time.Now().UTC()
-		}
-		var signer crypto.Signer
-
-		if cert != nil {
-			if cert.Revoked {
-				template.RevokedAt = cert.ExpiryTime
-				template.RevocationReason = ocsp.Unspecified
-			}
-			pemBlock, _ := pem.Decode(cert.Certificate)
-			parsedCert, err := x509.ParseCertificate(pemBlock.Bytes)
-			if err != nil {
-				return nil, err
-			}
-			template.Certificate = parsedCert
-			keyBlock, _ := pem.Decode(cert.Key)
-			privKey, err := x509.ParsePKCS1PrivateKey(keyBlock.Bytes)
-			if err != nil {
-				return nil, err
-			}
-			signer = privKey
-			if !parsedCert.NotAfter.After(time.Now().UTC()) {
-				template.Status = ocsp.Revoked
-				template.RevocationReason = ocsp.CessationOfOperation
-			}
-		}
-
-		return ocspRes{
-			template:   template,
-			issuerCert: issuerCert,
-			signer:     signer,
+		return ocspRawRes{
+			responseBytes: resBytes,
 		}, nil
 	}
 }
 
 func generateCRLEndpoint(svc certs.Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+	return func(ctx context.Context, request any) (response any, err error) {
 		req := request.(crlReq)
 		if err := req.validate(); err != nil {
 			return crlRes{}, err
@@ -260,7 +204,7 @@ func generateCRLEndpoint(svc certs.Service) endpoint.Endpoint {
 }
 
 func getDownloadCATokenEndpoint(svc certs.Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+	return func(ctx context.Context, request any) (response any, err error) {
 		token, err := svc.RetrieveCAToken(ctx)
 		if err != nil {
 			return requestCertDownloadTokenRes{}, err
@@ -271,7 +215,7 @@ func getDownloadCATokenEndpoint(svc certs.Service) endpoint.Endpoint {
 }
 
 func downloadCAEndpoint(svc certs.Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+	return func(ctx context.Context, request any) (response any, err error) {
 		req := request.(downloadReq)
 		if err := req.validate(); err != nil {
 			return fileDownloadRes{}, err
@@ -291,7 +235,7 @@ func downloadCAEndpoint(svc certs.Service) endpoint.Endpoint {
 }
 
 func viewCAEndpoint(svc certs.Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+	return func(ctx context.Context, request any) (response any, err error) {
 		req := request.(downloadReq)
 		if err := req.validate(); err != nil {
 			return viewCertRes{}, err
@@ -303,14 +247,17 @@ func viewCAEndpoint(svc certs.Service) endpoint.Endpoint {
 		}
 
 		return viewCertRes{
-			Certificate: string(cert.Certificate),
-			Key:         string(cert.Key),
+			SerialNumber: cert.SerialNumber,
+			Certificate:  string(cert.Certificate),
+			Revoked:      cert.Revoked,
+			ExpiryTime:   cert.ExpiryTime,
+			EntityID:     cert.EntityID,
 		}, nil
 	}
 }
 
 func issueFromCSREndpoint(svc certs.Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+	return func(ctx context.Context, request any) (response any, err error) {
 		req := request.(IssueFromCSRReq)
 		if err := req.validate(); err != nil {
 			return issueFromCSRRes{}, err

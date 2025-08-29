@@ -38,19 +38,19 @@ func NewServer(svc certs.Service) certs.CertsServiceServer {
 	}
 }
 
-func decodeGetEntityReq(_ context.Context, req interface{}) (interface{}, error) {
+func decodeGetEntityReq(_ context.Context, req any) (any, error) {
 	return req.(*certs.EntityReq), nil
 }
 
-func encodeGetEntityRes(_ context.Context, res interface{}) (interface{}, error) {
+func encodeGetEntityRes(_ context.Context, res any) (any, error) {
 	return res.(*certs.EntityRes), nil
 }
 
-func decodeRevokeCertsReq(_ context.Context, req interface{}) (interface{}, error) {
+func decodeRevokeCertsReq(_ context.Context, req any) (any, error) {
 	return req.(*certs.RevokeReq), nil
 }
 
-func encodeRevokeCertsRes(_ context.Context, res interface{}) (interface{}, error) {
+func encodeRevokeCertsRes(_ context.Context, res any) (any, error) {
 	return res.(*emptypb.Empty), nil
 }
 
