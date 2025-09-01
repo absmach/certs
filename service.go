@@ -252,7 +252,7 @@ func (s *service) RenewCert(ctx context.Context, serialNumber string) (Certifica
 	if err != nil {
 		return Certificate{}, errors.Wrap(ErrUpdateEntity, err)
 	}
-	
+
 	return newCert, nil
 }
 

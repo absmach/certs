@@ -36,7 +36,7 @@ services:
       - ${AM_CERTS_GRPC_PORT}:${AM_CERTS_GRPC_PORT}
 
   openbao:
-    image: quay.io/openbao/openbao:latest
+    image: openbao/openbao:2.4.0
     container_name: certs-openbao
     restart: on-failure
     networks:
