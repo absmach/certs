@@ -233,39 +233,56 @@ func TestRenewCert(t *testing.T) {
 	svc, err := certs.NewService(context.Background(), agent)
 	require.NoError(t, err)
 
+	newCert := certs.Certificate{
+		SerialNumber: "new-serial-number",
+		EntityID:     "test-entity",
+		Certificate:  []byte(testCertPEM),
+	}
+
 	testCases := []struct {
 		desc     string
 		serial   string
 		viewErr  error
 		renewErr error
+		newCert  certs.Certificate
 		err      error
 	}{
 		{
-			desc:   "renew cert successfully",
-			serial: serialNumber,
-			err:    nil,
+			desc:    "renew cert successfully",
+			serial:  serialNumber,
+			newCert: newCert,
+			err:     nil,
 		},
 		{
 			desc:     "failed agent renew",
 			serial:   serialNumber,
 			renewErr: certs.ErrUpdateEntity,
+			newCert:  certs.Certificate{},
 			err:      certs.ErrUpdateEntity,
 		},
 		{
 			desc:     "failed agent view",
 			serial:   serialNumber,
+			viewErr:  certs.ErrViewEntity,
 			renewErr: certs.ErrViewEntity,
+			newCert:  certs.Certificate{},
 			err:      certs.ErrViewEntity,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			agentCall := agent.On("Renew", tc.serial, certValidityPeriod.String()).Return(certs.Certificate{}, tc.renewErr)
+			agentCall := agent.On("Renew", tc.serial, certValidityPeriod.String()).Return(tc.newCert, tc.renewErr)
 			agentCall1 := agent.On("View", tc.serial).Return(certs.Certificate{Certificate: []byte(testCertPEM), Revoked: false}, tc.viewErr)
 
-			err = svc.RenewCert(context.Background(), tc.serial)
-			require.True(t, errors.Contains(err, tc.err), "expected error %v, got %v", tc.err, err)
+			renewedCert, err := svc.RenewCert(context.Background(), tc.serial)
+			if tc.err != nil {
+				require.True(t, errors.Contains(err, tc.err), "expected error %v, got %v", tc.err, err)
+				require.Equal(t, certs.Certificate{}, renewedCert)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.newCert, renewedCert)
+			}
 
 			agentCall1.Unset()
 			agentCall.Unset()

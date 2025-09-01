@@ -6,6 +6,8 @@ package http
 import (
 	"net/http"
 	"time"
+
+	"github.com/absmach/certs"
 )
 
 var (
@@ -16,11 +18,12 @@ var (
 )
 
 type renewCertRes struct {
-	renewed bool
+	Renewed     bool              `json:"renewed"`
+	Certificate certs.Certificate `json:"certificate,omitempty"`
 }
 
 func (res renewCertRes) Code() int {
-	if res.renewed {
+	if res.Renewed {
 		return http.StatusOK
 	}
 
@@ -173,7 +176,9 @@ func (res crlRes) Empty() bool {
 }
 
 type ocspRawRes struct {
-	responseBytes []byte
+	Status       int    `json:"status"`
+	SerialNumber string `json:"serial_number"`
+	Revoked      bool   `json:"revoked"`
 }
 
 func (res ocspRawRes) Code() int {

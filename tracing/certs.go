@@ -22,7 +22,7 @@ func New(svc certs.Service, tracer trace.Tracer) certs.Service {
 	return &tracingMiddleware{tracer, svc}
 }
 
-func (tm *tracingMiddleware) RenewCert(ctx context.Context, serialNumber string) error {
+func (tm *tracingMiddleware) RenewCert(ctx context.Context, serialNumber string) (certs.Certificate, error) {
 	ctx, span := tm.tracer.Start(ctx, "renew_cert")
 	defer span.End()
 	return tm.svc.RenewCert(ctx, serialNumber)

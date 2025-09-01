@@ -24,14 +24,14 @@ func LoggingMiddleware(svc certs.Service, logger *slog.Logger) certs.Service {
 	return &loggingMiddleware{logger, svc}
 }
 
-func (lm *loggingMiddleware) RenewCert(ctx context.Context, serialNumber string) (err error) {
+func (lm *loggingMiddleware) RenewCert(ctx context.Context, serialNumber string) (cert certs.Certificate, err error) {
 	defer func(begin time.Time) {
 		message := fmt.Sprintf("Method renew_cert for cert %s took %s to complete", serialNumber, time.Since(begin))
 		if err != nil {
 			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
 			return
 		}
-		lm.logger.Info(message)
+		lm.logger.Info(fmt.Sprintf("%s and returned new cert %s.", message, cert.SerialNumber))
 	}(time.Now())
 	return lm.svc.RenewCert(ctx, serialNumber)
 }

@@ -82,13 +82,13 @@ func (req listCertsReq) validate() error {
 
 type ocspCheckReq struct {
 	SerialNumber string `json:"serial_number"`
-	CertContent  string `json:"cert_content"`
+	Certificate  string `json:"certificate"`
 	StatusParam  string `json:"status_param"`
 }
 
 func (req *ocspCheckReq) validate() error {
-	if req.CertContent != "" {
-		serialNumber, err := extractSerialFromCertContent(req.CertContent)
+	if req.Certificate != "" {
+		serialNumber, err := extractSerialFromCertContent(req.Certificate)
 		if err != nil {
 			return errors.Wrap(certs.ErrMalformedEntity, fmt.Errorf("failed to extract serial from certificate: %w", err))
 		}

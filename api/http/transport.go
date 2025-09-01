@@ -98,7 +98,7 @@ func MakeHandler(svc certs.Service, logger *slog.Logger, instanceID string) http
 		r.Post("/ocsp", otelhttp.NewHandler(kithttp.NewServer(
 			ocspEndpoint(svc),
 			decodeOCSPRequest,
-			encodeOSCPResponse,
+			EncodeResponse,
 			opts...,
 		), "ocsp").ServeHTTP)
 		r.Get("/crl", otelhttp.NewHandler(kithttp.NewServer(
@@ -294,16 +294,6 @@ func EncodeResponse(_ context.Context, w http.ResponseWriter, response any) erro
 	}
 
 	return json.NewEncoder(w).Encode(response)
-}
-
-func encodeOSCPResponse(_ context.Context, w http.ResponseWriter, response any) error {
-	w.Header().Set("Content-Type", "application/ocsp-response")
-
-	res := response.(ocspRawRes)
-
-	w.WriteHeader(http.StatusOK)
-	_, err := w.Write(res.responseBytes)
-	return err
 }
 
 func encodeFileDownloadResponse(_ context.Context, w http.ResponseWriter, response any) error {

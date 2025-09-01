@@ -196,12 +196,12 @@ type SDK interface {
 	//  fmt.Println(err) // nil if successful
 	RevokeCert(serialNumber string) errors.SDKError
 
-	// RenewCert renews certificate for thing with thingID
+	// RenewCert renews certificate for entity with entityID and returns the new certificate
 	//
 	// example:
-	//  err := sdk.RenewCert("serialNumber")
-	//  fmt.Println(err) // nil if successful
-	RenewCert(serialNumber string) errors.SDKError
+	//  newCert, err := sdk.RenewCert("serialNumber")
+	//  fmt.Println(newCert.SerialNumber)
+	RenewCert(serialNumber string) (Certificate, errors.SDKError)
 
 	// ListCerts lists all certificates for a client
 	//
@@ -352,10 +352,22 @@ func (sdk mgSDK) RevokeCert(serialNumber string) errors.SDKError {
 	return sdkerr
 }
 
-func (sdk mgSDK) RenewCert(serialNumber string) errors.SDKError {
+func (sdk mgSDK) RenewCert(serialNumber string) (Certificate, errors.SDKError) {
 	url := fmt.Sprintf("%s/%s/%s/renew", sdk.certsURL, certsEndpoint, serialNumber)
-	_, _, sdkerr := sdk.processRequest(http.MethodPatch, url, nil, nil, http.StatusOK)
-	return sdkerr
+	_, body, sdkerr := sdk.processRequest(http.MethodPatch, url, nil, nil, http.StatusOK)
+	if sdkerr != nil {
+		return Certificate{}, sdkerr
+	}
+
+	var renewRes struct {
+		Renewed     bool        `json:"renewed"`
+		Certificate Certificate `json:"certificate"`
+	}
+	if err := json.Unmarshal(body, &renewRes); err != nil {
+		return Certificate{}, errors.NewSDKError(err)
+	}
+
+	return renewRes.Certificate, nil
 }
 
 func (sdk mgSDK) ListCerts(pm PageMetadata) (CertificatePage, errors.SDKError) {
@@ -399,14 +411,12 @@ func (sdk mgSDK) OCSP(serialNumber, cert string) (OCSPResponse, errors.SDKError)
 		return OCSPResponse{}, errors.NewSDKError(errors.New("either serial number or certificate must be provided"))
 	}
 
-	ocspReq := map[string]string{}
-
 	if serialNumber != "" {
-		ocspReq["serial_number"] = serialNumber
+		ocspReq.SerialNumber = serialNumber
 	}
 
 	if cert != "" {
-		ocspReq["cert_content"] = cert
+		ocspReq.Certificate = cert
 	}
 
 	requestBody, err := json.Marshal(ocspReq)
@@ -661,4 +671,9 @@ type certReq struct {
 
 type csrReq struct {
 	CSR string `json:"csr,omitempty"`
+}
+
+var ocspReq struct {
+	SerialNumber string `json:"serial_number,omitempty"`
+	Certificate  string `json:"certificate,omitempty"`
 }

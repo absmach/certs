@@ -273,7 +273,7 @@ func TestRenewCertCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("RenewCert", mock.Anything).Return(tc.sdkErr)
+			sdkCall := sdkMock.On("RenewCert", mock.Anything).Return(sdk.Certificate{}, tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{renewCmd}, tc.args...)...)
 			switch tc.logType {
 			case okLog:

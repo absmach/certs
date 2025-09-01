@@ -108,7 +108,7 @@ var cmdCerts = []cobra.Command{
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			err := sdk.RenewCert(args[0])
+			_, err := sdk.RenewCert(args[0])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return

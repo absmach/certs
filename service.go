@@ -226,33 +226,34 @@ func (s *service) RetrieveCAToken(ctx context.Context) (string, error) {
 	return token, nil
 }
 
-// RenewCert renews a certificate lease if it's still valid and renewable.
-// This extends the TTL of an existing certificate without generating new keys.
-func (s *service) RenewCert(ctx context.Context, serialNumber string) error {
+// RenewCert renews a certificate by issuing a new certificate with the same parameters.
+// Returns the new certificate with extended TTL and a new serial number.
+func (s *service) RenewCert(ctx context.Context, serialNumber string) (Certificate, error) {
 	cert, err := s.pki.View(serialNumber)
 	if err != nil {
-		return errors.Wrap(ErrViewEntity, err)
+		return Certificate{}, errors.Wrap(ErrViewEntity, err)
 	}
 	if cert.Revoked {
-		return ErrCertRevoked
+		return Certificate{}, ErrCertRevoked
 	}
 	block, _ := pem.Decode(cert.Certificate)
 	if block == nil {
-		return errors.New("failed to parse certificate PEM")
+		return Certificate{}, errors.New("failed to parse certificate PEM")
 	}
 
 	x509Cert, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
-		return err
+		return Certificate{}, err
 	}
 	if !x509Cert.NotAfter.After(time.Now().UTC()) {
-		return ErrCertExpired
+		return Certificate{}, ErrCertExpired
 	}
-	_, err = s.pki.Renew(serialNumber, certValidityPeriod.String())
+	newCert, err := s.pki.Renew(serialNumber, certValidityPeriod.String())
 	if err != nil {
-		return errors.Wrap(ErrUpdateEntity, err)
+		return Certificate{}, errors.Wrap(ErrUpdateEntity, err)
 	}
-	return nil
+	
+	return newCert, nil
 }
 
 // OCSP forwards OCSP requests to OpenBao's OCSP endpoint.

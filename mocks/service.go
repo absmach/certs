@@ -537,20 +537,29 @@ func (_c *Service_OCSP_Call) RunAndReturn(run func(ctx context.Context, serialNu
 }
 
 // RenewCert provides a mock function for the type Service
-func (_mock *Service) RenewCert(ctx context.Context, serialNumber string) error {
+func (_mock *Service) RenewCert(ctx context.Context, serialNumber string) (certs.Certificate, error) {
 	ret := _mock.Called(ctx, serialNumber)
 
 	if len(ret) == 0 {
 		panic("no return value specified for RenewCert")
 	}
 
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) error); ok {
+	var r0 certs.Certificate
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (certs.Certificate, error)); ok {
+		return returnFunc(ctx, serialNumber)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) certs.Certificate); ok {
 		r0 = returnFunc(ctx, serialNumber)
 	} else {
-		r0 = ret.Error(0)
+		r0 = ret.Get(0).(certs.Certificate)
 	}
-	return r0
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, serialNumber)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
 }
 
 // Service_RenewCert_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RenewCert'
@@ -583,12 +592,12 @@ func (_c *Service_RenewCert_Call) Run(run func(ctx context.Context, serialNumber
 	return _c
 }
 
-func (_c *Service_RenewCert_Call) Return(err error) *Service_RenewCert_Call {
-	_c.Call.Return(err)
+func (_c *Service_RenewCert_Call) Return(certificate certs.Certificate, err error) *Service_RenewCert_Call {
+	_c.Call.Return(certificate, err)
 	return _c
 }
 
-func (_c *Service_RenewCert_Call) RunAndReturn(run func(ctx context.Context, serialNumber string) error) *Service_RenewCert_Call {
+func (_c *Service_RenewCert_Call) RunAndReturn(run func(ctx context.Context, serialNumber string) (certs.Certificate, error)) *Service_RenewCert_Call {
 	_c.Call.Return(run)
 	return _c
 }

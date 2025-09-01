@@ -102,7 +102,7 @@ func (va *openbaoPKIAgent) Issue(entityId, ttl string, ipAddrs []string, options
 	}
 
 	secretValues := map[string]any{
-		"common_name":          entityId,
+		"common_name":          options.CommonName,
 		"ttl":                  ttl,
 		"exclude_cn_from_sans": true,
 	}
@@ -259,32 +259,64 @@ func (va *openbaoPKIAgent) Renew(serialNumber string, increment string) (certs.C
 		return certs.Certificate{}, err
 	}
 
-	leasePath := va.readURL + serialNumber
-	lease, err := va.client.Sys().Renew(leasePath, 0)
+	existingCert, err := va.View(serialNumber)
 	if err != nil {
-		return certs.Certificate{}, fmt.Errorf("failed to renew certificate lease: %w", err)
+		return certs.Certificate{}, fmt.Errorf("failed to retrieve existing certificate: %w", err)
 	}
 
-	if lease == nil || lease.Data == nil {
-		return certs.Certificate{}, fmt.Errorf("no renewal data returned from OpenBao")
+	if existingCert.Revoked {
+		return certs.Certificate{}, fmt.Errorf("cannot renew revoked certificate")
 	}
 
-	cert := certs.Certificate{
-		SerialNumber: serialNumber,
+	block, _ := pem.Decode(existingCert.Certificate)
+	if block == nil {
+		return certs.Certificate{}, fmt.Errorf("failed to decode existing certificate PEM")
 	}
 
-	if certData, ok := lease.Data["certificate"].(string); ok {
-		cert.Certificate = []byte(certData)
-		if expiry, err := va.parseCertificateExpiry(certData); err == nil {
-			cert.ExpiryTime = expiry
-		}
-
-		if entityID, err := va.parseCertificateEntityID(certData); err == nil {
-			cert.EntityID = entityID
-		}
+	x509Cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return certs.Certificate{}, fmt.Errorf("failed to parse existing certificate: %w", err)
 	}
 
-	return cert, nil
+	options := certs.SubjectOptions{
+		DnsNames: x509Cert.DNSNames,
+	}
+
+	options.IpAddresses = append(options.IpAddresses, x509Cert.IPAddresses...)
+
+	if len(x509Cert.Subject.Organization) > 0 {
+		options.Organization = x509Cert.Subject.Organization
+	}
+	if len(x509Cert.Subject.OrganizationalUnit) > 0 {
+		options.OrganizationalUnit = x509Cert.Subject.OrganizationalUnit
+	}
+	if len(x509Cert.Subject.Country) > 0 {
+		options.Country = x509Cert.Subject.Country
+	}
+	if len(x509Cert.Subject.Province) > 0 {
+		options.Province = x509Cert.Subject.Province
+	}
+	if len(x509Cert.Subject.Locality) > 0 {
+		options.Locality = x509Cert.Subject.Locality
+	}
+	if len(x509Cert.Subject.StreetAddress) > 0 {
+		options.StreetAddress = x509Cert.Subject.StreetAddress
+	}
+	if len(x509Cert.Subject.PostalCode) > 0 {
+		options.PostalCode = x509Cert.Subject.PostalCode
+	}
+
+	var ipAddrs []string
+	for _, ip := range x509Cert.IPAddresses {
+		ipAddrs = append(ipAddrs, ip.String())
+	}
+
+	newCert, err := va.Issue(existingCert.EntityID, increment, ipAddrs, options)
+	if err != nil {
+		return certs.Certificate{}, fmt.Errorf("failed to issue renewed certificate: %w", err)
+	}
+
+	return newCert, nil
 }
 
 func (va *openbaoPKIAgent) Revoke(serialNumber string) error {

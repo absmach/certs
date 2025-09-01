@@ -28,7 +28,7 @@ func MetricsMiddleware(svc certs.Service, counter metrics.Counter, latency metri
 	}
 }
 
-func (mm *metricsMiddleware) RenewCert(ctx context.Context, cmpId string) error {
+func (mm *metricsMiddleware) RenewCert(ctx context.Context, cmpId string) (certs.Certificate, error) {
 	defer func(begin time.Time) {
 		mm.counter.With("method", "renew_certificate").Add(1)
 		mm.latency.With("method", "renew_certificate").Observe(time.Since(begin).Seconds())

@@ -138,8 +138,9 @@ type Config struct {
 }
 
 type Service interface {
-	// RenewCert renews a certificate from the database.
-	RenewCert(ctx context.Context, serialNumber string) error
+	// RenewCert renews a certificate by issuing a new certificate with the same parameters.
+	// Returns the new certificate with extended TTL and a new serial number.
+	RenewCert(ctx context.Context, serialNumber string) (Certificate, error)
 
 	// RevokeBySerial revokes a single certificate by its serial number.
 	RevokeBySerial(ctx context.Context, serialNumber string) error
