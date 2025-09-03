@@ -641,12 +641,18 @@ func (va *openbaoPKIAgent) OCSP(serialNumber string) ([]byte, error) {
 		return nil, err
 	}
 
+	now := time.Now().UTC()
+	nextUpdate := now.Add(24 * time.Hour)
+
 	secret, err := va.client.Logical().Read(va.readURL + serialNumber)
 	if err != nil {
 		response := map[string]any{
 			"status":        ocsp.Unknown,
 			"serial_number": serialNumber,
 			"revoked":       false,
+			"produced_at":   now.Format(time.RFC3339),
+			"this_update":   now.Format(time.RFC3339),
+			"next_update":   nextUpdate.Format(time.RFC3339),
 		}
 		responseBytes, err := json.Marshal(response)
 		if err != nil {
@@ -660,6 +666,9 @@ func (va *openbaoPKIAgent) OCSP(serialNumber string) ([]byte, error) {
 			"status":        ocsp.Unknown,
 			"serial_number": serialNumber,
 			"revoked":       false,
+			"produced_at":   now.Format(time.RFC3339),
+			"this_update":   now.Format(time.RFC3339),
+			"next_update":   nextUpdate.Format(time.RFC3339),
 		}
 		responseBytes, err := json.Marshal(response)
 		if err != nil {
@@ -670,10 +679,14 @@ func (va *openbaoPKIAgent) OCSP(serialNumber string) ([]byte, error) {
 
 	var status int
 	var revoked bool
+	var revokedAt *time.Time
 
 	if revokedTimeStr, ok := secret.Data["revocation_time_rfc3339"].(string); ok && revokedTimeStr != "" {
 		status = ocsp.Revoked
 		revoked = true
+		if parsedTime, err := time.Parse(time.RFC3339, revokedTimeStr); err == nil {
+			revokedAt = &parsedTime
+		}
 	} else {
 		status = ocsp.Good
 		revoked = false
@@ -683,6 +696,13 @@ func (va *openbaoPKIAgent) OCSP(serialNumber string) ([]byte, error) {
 		"status":        status,
 		"serial_number": serialNumber,
 		"revoked":       revoked,
+		"produced_at":   now.Format(time.RFC3339),
+		"this_update":   now.Format(time.RFC3339),
+		"next_update":   nextUpdate.Format(time.RFC3339),
+	}
+
+	if revokedAt != nil {
+		response["revoked_at"] = revokedAt.Format(time.RFC3339)
 	}
 
 	responseBytes, err := json.Marshal(response)
