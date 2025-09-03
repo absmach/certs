@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/absmach/certs/errors"
+	"golang.org/x/crypto/ocsp"
 	"moul.io/http2curl"
 )
 
@@ -148,12 +149,15 @@ type CertificateBundle struct {
 }
 
 type OCSPResponse struct {
-	Status       CertStatus `json:"status"`
-	SerialNumber string     `json:"serial_number"`
-	RevokedAt    *time.Time `json:"revoked_at,omitempty"`
-	ProducedAt   *time.Time `json:"produced_at,omitempty"`
-	Certificate  []byte     `json:"certificate,omitempty"`
-	IssuerHash   string     `json:"issuer_hash,omitempty"`
+	Status           CertStatus `json:"status"`
+	SerialNumber     string     `json:"serial_number"`
+	RevokedAt        *time.Time `json:"revoked_at,omitempty"`
+	ProducedAt       *time.Time `json:"produced_at,omitempty"`
+	ThisUpdate       *time.Time `json:"this_update,omitempty"`
+	NextUpdate       *time.Time `json:"next_update,omitempty"`
+	Certificate      []byte     `json:"certificate,omitempty"`
+	IssuerHash       string     `json:"issuer_hash,omitempty"`
+	RevocationReason int        `json:"revocation_reason,omitempty"`
 }
 
 type CSRMetadata struct {
@@ -231,7 +235,8 @@ type SDK interface {
 	//  fmt.Println(token)
 	RetrieveCertDownloadToken(serialNumber string) (Token, errors.SDKError)
 
-	// OCSP checks the revocation status of a certificate
+	// OCSP checks the revocation status of a certificate using OpenBao's OCSP endpoint.
+	// Returns a binary OCSP response (RFC 6960) with detailed status information.
 	//
 	// example:
 	//  response, _ := sdk.OCSP("serialNumber", "")
@@ -411,6 +416,11 @@ func (sdk mgSDK) OCSP(serialNumber, cert string) (OCSPResponse, errors.SDKError)
 		return OCSPResponse{}, errors.NewSDKError(errors.New("either serial number or certificate must be provided"))
 	}
 
+	ocspReq := struct {
+		SerialNumber string `json:"serial_number,omitempty"`
+		Certificate  string `json:"certificate,omitempty"`
+	}{}
+
 	if serialNumber != "" {
 		ocspReq.SerialNumber = serialNumber
 	}
@@ -430,23 +440,18 @@ func (sdk mgSDK) OCSP(serialNumber, cert string) (OCSPResponse, errors.SDKError)
 		return OCSPResponse{}, sdkerr
 	}
 
-	var jsonResponse struct {
-		Status       int    `json:"status"`
-		SerialNumber string `json:"serial_number"`
-		Revoked      bool   `json:"revoked"`
-	}
-
-	if err := json.Unmarshal(body, &jsonResponse); err != nil {
-		return OCSPResponse{}, errors.NewSDKError(err)
+	ocspResp, err := ocsp.ParseResponse(body, nil)
+	if err != nil {
+		return OCSPResponse{}, errors.NewSDKError(fmt.Errorf("failed to parse OCSP response: %w", err))
 	}
 
 	var status CertStatus
-	switch jsonResponse.Status {
-	case 0: // ocsp.Good
+	switch ocspResp.Status {
+	case ocsp.Good:
 		status = Valid
-	case 1: // ocsp.Revoked
+	case ocsp.Revoked:
 		status = Revoked
-	case 2: // ocsp.Unknown
+	case ocsp.Unknown:
 		status = Unknown
 	default:
 		status = Unknown
@@ -454,8 +459,27 @@ func (sdk mgSDK) OCSP(serialNumber, cert string) (OCSPResponse, errors.SDKError)
 
 	resp := OCSPResponse{
 		Status:       status,
-		SerialNumber: jsonResponse.SerialNumber,
+		SerialNumber: ocspResp.SerialNumber.String(),
+		Certificate:  body,
 	}
+
+	if ocspResp.RevokedAt != (time.Time{}) {
+		resp.RevokedAt = &ocspResp.RevokedAt
+	}
+
+	if ocspResp.ProducedAt != (time.Time{}) {
+		resp.ProducedAt = &ocspResp.ProducedAt
+	}
+
+	if ocspResp.ThisUpdate != (time.Time{}) {
+		resp.ThisUpdate = &ocspResp.ThisUpdate
+	}
+
+	if ocspResp.NextUpdate != (time.Time{}) {
+		resp.NextUpdate = &ocspResp.NextUpdate
+	}
+
+	resp.RevocationReason = int(ocspResp.RevocationReason)
 
 	return resp, nil
 }
@@ -671,9 +695,4 @@ type certReq struct {
 
 type csrReq struct {
 	CSR string `json:"csr,omitempty"`
-}
-
-var ocspReq struct {
-	SerialNumber string `json:"serial_number,omitempty"`
-	Certificate  string `json:"certificate,omitempty"`
 }
