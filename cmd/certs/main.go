@@ -67,13 +67,13 @@ func main() {
 
 	logger, err := initLogger(cfg.LogLevel)
 	if err != nil {
-		log.Fatalf(err.Error())
+		log.Fatalf("failed to initialize logger: %s", err)
 	}
 
 	if cfg.InstanceID == "" {
 		cfg.InstanceID, err = uuid.New().ID()
 		if err != nil {
-			log.Fatalf(fmt.Sprintf("failed to generate instance ID: %s", err))
+			log.Fatalf("failed to generate instance ID: %s", err)
 		}
 	}
 

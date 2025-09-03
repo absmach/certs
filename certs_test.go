@@ -64,7 +64,11 @@ func TestIssueCert(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			agentCall := agent.On("Issue", tc.entityID, tc.ttl, []string{}, certs.SubjectOptions{}).Return(tc.cert, tc.agentErr)
+			// Expected SubjectOptions with defaults set by service
+			expectedOptions := certs.SubjectOptions{
+				CommonName: tc.entityID,
+			}
+			agentCall := agent.On("Issue", tc.entityID, tc.ttl, []string{}, expectedOptions).Return(tc.cert, tc.agentErr)
 
 			cert, err := svc.IssueCert(context.Background(), tc.entityID, "thing", tc.ttl, []string{}, certs.SubjectOptions{})
 			if tc.err != nil {
