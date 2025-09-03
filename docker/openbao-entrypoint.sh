@@ -169,10 +169,11 @@ if [ ! -f /opt/openbao/data/configured ]; then
     exit 1
   fi
 
-  # Configure CA and CRL URLs
+  # Configure CA, CRL, and OCSP URLs
   bao write pki/config/urls \
     issuing_certificates='http://127.0.0.1:8200/v1/pki/ca' \
-    crl_distribution_points='http://127.0.0.1:8200/v1/pki/crl'
+    crl_distribution_points='http://127.0.0.1:8200/v1/pki/crl' \
+    ocsp_servers='http://127.0.0.1:8200/v1/pki/ocsp'
 
   echo "Creating PKI role: ${SMQ_OPENBAO_PKI_ROLE}"
   bao write pki/roles/"${SMQ_OPENBAO_PKI_ROLE}" \

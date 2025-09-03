@@ -5,13 +5,20 @@
 package pki
 
 import (
+	"crypto"
+	"crypto/sha1"
 	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/asn1"
+	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"io"
 	"log/slog"
+	"math/big"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/absmach/certs"
@@ -641,74 +648,112 @@ func (va *openbaoPKIAgent) OCSP(serialNumber string) ([]byte, error) {
 		return nil, err
 	}
 
-	now := time.Now().UTC()
-	nextUpdate := now.Add(24 * time.Hour)
-
-	secret, err := va.client.Logical().Read(va.readURL + serialNumber)
+	issuerCert, err := va.getIssuerCertificate()
 	if err != nil {
-		response := map[string]any{
-			"status":        ocsp.Unknown,
-			"serial_number": serialNumber,
-			"revoked":       false,
-			"produced_at":   now.Format(time.RFC3339),
-			"this_update":   now.Format(time.RFC3339),
-			"next_update":   nextUpdate.Format(time.RFC3339),
-		}
-		responseBytes, err := json.Marshal(response)
-		if err != nil {
-			return nil, err
-		}
-		return responseBytes, nil
+		return nil, fmt.Errorf("failed to get issuer certificate for OCSP: %w", err)
 	}
 
-	if secret == nil || secret.Data == nil {
-		response := map[string]any{
-			"status":        ocsp.Unknown,
-			"serial_number": serialNumber,
-			"revoked":       false,
-			"produced_at":   now.Format(time.RFC3339),
-			"this_update":   now.Format(time.RFC3339),
-			"next_update":   nextUpdate.Format(time.RFC3339),
-		}
-		responseBytes, err := json.Marshal(response)
-		if err != nil {
-			return nil, err
-		}
-		return responseBytes, nil
-	}
-
-	var status int
-	var revoked bool
-	var revokedAt *time.Time
-
-	if revokedTimeStr, ok := secret.Data["revocation_time_rfc3339"].(string); ok && revokedTimeStr != "" {
-		status = ocsp.Revoked
-		revoked = true
-		if parsedTime, err := time.Parse(time.RFC3339, revokedTimeStr); err == nil {
-			revokedAt = &parsedTime
-		}
-	} else {
-		status = ocsp.Good
-		revoked = false
-	}
-
-	response := map[string]any{
-		"status":        status,
-		"serial_number": serialNumber,
-		"revoked":       revoked,
-		"produced_at":   now.Format(time.RFC3339),
-		"this_update":   now.Format(time.RFC3339),
-		"next_update":   nextUpdate.Format(time.RFC3339),
-	}
-
-	if revokedAt != nil {
-		response["revoked_at"] = revokedAt.Format(time.RFC3339)
-	}
-
-	responseBytes, err := json.Marshal(response)
+	serialBytes, err := parseSerialNumber(serialNumber)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse serial number: %w", err)
 	}
 
-	return responseBytes, nil
+	issuerNameDER, err := va.encodeRDNSequence(issuerCert.Subject)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode issuer name: %w", err)
+	}
+
+	var issuerKeyHash []byte
+	if len(issuerCert.SubjectKeyId) > 0 {
+		issuerKeyHash = sha1Hash(issuerCert.SubjectKeyId)
+	}
+
+	ocspReq := &ocsp.Request{
+		HashAlgorithm:  crypto.SHA1,
+		IssuerNameHash: sha1Hash(issuerNameDER),
+		IssuerKeyHash:  issuerKeyHash,
+		SerialNumber:   new(big.Int).SetBytes(serialBytes),
+	}
+
+	ocspRequestDER, err := ocspReq.Marshal()
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal OCSP request: %w", err)
+	}
+
+	url := fmt.Sprintf("%s/v1/%s/ocsp", va.host, va.path)
+	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(string(ocspRequestDER)))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create OCSP request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/ocsp-request")
+	if va.secret != nil && va.secret.Auth != nil && va.secret.Auth.ClientToken != "" {
+		req.Header.Set("X-Vault-Token", va.secret.Auth.ClientToken)
+	}
+	if va.namespace != "" {
+		req.Header.Set("X-Vault-Namespace", va.namespace)
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query OpenBao OCSP: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("OCSP request failed: HTTP %d - %s", resp.StatusCode, string(body))
+	}
+
+	der, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read OCSP response: %w", err)
+	}
+
+	_, err = ocsp.ParseResponse(der, nil)
+	if err != nil {
+		return nil, fmt.Errorf("invalid OCSP response from OpenBao: %w", err)
+	}
+
+	return der, nil
+}
+
+func (va *openbaoPKIAgent) getIssuerCertificate() (*x509.Certificate, error) {
+	certData, err := va.GetCA()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get CA certificate: %w", err)
+	}
+
+	block, _ := pem.Decode(certData)
+	if block == nil {
+		return nil, fmt.Errorf("failed to decode PEM certificate")
+	}
+
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse X509 certificate: %w", err)
+	}
+
+	return cert, nil
+}
+
+func parseSerialNumber(serialStr string) ([]byte, error) {
+	cleaned := strings.ReplaceAll(strings.ReplaceAll(serialStr, ":", ""), "-", "")
+
+	serialBytes, err := hex.DecodeString(cleaned)
+	if err != nil {
+		return nil, fmt.Errorf("invalid serial number format: %w", err)
+	}
+
+	return serialBytes, nil
+}
+
+func sha1Hash(data []byte) []byte {
+	h := sha1.Sum(data)
+	return h[:]
+}
+
+func (va *openbaoPKIAgent) encodeRDNSequence(name pkix.Name) ([]byte, error) {
+	return asn1.Marshal(name.ToRDNSequence())
 }
