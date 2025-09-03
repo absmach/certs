@@ -253,19 +253,10 @@ func (va *openbaoPKIAgent) parseCertificateEntityID(certPEM string) (string, err
 	return cert.Subject.CommonName, nil
 }
 
-func (va *openbaoPKIAgent) Renew(serialNumber string, increment string) (certs.Certificate, error) {
+func (va *openbaoPKIAgent) Renew(existingCert certs.Certificate, increment string) (certs.Certificate, error) {
 	err := va.LoginAndRenew()
 	if err != nil {
 		return certs.Certificate{}, err
-	}
-
-	existingCert, err := va.View(serialNumber)
-	if err != nil {
-		return certs.Certificate{}, fmt.Errorf("failed to retrieve existing certificate: %w", err)
-	}
-
-	if existingCert.Revoked {
-		return certs.Certificate{}, fmt.Errorf("cannot renew revoked certificate")
 	}
 
 	block, _ := pem.Decode(existingCert.Certificate)

@@ -5,8 +5,6 @@ package http
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 
 	"github.com/absmach/certs"
 	"github.com/go-kit/kit/endpoint"
@@ -24,7 +22,7 @@ func renewCertEndpoint(svc certs.Service) endpoint.Endpoint {
 			return renewCertRes{}, err
 		}
 
-		return renewCertRes{Renewed: true, Certificate: cert}, nil
+		return renewCertRes{renewed: true, Certificate: cert}, nil
 	}
 }
 
@@ -183,20 +181,8 @@ func ocspEndpoint(svc certs.Service) endpoint.Endpoint {
 			return nil, err
 		}
 
-		var ocspData struct {
-			Status       int    `json:"status"`
-			SerialNumber string `json:"serial_number"`
-			Revoked      bool   `json:"revoked"`
-		}
-
-		if err := json.Unmarshal(resBytes, &ocspData); err != nil {
-			return nil, fmt.Errorf("failed to parse OCSP response: %w", err)
-		}
-
 		return ocspRawRes{
-			Status:       ocspData.Status,
-			SerialNumber: ocspData.SerialNumber,
-			Revoked:      ocspData.Revoked,
+			Data: resBytes,
 		}, nil
 	}
 }

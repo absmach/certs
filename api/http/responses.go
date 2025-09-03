@@ -16,14 +16,13 @@ var (
 	_ Response = (*renewCertRes)(nil)
 	_ Response = (*ocspRawRes)(nil)
 )
-
 type renewCertRes struct {
-	Renewed     bool              `json:"renewed"`
+	renewed     bool
 	Certificate certs.Certificate `json:"certificate,omitempty"`
 }
 
 func (res renewCertRes) Code() int {
-	if res.Renewed {
+	if res.renewed {
 		return http.StatusOK
 	}
 
@@ -176,9 +175,7 @@ func (res crlRes) Empty() bool {
 }
 
 type ocspRawRes struct {
-	Status       int    `json:"status"`
-	SerialNumber string `json:"serial_number"`
-	Revoked      bool   `json:"revoked"`
+	Data []byte `json:"-"`
 }
 
 func (res ocspRawRes) Code() int {

@@ -404,8 +404,8 @@ func (_c *Agent_OCSP_Call) RunAndReturn(run func(serialNumber string) ([]byte, e
 }
 
 // Renew provides a mock function for the type Agent
-func (_mock *Agent) Renew(serialNumber string, increment string) (certs.Certificate, error) {
-	ret := _mock.Called(serialNumber, increment)
+func (_mock *Agent) Renew(cert certs.Certificate, increment string) (certs.Certificate, error) {
+	ret := _mock.Called(cert, increment)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Renew")
@@ -413,16 +413,16 @@ func (_mock *Agent) Renew(serialNumber string, increment string) (certs.Certific
 
 	var r0 certs.Certificate
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string, string) (certs.Certificate, error)); ok {
-		return returnFunc(serialNumber, increment)
+	if returnFunc, ok := ret.Get(0).(func(certs.Certificate, string) (certs.Certificate, error)); ok {
+		return returnFunc(cert, increment)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string, string) certs.Certificate); ok {
-		r0 = returnFunc(serialNumber, increment)
+	if returnFunc, ok := ret.Get(0).(func(certs.Certificate, string) certs.Certificate); ok {
+		r0 = returnFunc(cert, increment)
 	} else {
 		r0 = ret.Get(0).(certs.Certificate)
 	}
-	if returnFunc, ok := ret.Get(1).(func(string, string) error); ok {
-		r1 = returnFunc(serialNumber, increment)
+	if returnFunc, ok := ret.Get(1).(func(certs.Certificate, string) error); ok {
+		r1 = returnFunc(cert, increment)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -435,17 +435,17 @@ type Agent_Renew_Call struct {
 }
 
 // Renew is a helper method to define mock.On call
-//   - serialNumber string
+//   - cert certs.Certificate
 //   - increment string
-func (_e *Agent_Expecter) Renew(serialNumber interface{}, increment interface{}) *Agent_Renew_Call {
-	return &Agent_Renew_Call{Call: _e.mock.On("Renew", serialNumber, increment)}
+func (_e *Agent_Expecter) Renew(cert interface{}, increment interface{}) *Agent_Renew_Call {
+	return &Agent_Renew_Call{Call: _e.mock.On("Renew", cert, increment)}
 }
 
-func (_c *Agent_Renew_Call) Run(run func(serialNumber string, increment string)) *Agent_Renew_Call {
+func (_c *Agent_Renew_Call) Run(run func(cert certs.Certificate, increment string)) *Agent_Renew_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 certs.Certificate
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			arg0 = args[0].(certs.Certificate)
 		}
 		var arg1 string
 		if args[1] != nil {
@@ -464,7 +464,7 @@ func (_c *Agent_Renew_Call) Return(certificate certs.Certificate, err error) *Ag
 	return _c
 }
 
-func (_c *Agent_Renew_Call) RunAndReturn(run func(serialNumber string, increment string) (certs.Certificate, error)) *Agent_Renew_Call {
+func (_c *Agent_Renew_Call) RunAndReturn(run func(cert certs.Certificate, increment string) (certs.Certificate, error)) *Agent_Renew_Call {
 	_c.Call.Return(run)
 	return _c
 }

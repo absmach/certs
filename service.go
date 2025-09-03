@@ -236,19 +236,7 @@ func (s *service) RenewCert(ctx context.Context, serialNumber string) (Certifica
 	if cert.Revoked {
 		return Certificate{}, ErrCertRevoked
 	}
-	block, _ := pem.Decode(cert.Certificate)
-	if block == nil {
-		return Certificate{}, errors.New("failed to parse certificate PEM")
-	}
-
-	x509Cert, err := x509.ParseCertificate(block.Bytes)
-	if err != nil {
-		return Certificate{}, err
-	}
-	if !x509Cert.NotAfter.After(time.Now().UTC()) {
-		return Certificate{}, ErrCertExpired
-	}
-	newCert, err := s.pki.Renew(serialNumber, certValidityPeriod.String())
+	newCert, err := s.pki.Renew(cert, certValidityPeriod.String())
 	if err != nil {
 		return Certificate{}, errors.Wrap(ErrUpdateEntity, err)
 	}
