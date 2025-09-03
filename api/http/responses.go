@@ -16,6 +16,7 @@ var (
 	_ Response = (*renewCertRes)(nil)
 	_ Response = (*ocspRawRes)(nil)
 )
+
 type renewCertRes struct {
 	renewed     bool
 	Certificate certs.Certificate `json:"certificate,omitempty"`
