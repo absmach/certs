@@ -9,9 +9,9 @@ import (
 	crt "github.com/absmach/certs"
 	"github.com/absmach/supermq/pkg/authn"
 	"github.com/absmach/supermq/pkg/authz"
-	"github.com/absmach/supermq/pkg/policies"
 	"github.com/absmach/supermq/pkg/errors"
 	svcerr "github.com/absmach/supermq/pkg/errors/service"
+	"github.com/absmach/supermq/pkg/policies"
 )
 
 var _ crt.Service = (*authorizationMiddleware)(nil)
