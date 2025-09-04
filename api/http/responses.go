@@ -35,7 +35,7 @@ func (res renewCertRes) Headers() map[string]string {
 }
 
 func (res renewCertRes) Empty() bool {
-	return true
+	return false
 }
 
 type revokeCertRes struct {

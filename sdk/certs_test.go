@@ -190,12 +190,12 @@ func TestRevokeCert(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			svcCall := svc.On("RevokeCert", mock.Anything, tc.serial).Return(tc.svcerr)
+			svcCall := svc.On("RevokeBySerial", mock.Anything, tc.serial).Return(tc.svcerr)
 
 			err := ctsdk.RevokeCert(tc.serial)
 			assert.Equal(t, tc.err, err)
 			if tc.desc != "RevokeCert with empty serial" {
-				ok := svcCall.Parent.AssertCalled(t, "RevokeCert", mock.Anything, tc.serial)
+				ok := svcCall.Parent.AssertCalled(t, "RevokeBySerial", mock.Anything, tc.serial)
 				assert.True(t, ok)
 			}
 			svcCall.Unset()
