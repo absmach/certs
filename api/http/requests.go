@@ -11,6 +11,7 @@ import (
 
 	"github.com/absmach/certs"
 	"github.com/absmach/certs/errors"
+	"golang.org/x/crypto/ocsp"
 )
 
 type downloadReq struct {
@@ -80,23 +81,24 @@ func (req listCertsReq) validate() error {
 	return nil
 }
 
-type ocspCheckReq struct {
-	SerialNumber string `json:"serial_number"`
-	Certificate  string `json:"certificate"`
-	StatusParam  string `json:"status_param"`
+type ocspReq struct {
+	req          *ocsp.Request
+	StatusParam  string `json:"status,omitempty"`
+	SerialNumber string `json:"serial_number,omitempty"`
+	Certificate  string `json:"certificate,omitempty"`
 }
 
-func (req *ocspCheckReq) validate() error {
+func (req *ocspReq) validate() error {
+	if req.req == nil {
+		return certs.ErrMalformedEntity
+	}
+
 	if req.Certificate != "" {
 		serialNumber, err := extractSerialFromCertContent(req.Certificate)
 		if err != nil {
 			return errors.Wrap(certs.ErrMalformedEntity, fmt.Errorf("failed to extract serial from certificate: %w", err))
 		}
 		req.SerialNumber = serialNumber
-	}
-
-	if req.SerialNumber == "" {
-		return errors.Wrap(certs.ErrMalformedEntity, errors.New("either serial number or certificate path must be provided"))
 	}
 
 	req.SerialNumber = normalizeSerialNumber(req.SerialNumber)

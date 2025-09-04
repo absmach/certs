@@ -14,5 +14,5 @@ type Agent interface {
 	GetCRL() ([]byte, error)
 	SignCSR(csr []byte, entityId, ttl string) (Certificate, error)
 	Renew(cert Certificate, increment string) (Certificate, error)
-	OCSP(serialNumber string) ([]byte, error)
+	OCSP(serialNumber string, ocspRequestDER []byte) ([]byte, error)
 }

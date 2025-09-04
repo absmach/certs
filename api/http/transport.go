@@ -7,12 +7,16 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"crypto"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
+	"math/big"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/absmach/certs"
 	"github.com/absmach/certs/errors"
@@ -20,6 +24,7 @@ import (
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"golang.org/x/crypto/ocsp"
 )
 
 const (
@@ -192,15 +197,55 @@ func decodeDownloadCA(_ context.Context, r *http.Request) (any, error) {
 }
 
 func decodeOCSPRequest(_ context.Context, r *http.Request) (any, error) {
-	var request ocspCheckReq
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		return nil, errors.Wrap(certs.ErrMalformedEntity, err)
 	}
 	defer r.Body.Close()
 
-	if err := json.Unmarshal(body, &request); err != nil {
-		return nil, errors.Wrap(certs.ErrMalformedEntity, err)
+	req, err := ocsp.ParseRequest(body)
+	if err != nil {
+		contentType := r.Header.Get("Content-Type")
+		if strings.Contains(contentType, "application/json") {
+			return decodeJsonOCSPRequest(body)
+		}
+		return nil, fmt.Errorf("invalid OCSP request: %w", err)
+	}
+
+	request := ocspReq{
+		req:         req,
+		StatusParam: strings.TrimSpace(r.URL.Query().Get(ocspStatusParam)),
+	}
+	return request, nil
+}
+
+func decodeJsonOCSPRequest(body []byte) (any, error) {
+	var simple ocspReq
+	if err := json.Unmarshal(body, &simple); err != nil {
+		return nil, fmt.Errorf("invalid JSON OCSP request: %w", err)
+	}
+
+	if simple.SerialNumber == "" {
+		return nil, fmt.Errorf("serial_number is required")
+	}
+
+	serialHex := strings.ReplaceAll(simple.SerialNumber, ":", "")
+	serialBytes, err := hex.DecodeString(serialHex)
+	if err != nil {
+		return nil, fmt.Errorf("invalid serial number format: %w", err)
+	}
+	serial := new(big.Int).SetBytes(serialBytes)
+
+	req := &ocsp.Request{
+		HashAlgorithm:  crypto.SHA1,
+		IssuerNameHash: make([]byte, 20),
+		IssuerKeyHash:  make([]byte, 20),
+		SerialNumber:   serial,
+	}
+
+	request := ocspReq{
+		req:         req,
+		StatusParam: simple.StatusParam,
 	}
 	return request, nil
 }

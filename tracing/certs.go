@@ -76,10 +76,10 @@ func (s *tracingMiddleware) ViewCert(ctx context.Context, serialNumber string) (
 	return s.svc.ViewCert(ctx, serialNumber)
 }
 
-func (tm *tracingMiddleware) OCSP(ctx context.Context, serialNumber string) ([]byte, error) {
+func (tm *tracingMiddleware) OCSP(ctx context.Context, serialNumber string, ocspRequestDER []byte) ([]byte, error) {
 	ctx, span := tm.tracer.Start(ctx, "ocsp")
 	defer span.End()
-	return tm.svc.OCSP(ctx, serialNumber)
+	return tm.svc.OCSP(ctx, serialNumber, ocspRequestDER)
 }
 
 func (tm *tracingMiddleware) GetEntityID(ctx context.Context, serialNumber string) (string, error) {

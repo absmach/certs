@@ -245,9 +245,9 @@ func (s *service) RenewCert(ctx context.Context, serialNumber string) (Certifica
 }
 
 // OCSP forwards OCSP requests to OpenBao's OCSP endpoint.
-// This method bypasses the custom OCSP implementation and proxies directly to OpenBao.
-func (s *service) OCSP(ctx context.Context, serialNumber string) ([]byte, error) {
-	return s.pki.OCSP(serialNumber)
+// If ocspRequestDER is provided, it will be used directly; otherwise, a request will be built from the serialNumber.
+func (s *service) OCSP(ctx context.Context, serialNumber string, ocspRequestDER []byte) ([]byte, error) {
+	return s.pki.OCSP(serialNumber, ocspRequestDER)
 }
 
 func (s *service) GetEntityID(ctx context.Context, serialNumber string) (string, error) {

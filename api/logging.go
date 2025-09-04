@@ -132,16 +132,20 @@ func (lm *loggingMiddleware) ViewCert(ctx context.Context, serialNumber string) 
 	return lm.svc.ViewCert(ctx, serialNumber)
 }
 
-func (lm *loggingMiddleware) OCSP(ctx context.Context, serialNumber string) (ocspBytes []byte, err error) {
+func (lm *loggingMiddleware) OCSP(ctx context.Context, serialNumber string, ocspRequestDER []byte) (ocspBytes []byte, err error) {
 	defer func(begin time.Time) {
-		message := fmt.Sprintf("Method ocsp for serial number %s took %s to complete", serialNumber, time.Since(begin))
+		requestType := "serial_number"
+		if len(ocspRequestDER) > 0 {
+			requestType = "raw_request"
+		}
+		message := fmt.Sprintf("Method ocsp (%s) for serial number %s took %s to complete", requestType, serialNumber, time.Since(begin))
 		if err != nil {
 			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
 			return
 		}
 		lm.logger.Info(message)
 	}(time.Now())
-	return lm.svc.OCSP(ctx, serialNumber)
+	return lm.svc.OCSP(ctx, serialNumber, ocspRequestDER)
 }
 
 func (lm *loggingMiddleware) GetEntityID(ctx context.Context, serialNumber string) (entityID string, err error) {

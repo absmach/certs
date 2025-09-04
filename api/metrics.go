@@ -103,12 +103,12 @@ func (mm *metricsMiddleware) ViewCert(ctx context.Context, serialNumber string) 
 	return mm.svc.ViewCert(ctx, serialNumber)
 }
 
-func (mm *metricsMiddleware) OCSP(ctx context.Context, serialNumber string) ([]byte, error) {
+func (mm *metricsMiddleware) OCSP(ctx context.Context, serialNumber string, ocspRequestDER []byte) ([]byte, error) {
 	defer func(begin time.Time) {
 		mm.counter.With("method", "ocsp").Add(1)
 		mm.latency.With("method", "ocsp").Observe(time.Since(begin).Seconds())
 	}(time.Now())
-	return mm.svc.OCSP(ctx, serialNumber)
+	return mm.svc.OCSP(ctx, serialNumber, ocspRequestDER)
 }
 
 func (mm *metricsMiddleware) GetEntityID(ctx context.Context, serialNumber string) (string, error) {

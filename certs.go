@@ -169,7 +169,8 @@ type Service interface {
 	IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, option SubjectOptions) (Certificate, error)
 
 	// OCSP forwards OCSP requests to OpenBao's OCSP endpoint.
-	OCSP(ctx context.Context, serialNumber string) ([]byte, error)
+	// If ocspRequestDER is provided, it will be used directly; otherwise, a request will be built from the serialNumber.
+	OCSP(ctx context.Context, serialNumber string, ocspRequestDER []byte) ([]byte, error)
 
 	// GetEntityID retrieves the entity ID for a certificate.
 	GetEntityID(ctx context.Context, serialNumber string) (string, error)

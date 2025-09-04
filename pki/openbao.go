@@ -642,46 +642,52 @@ func (va *openbaoPKIAgent) SignCSR(csr []byte, entityId, ttl string) (certs.Cert
 	return cert, nil
 }
 
-func (va *openbaoPKIAgent) OCSP(serialNumber string) ([]byte, error) {
+func (va *openbaoPKIAgent) OCSP(serialNumber string, ocspRequestDER []byte) ([]byte, error) {
 	err := va.LoginAndRenew()
 	if err != nil {
 		return nil, err
 	}
 
-	issuerCert, err := va.getIssuerCertificate()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get issuer certificate for OCSP: %w", err)
-	}
+	var requestDER []byte
 
-	serialBytes, err := parseSerialNumber(serialNumber)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse serial number: %w", err)
-	}
+	if len(ocspRequestDER) > 0 {
+		requestDER = ocspRequestDER
+	} else {
+		issuerCert, err := va.getIssuerCertificate()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get issuer certificate for OCSP: %w", err)
+		}
 
-	issuerNameDER, err := va.encodeRDNSequence(issuerCert.Subject)
-	if err != nil {
-		return nil, fmt.Errorf("failed to encode issuer name: %w", err)
-	}
+		serialBytes, err := parseSerialNumber(serialNumber)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse serial number: %w", err)
+		}
 
-	var issuerKeyHash []byte
-	if len(issuerCert.SubjectKeyId) > 0 {
-		issuerKeyHash = sha1Hash(issuerCert.SubjectKeyId)
-	}
+		issuerNameDER, err := va.encodeRDNSequence(issuerCert.Subject)
+		if err != nil {
+			return nil, fmt.Errorf("failed to encode issuer name: %w", err)
+		}
 
-	ocspReq := &ocsp.Request{
-		HashAlgorithm:  crypto.SHA1,
-		IssuerNameHash: sha1Hash(issuerNameDER),
-		IssuerKeyHash:  issuerKeyHash,
-		SerialNumber:   new(big.Int).SetBytes(serialBytes),
-	}
+		var issuerKeyHash []byte
+		if len(issuerCert.SubjectKeyId) > 0 {
+			issuerKeyHash = sha1Hash(issuerCert.SubjectKeyId)
+		}
 
-	ocspRequestDER, err := ocspReq.Marshal()
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal OCSP request: %w", err)
+		ocspReq := &ocsp.Request{
+			HashAlgorithm:  crypto.SHA1,
+			IssuerNameHash: sha1Hash(issuerNameDER),
+			IssuerKeyHash:  issuerKeyHash,
+			SerialNumber:   new(big.Int).SetBytes(serialBytes),
+		}
+
+		requestDER, err = ocspReq.Marshal()
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal OCSP request: %w", err)
+		}
 	}
 
 	url := fmt.Sprintf("%s/v1/%s/ocsp", va.host, va.path)
-	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(string(ocspRequestDER)))
+	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(string(requestDER)))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create OCSP request: %w", err)
 	}

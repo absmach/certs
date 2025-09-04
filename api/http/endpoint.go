@@ -171,14 +171,27 @@ func viewCertEndpoint(svc certs.Service) endpoint.Endpoint {
 
 func ocspEndpoint(svc certs.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request any) (response any, err error) {
-		req := request.(ocspCheckReq)
+		req := request.(ocspReq)
 		if err := req.validate(); err != nil {
 			return nil, err
 		}
 
-		resBytes, err := svc.OCSP(ctx, req.SerialNumber)
-		if err != nil {
-			return nil, err
+		var resBytes []byte
+
+		if req.req != nil {
+			ocspRequestDER, err := req.req.Marshal()
+			if err != nil {
+				return nil, err
+			}
+			resBytes, err = svc.OCSP(ctx, "", ocspRequestDER)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			resBytes, err = svc.OCSP(ctx, req.SerialNumber, nil)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		return ocspRawRes{
