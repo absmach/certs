@@ -83,7 +83,7 @@ func issueEndpoint(svc certs.Service) endpoint.Endpoint {
 				DnsNames:           req.SubjectOptions.DnsNames,
 			}
 		}
-		
+
 		crt, err := svc.IssueCert(ctx, req.EntityId, req.EntityType, req.Ttl, req.IpAddresses, subjectOptions)
 		if err != nil {
 			return &certs.IssueCertRes{}, err

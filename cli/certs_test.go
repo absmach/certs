@@ -737,7 +737,7 @@ func TestGenerateCRLCmd(t *testing.T) {
 			crlBytes: []byte("mock-crl-data"),
 		},
 		{
-			desc:     "generate CRL successfully for intermediate", 
+			desc:     "generate CRL successfully for intermediate",
 			args:     []string{"intermediate"},
 			logType:  entityLog,
 			crlBytes: []byte("mock-crl-data"),
@@ -763,7 +763,7 @@ func TestGenerateCRLCmd(t *testing.T) {
 			}()
 			sdkCall := sdkMock.On("GenerateCRL", mock.Anything).Return(tc.crlBytes, tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{"crl"}, tc.args...)...)
-			
+
 			switch tc.logType {
 			case entityLog:
 				assert.True(t, strings.Contains(out, "CRL file has been saved successfully"), fmt.Sprintf("%s invalid output: %s", tc.desc, out))
@@ -817,7 +817,7 @@ func TestGetEntityIDCmd(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			sdkCall := sdkMock.On("GetEntityID", mock.Anything).Return(tc.entityID, tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{"entity-id"}, tc.args...)...)
-			
+
 			switch tc.logType {
 			case entityLog:
 				assert.True(t, strings.Contains(out, tc.entityID), fmt.Sprintf("%s invalid output: %s", tc.desc, out))
@@ -872,7 +872,7 @@ func TestGetCACmd(t *testing.T) {
 			cli.SetSDK(sdkMock)
 			sdkCall := sdkMock.On("GetCA").Return(tc.cert, tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{"ca"}, tc.args...)...)
-			
+
 			switch tc.logType {
 			case entityLog:
 				err := json.Unmarshal([]byte(out), &cert)

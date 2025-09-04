@@ -4,16 +4,16 @@
 package sdk
 
 import (
-    "archive/zip"
-    "bytes"
-    "crypto/tls"
-    "encoding/json"
-    "encoding/base64"
-    "fmt"
-    "io"
-    "log"
-    "net/http"
-    "net/url"
+	"archive/zip"
+	"bytes"
+	"crypto/tls"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -639,20 +639,20 @@ func (sdk mgSDK) GenerateCRL(certType CertType) ([]byte, errors.SDKError) {
 	if sdkerr != nil {
 		return nil, sdkerr
 	}
-	
+
 	var crlRes struct {
 		CRL string `json:"crl"`
 	}
 	if err := json.Unmarshal(body, &crlRes); err != nil {
 		return nil, errors.NewSDKError(err)
 	}
-	
+
 	// Decode base64 CRL data
 	crlData, err := base64.StdEncoding.DecodeString(crlRes.CRL)
 	if err != nil {
 		return nil, errors.NewSDKError(err)
 	}
-	
+
 	return crlData, nil
 }
 

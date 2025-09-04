@@ -313,7 +313,7 @@ var cmdCerts = []cobra.Command{
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			
+
 			var certType ctxsdk.CertType
 			switch args[0] {
 			case "root":
@@ -324,7 +324,7 @@ var cmdCerts = []cobra.Command{
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			
+
 			crlBytes, err := sdk.GenerateCRL(certType)
 			if err != nil {
 				logErrorCmd(*cmd, err)

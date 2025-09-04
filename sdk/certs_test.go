@@ -1020,22 +1020,22 @@ func TestGetCA(t *testing.T) {
 			err: nil,
 		},
 		{
-			desc:      "GetCA token failure",
-			tokenResp: "",
-			tokenErr:  certs.ErrGetToken,
-			caResp:    certs.Certificate{},
-			caErr:     nil,
+			desc:         "GetCA token failure",
+			tokenResp:    "",
+			tokenErr:     certs.ErrGetToken,
+			caResp:       certs.Certificate{},
+			caErr:        nil,
 			expectedCert: sdk.Certificate{},
-			err:       errors.NewSDKErrorWithStatus(certs.ErrGetToken, http.StatusUnprocessableEntity),
+			err:          errors.NewSDKErrorWithStatus(certs.ErrGetToken, http.StatusUnprocessableEntity),
 		},
 		{
-			desc:      "GetCA view CA failure",
-			tokenResp: token,
-			tokenErr:  nil,
-			caResp:    certs.Certificate{},
-			caErr:     certs.ErrViewEntity,
+			desc:         "GetCA view CA failure",
+			tokenResp:    token,
+			tokenErr:     nil,
+			caResp:       certs.Certificate{},
+			caErr:        certs.ErrViewEntity,
 			expectedCert: sdk.Certificate{},
-			err:       errors.NewSDKErrorWithStatus(certs.ErrViewEntity, http.StatusUnprocessableEntity),
+			err:          errors.NewSDKErrorWithStatus(certs.ErrViewEntity, http.StatusUnprocessableEntity),
 		},
 	}
 
@@ -1047,7 +1047,7 @@ func TestGetCA(t *testing.T) {
 			resp, err := ctsdk.GetCA()
 			assert.Equal(t, tc.err, err)
 			assert.Equal(t, tc.expectedCert, resp)
-			
+
 			if tc.desc == "GetCA success" {
 				ok := tokenCall.Parent.AssertCalled(t, "RetrieveCAToken", mock.Anything)
 				assert.True(t, ok)
@@ -1059,7 +1059,7 @@ func TestGetCA(t *testing.T) {
 				ok = caCall.Parent.AssertCalled(t, "GetChainCA", mock.Anything, tc.tokenResp)
 				assert.True(t, ok)
 			}
-			
+
 			tokenCall.Unset()
 			caCall.Unset()
 		})
