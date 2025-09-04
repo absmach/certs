@@ -5,7 +5,6 @@ package api
 
 import (
 	"context"
-	"crypto/x509"
 	"fmt"
 	"log/slog"
 	"time"
@@ -25,14 +24,14 @@ func LoggingMiddleware(svc certs.Service, logger *slog.Logger) certs.Service {
 	return &loggingMiddleware{logger, svc}
 }
 
-func (lm *loggingMiddleware) RenewCert(ctx context.Context, serialNumber string) (err error) {
+func (lm *loggingMiddleware) RenewCert(ctx context.Context, serialNumber string) (cert certs.Certificate, err error) {
 	defer func(begin time.Time) {
 		message := fmt.Sprintf("Method renew_cert for cert %s took %s to complete", serialNumber, time.Since(begin))
 		if err != nil {
 			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
 			return
 		}
-		lm.logger.Info(message)
+		lm.logger.Info(fmt.Sprintf("%s and returned new cert %s.", message, cert.SerialNumber))
 	}(time.Now())
 	return lm.svc.RenewCert(ctx, serialNumber)
 }
@@ -47,18 +46,6 @@ func (lm *loggingMiddleware) RetrieveCert(ctx context.Context, token, serialNumb
 		lm.logger.Info(message)
 	}(time.Now())
 	return lm.svc.RetrieveCert(ctx, token, serialNumber)
-}
-
-func (lm *loggingMiddleware) RevokeCert(ctx context.Context, serialNumber string) (err error) {
-	defer func(begin time.Time) {
-		message := fmt.Sprintf("Method revoke_cert for cert %s and took %s to complete", serialNumber, time.Since(begin))
-		if err != nil {
-			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
-			return
-		}
-		lm.logger.Info(message)
-	}(time.Now())
-	return lm.svc.RevokeCert(ctx, serialNumber)
 }
 
 func (lm *loggingMiddleware) RetrieveCertDownloadToken(ctx context.Context, serialNumber string) (tokenString string, err error) {
@@ -109,16 +96,28 @@ func (lm *loggingMiddleware) ListCerts(ctx context.Context, pm certs.PageMetadat
 	return lm.svc.ListCerts(ctx, pm)
 }
 
-func (lm *loggingMiddleware) RemoveCert(ctx context.Context, entityId string) (err error) {
+func (lm *loggingMiddleware) RevokeBySerial(ctx context.Context, serialNumber string) (err error) {
 	defer func(begin time.Time) {
-		message := fmt.Sprintf("Method remove_cert took %s to complete", time.Since(begin))
+		message := fmt.Sprintf("Method revoke_by_serial took %s to complete", time.Since(begin))
 		if err != nil {
 			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
 			return
 		}
 		lm.logger.Info(message)
 	}(time.Now())
-	return lm.svc.RemoveCert(ctx, entityId)
+	return lm.svc.RevokeBySerial(ctx, serialNumber)
+}
+
+func (lm *loggingMiddleware) RevokeAll(ctx context.Context, entityId string) (err error) {
+	defer func(begin time.Time) {
+		message := fmt.Sprintf("Method revoke_all took %s to complete", time.Since(begin))
+		if err != nil {
+			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
+			return
+		}
+		lm.logger.Info(message)
+	}(time.Now())
+	return lm.svc.RevokeAll(ctx, entityId)
 }
 
 func (lm *loggingMiddleware) ViewCert(ctx context.Context, serialNumber string) (cert certs.Certificate, err error) {
@@ -133,16 +132,20 @@ func (lm *loggingMiddleware) ViewCert(ctx context.Context, serialNumber string) 
 	return lm.svc.ViewCert(ctx, serialNumber)
 }
 
-func (lm *loggingMiddleware) OCSP(ctx context.Context, serialNumber string) (cert *certs.Certificate, ocspStatus int, rootCACert *x509.Certificate, err error) {
+func (lm *loggingMiddleware) OCSP(ctx context.Context, serialNumber string, ocspRequestDER []byte) (ocspBytes []byte, err error) {
 	defer func(begin time.Time) {
-		message := fmt.Sprintf("Method ocsp for serial number %s took %s to complete", serialNumber, time.Since(begin))
+		requestType := "serial_number"
+		if len(ocspRequestDER) > 0 {
+			requestType = "raw_request"
+		}
+		message := fmt.Sprintf("Method ocsp (%s) for serial number %s took %s to complete", requestType, serialNumber, time.Since(begin))
 		if err != nil {
 			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
 			return
 		}
 		lm.logger.Info(message)
 	}(time.Now())
-	return lm.svc.OCSP(ctx, serialNumber)
+	return lm.svc.OCSP(ctx, serialNumber, ocspRequestDER)
 }
 
 func (lm *loggingMiddleware) GetEntityID(ctx context.Context, serialNumber string) (entityID string, err error) {
@@ -191,16 +194,4 @@ func (lm *loggingMiddleware) IssueFromCSR(ctx context.Context, entityID, ttl str
 		lm.logger.Info(message)
 	}(time.Now())
 	return lm.svc.IssueFromCSR(ctx, entityID, ttl, csr)
-}
-
-func (lm *loggingMiddleware) RevokeCerts(ctx context.Context, entityID string) (err error) {
-	defer func(begin time.Time) {
-		message := fmt.Sprintf("Method revoke_certs for entity %s took %s to complete", entityID, time.Since(begin))
-		if err != nil {
-			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
-			return
-		}
-		lm.logger.Info(message)
-	}(time.Now())
-	return lm.svc.RevokeCerts(ctx, entityID)
 }

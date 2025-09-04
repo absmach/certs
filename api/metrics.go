@@ -5,7 +5,6 @@ package api
 
 import (
 	"context"
-	"crypto/x509"
 	"time"
 
 	"github.com/absmach/certs"
@@ -29,7 +28,7 @@ func MetricsMiddleware(svc certs.Service, counter metrics.Counter, latency metri
 	}
 }
 
-func (mm *metricsMiddleware) RenewCert(ctx context.Context, cmpId string) error {
+func (mm *metricsMiddleware) RenewCert(ctx context.Context, cmpId string) (certs.Certificate, error) {
 	defer func(begin time.Time) {
 		mm.counter.With("method", "renew_certificate").Add(1)
 		mm.latency.With("method", "renew_certificate").Observe(time.Since(begin).Seconds())
@@ -43,14 +42,6 @@ func (mm *metricsMiddleware) RetrieveCert(ctx context.Context, token, serialNumb
 		mm.latency.With("method", "get_certificate").Observe(time.Since(begin).Seconds())
 	}(time.Now())
 	return mm.svc.RetrieveCert(ctx, token, serialNumber)
-}
-
-func (mm *metricsMiddleware) RevokeCert(ctx context.Context, serialNumber string) error {
-	defer func(begin time.Time) {
-		mm.counter.With("method", "revoke_certificate").Add(1)
-		mm.latency.With("method", "revoke_certificate").Observe(time.Since(begin).Seconds())
-	}(time.Now())
-	return mm.svc.RevokeCert(ctx, serialNumber)
 }
 
 func (mm *metricsMiddleware) RetrieveCertDownloadToken(ctx context.Context, serialNumber string) (string, error) {
@@ -87,12 +78,20 @@ func (mm *metricsMiddleware) ListCerts(ctx context.Context, pm certs.PageMetadat
 	return mm.svc.ListCerts(ctx, pm)
 }
 
-func (mm *metricsMiddleware) RemoveCert(ctx context.Context, entityId string) error {
+func (mm *metricsMiddleware) RevokeBySerial(ctx context.Context, serialNumber string) error {
 	defer func(begin time.Time) {
-		mm.counter.With("method", "remove_certificate").Add(1)
-		mm.latency.With("method", "remove_certificate").Observe(time.Since(begin).Seconds())
+		mm.counter.With("method", "revoke_by_serial").Add(1)
+		mm.latency.With("method", "revoke_by_serial").Observe(time.Since(begin).Seconds())
 	}(time.Now())
-	return mm.svc.RemoveCert(ctx, entityId)
+	return mm.svc.RevokeBySerial(ctx, serialNumber)
+}
+
+func (mm *metricsMiddleware) RevokeAll(ctx context.Context, entityId string) error {
+	defer func(begin time.Time) {
+		mm.counter.With("method", "revoke_all").Add(1)
+		mm.latency.With("method", "revoke_all").Observe(time.Since(begin).Seconds())
+	}(time.Now())
+	return mm.svc.RevokeAll(ctx, entityId)
 }
 
 func (mm *metricsMiddleware) ViewCert(ctx context.Context, serialNumber string) (certs.Certificate, error) {
@@ -104,12 +103,12 @@ func (mm *metricsMiddleware) ViewCert(ctx context.Context, serialNumber string) 
 	return mm.svc.ViewCert(ctx, serialNumber)
 }
 
-func (mm *metricsMiddleware) OCSP(ctx context.Context, serialNumber string) (*certs.Certificate, int, *x509.Certificate, error) {
+func (mm *metricsMiddleware) OCSP(ctx context.Context, serialNumber string, ocspRequestDER []byte) ([]byte, error) {
 	defer func(begin time.Time) {
 		mm.counter.With("method", "ocsp").Add(1)
 		mm.latency.With("method", "ocsp").Observe(time.Since(begin).Seconds())
 	}(time.Now())
-	return mm.svc.OCSP(ctx, serialNumber)
+	return mm.svc.OCSP(ctx, serialNumber, ocspRequestDER)
 }
 
 func (mm *metricsMiddleware) GetEntityID(ctx context.Context, serialNumber string) (string, error) {
@@ -142,12 +141,4 @@ func (mm *metricsMiddleware) IssueFromCSR(ctx context.Context, entityID, ttl str
 		mm.latency.With("method", "issue_from_csr").Observe(time.Since(begin).Seconds())
 	}(time.Now())
 	return mm.svc.IssueFromCSR(ctx, entityID, ttl, csr)
-}
-
-func (mm *metricsMiddleware) RevokeCerts(ctx context.Context, entityID string) error {
-	defer func(begin time.Time) {
-		mm.counter.With("method", "revoke_certificates").Add(1)
-		mm.latency.With("method", "revoke_certificates").Observe(time.Since(begin).Seconds())
-	}(time.Now())
-	return mm.svc.RevokeCerts(ctx, entityID)
 }

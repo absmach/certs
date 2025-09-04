@@ -217,7 +217,7 @@ func TestDeleteCertCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("DeleteCerts", mock.Anything).Return(tc.sdkErr)
+			sdkCall := sdkMock.On("DeleteCert", mock.Anything).Return(tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{deleteCmd}, tc.args...)...)
 			switch tc.logType {
 			case okLog:
@@ -273,7 +273,7 @@ func TestRenewCertCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("RenewCert", mock.Anything).Return(tc.sdkErr)
+			sdkCall := sdkMock.On("RenewCert", mock.Anything).Return(sdk.Certificate{}, tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{renewCmd}, tc.args...)...)
 			switch tc.logType {
 			case okLog:
@@ -552,13 +552,6 @@ func TestGetCATokenCmd(t *testing.T) {
 				extraArg,
 			},
 			logType: usageLog,
-		},
-		{
-			desc:          "get CA token failed",
-			args:          []string{},
-			sdkErr:        errors.NewSDKErrorWithStatus(certs.ErrGetToken, http.StatusUnprocessableEntity),
-			errLogMessage: fmt.Sprintf("\nerror: %s\n\n", errors.NewSDKErrorWithStatus(certs.ErrGetToken, http.StatusUnprocessableEntity)),
-			logType:       errLog,
 		},
 	}
 

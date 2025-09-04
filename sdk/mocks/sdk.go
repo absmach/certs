@@ -562,22 +562,31 @@ func (_c *SDK_OCSP_Call) RunAndReturn(run func(serialNumber string, cert string)
 }
 
 // RenewCert provides a mock function for the type SDK
-func (_mock *SDK) RenewCert(serialNumber string) errors.SDKError {
+func (_mock *SDK) RenewCert(serialNumber string) (sdk.Certificate, errors.SDKError) {
 	ret := _mock.Called(serialNumber)
 
 	if len(ret) == 0 {
 		panic("no return value specified for RenewCert")
 	}
 
-	var r0 errors.SDKError
-	if returnFunc, ok := ret.Get(0).(func(string) errors.SDKError); ok {
+	var r0 sdk.Certificate
+	var r1 errors.SDKError
+	if returnFunc, ok := ret.Get(0).(func(string) (sdk.Certificate, errors.SDKError)); ok {
+		return returnFunc(serialNumber)
+	}
+	if returnFunc, ok := ret.Get(0).(func(string) sdk.Certificate); ok {
 		r0 = returnFunc(serialNumber)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(errors.SDKError)
+		r0 = ret.Get(0).(sdk.Certificate)
+	}
+	if returnFunc, ok := ret.Get(1).(func(string) errors.SDKError); ok {
+		r1 = returnFunc(serialNumber)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(errors.SDKError)
 		}
 	}
-	return r0
+	return r0, r1
 }
 
 // SDK_RenewCert_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RenewCert'
@@ -604,12 +613,12 @@ func (_c *SDK_RenewCert_Call) Run(run func(serialNumber string)) *SDK_RenewCert_
 	return _c
 }
 
-func (_c *SDK_RenewCert_Call) Return(sDKError errors.SDKError) *SDK_RenewCert_Call {
-	_c.Call.Return(sDKError)
+func (_c *SDK_RenewCert_Call) Return(certificate sdk.Certificate, sDKError errors.SDKError) *SDK_RenewCert_Call {
+	_c.Call.Return(certificate, sDKError)
 	return _c
 }
 
-func (_c *SDK_RenewCert_Call) RunAndReturn(run func(serialNumber string) errors.SDKError) *SDK_RenewCert_Call {
+func (_c *SDK_RenewCert_Call) RunAndReturn(run func(serialNumber string) (sdk.Certificate, errors.SDKError)) *SDK_RenewCert_Call {
 	_c.Call.Return(run)
 	return _c
 }

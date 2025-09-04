@@ -7,11 +7,13 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
-	"encoding/asn1"
+	"crypto"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
+	"math/big"
 	"net/http"
 	"strconv"
 	"strings"
@@ -24,8 +26,6 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"golang.org/x/crypto/ocsp"
 )
-
-var idPKIXOCSPBasic = asn1.ObjectIdentifier([]int{1, 3, 6, 1, 5, 5, 7, 48, 1, 1})
 
 const (
 	offsetKey       = "offset"
@@ -42,16 +42,6 @@ const (
 	defLimit        = 10
 	defType         = 1
 )
-
-type responseASN1 struct {
-	Status   asn1.Enumerated
-	Response responseBytes `asn1:"explicit,tag:0,optional"`
-}
-
-type responseBytes struct {
-	ResponseType asn1.ObjectIdentifier
-	Response     []byte
-}
 
 // MakeHandler returns a HTTP handler for API endpoints.
 func MakeHandler(svc certs.Service, logger *slog.Logger, instanceID string) http.Handler {
@@ -156,21 +146,21 @@ func MakeHandler(svc certs.Service, logger *slog.Logger, instanceID string) http
 	return r
 }
 
-func decodeView(_ context.Context, r *http.Request) (interface{}, error) {
+func decodeView(_ context.Context, r *http.Request) (any, error) {
 	req := viewReq{
 		id: chi.URLParam(r, "id"),
 	}
 	return req, nil
 }
 
-func decodeDelete(_ context.Context, r *http.Request) (interface{}, error) {
+func decodeDelete(_ context.Context, r *http.Request) (any, error) {
 	req := deleteReq{
 		entityID: chi.URLParam(r, "entityID"),
 	}
 	return req, nil
 }
 
-func decodeCRL(_ context.Context, r *http.Request) (interface{}, error) {
+func decodeCRL(_ context.Context, r *http.Request) (any, error) {
 	certType, err := readNumQuery(r, "", defType)
 	if err != nil {
 		return nil, err
@@ -181,7 +171,7 @@ func decodeCRL(_ context.Context, r *http.Request) (interface{}, error) {
 	return req, nil
 }
 
-func decodeDownloadCerts(_ context.Context, r *http.Request) (interface{}, error) {
+func decodeDownloadCerts(_ context.Context, r *http.Request) (any, error) {
 	token, err := readStringQuery(r, token, "")
 	if err != nil {
 		return nil, err
@@ -194,7 +184,7 @@ func decodeDownloadCerts(_ context.Context, r *http.Request) (interface{}, error
 	return req, nil
 }
 
-func decodeDownloadCA(_ context.Context, r *http.Request) (interface{}, error) {
+func decodeDownloadCA(_ context.Context, r *http.Request) (any, error) {
 	token, err := readStringQuery(r, token, "")
 	if err != nil {
 		return nil, err
@@ -206,23 +196,61 @@ func decodeDownloadCA(_ context.Context, r *http.Request) (interface{}, error) {
 	return req, nil
 }
 
-func decodeOCSPRequest(_ context.Context, r *http.Request) (interface{}, error) {
+func decodeOCSPRequest(_ context.Context, r *http.Request) (any, error) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(certs.ErrMalformedEntity, err)
 	}
+	defer r.Body.Close()
+
 	req, err := ocsp.ParseRequest(body)
 	if err != nil {
-		return nil, err
+		contentType := r.Header.Get("Content-Type")
+		if strings.Contains(contentType, "application/json") {
+			return decodeJsonOCSPRequest(body)
+		}
+		return nil, fmt.Errorf("invalid OCSP request: %w", err)
 	}
+
 	request := ocspReq{
 		req:         req,
-		statusParam: strings.TrimSpace(r.URL.Query().Get(ocspStatusParam)),
+		StatusParam: strings.TrimSpace(r.URL.Query().Get(ocspStatusParam)),
 	}
 	return request, nil
 }
 
-func decodeIssueCert(_ context.Context, r *http.Request) (interface{}, error) {
+func decodeJsonOCSPRequest(body []byte) (any, error) {
+	var simple ocspReq
+	if err := json.Unmarshal(body, &simple); err != nil {
+		return nil, fmt.Errorf("invalid JSON OCSP request: %w", err)
+	}
+
+	if simple.SerialNumber == "" {
+		return nil, fmt.Errorf("serial_number is required")
+	}
+
+	serialHex := strings.ReplaceAll(simple.SerialNumber, ":", "")
+	serialBytes, err := hex.DecodeString(serialHex)
+	if err != nil {
+		return nil, fmt.Errorf("invalid serial number format: %w", err)
+	}
+	serial := new(big.Int).SetBytes(serialBytes)
+
+	req := &ocsp.Request{
+		HashAlgorithm:  crypto.SHA1,
+		IssuerNameHash: make([]byte, 20),
+		IssuerKeyHash:  make([]byte, 20),
+		SerialNumber:   serial,
+	}
+
+	request := ocspReq{
+		req:         req,
+		StatusParam: simple.StatusParam,
+	}
+	return request, nil
+}
+
+func decodeIssueCert(_ context.Context, r *http.Request) (any, error) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		return nil, err
@@ -246,7 +274,7 @@ func decodeIssueCert(_ context.Context, r *http.Request) (interface{}, error) {
 	return req, nil
 }
 
-func decodeListCerts(_ context.Context, r *http.Request) (interface{}, error) {
+func decodeListCerts(_ context.Context, r *http.Request) (any, error) {
 	o, err := readNumQuery(r, offsetKey, defOffset)
 	if err != nil {
 		return nil, err
@@ -272,7 +300,7 @@ func decodeListCerts(_ context.Context, r *http.Request) (interface{}, error) {
 	return req, nil
 }
 
-func decodeIssueFromCSR(_ context.Context, r *http.Request) (interface{}, error) {
+func decodeIssueFromCSR(_ context.Context, r *http.Request) (any, error) {
 	t, err := readStringQuery(r, ttl, "")
 	if err != nil {
 		return nil, err
@@ -297,7 +325,7 @@ func decodeIssueFromCSR(_ context.Context, r *http.Request) (interface{}, error)
 }
 
 // EncodeResponse encodes successful response.
-func EncodeResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
+func EncodeResponse(_ context.Context, w http.ResponseWriter, response any) error {
 	if ar, ok := response.(Response); ok {
 		for k, v := range ar.Headers() {
 			w.Header().Set(k, v)
@@ -314,38 +342,14 @@ func EncodeResponse(_ context.Context, w http.ResponseWriter, response interface
 }
 
 func encodeOSCPResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
-	res := response.(ocspRes)
-	if res.template.Certificate == nil {
-		ocspRes, err := asn1.Marshal(responseASN1{
-			Status: asn1.Enumerated(ocsp.Malformed),
-			Response: responseBytes{
-				ResponseType: idPKIXOCSPBasic,
-			},
-		})
-		if err != nil {
-			return err
-		}
+	res := response.(ocspRawRes)
 
-		w.Header().Set("Content-Type", OCSPType)
-		if _, err := w.Write(ocspRes); err != nil {
-			return err
-		}
-
-		return err
-	}
-
-	ocspRes, err := ocsp.CreateResponse(res.issuerCert, res.template.Certificate, res.template, res.signer)
-	if err != nil {
-		return err
-	}
 	w.Header().Set("Content-Type", OCSPType)
-	if _, err := w.Write(ocspRes); err != nil {
-		return err
-	}
+	_, err := w.Write(res.Data)
 	return err
 }
 
-func encodeFileDownloadResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
+func encodeFileDownloadResponse(_ context.Context, w http.ResponseWriter, response any) error {
 	resp := response.(fileDownloadRes)
 	var buffer bytes.Buffer
 	zw := zip.NewWriter(&buffer)
@@ -389,7 +393,7 @@ func encodeFileDownloadResponse(_ context.Context, w http.ResponseWriter, respon
 	return err
 }
 
-func encodeCADownloadResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
+func encodeCADownloadResponse(_ context.Context, w http.ResponseWriter, response any) error {
 	resp := response.(fileDownloadRes)
 	var buffer bytes.Buffer
 	zw := zip.NewWriter(&buffer)

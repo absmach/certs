@@ -8,7 +8,6 @@ package mocks
 
 import (
 	"context"
-	"crypto/x509"
 
 	"github.com/absmach/certs"
 	mock "github.com/stretchr/testify/mock"
@@ -470,45 +469,31 @@ func (_c *Service_ListCerts_Call) RunAndReturn(run func(ctx context.Context, pm 
 }
 
 // OCSP provides a mock function for the type Service
-func (_mock *Service) OCSP(ctx context.Context, serialNumber string) (*certs.Certificate, int, *x509.Certificate, error) {
-	ret := _mock.Called(ctx, serialNumber)
+func (_mock *Service) OCSP(ctx context.Context, serialNumber string, ocspRequestDER []byte) ([]byte, error) {
+	ret := _mock.Called(ctx, serialNumber, ocspRequestDER)
 
 	if len(ret) == 0 {
 		panic("no return value specified for OCSP")
 	}
 
-	var r0 *certs.Certificate
-	var r1 int
-	var r2 *x509.Certificate
-	var r3 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (*certs.Certificate, int, *x509.Certificate, error)); ok {
-		return returnFunc(ctx, serialNumber)
+	var r0 []byte
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, []byte) ([]byte, error)); ok {
+		return returnFunc(ctx, serialNumber, ocspRequestDER)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) *certs.Certificate); ok {
-		r0 = returnFunc(ctx, serialNumber)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, []byte) []byte); ok {
+		r0 = returnFunc(ctx, serialNumber, ocspRequestDER)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*certs.Certificate)
+			r0 = ret.Get(0).([]byte)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string) int); ok {
-		r1 = returnFunc(ctx, serialNumber)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, []byte) error); ok {
+		r1 = returnFunc(ctx, serialNumber, ocspRequestDER)
 	} else {
-		r1 = ret.Get(1).(int)
+		r1 = ret.Error(1)
 	}
-	if returnFunc, ok := ret.Get(2).(func(context.Context, string) *x509.Certificate); ok {
-		r2 = returnFunc(ctx, serialNumber)
-	} else {
-		if ret.Get(2) != nil {
-			r2 = ret.Get(2).(*x509.Certificate)
-		}
-	}
-	if returnFunc, ok := ret.Get(3).(func(context.Context, string) error); ok {
-		r3 = returnFunc(ctx, serialNumber)
-	} else {
-		r3 = ret.Error(3)
-	}
-	return r0, r1, r2, r3
+	return r0, r1
 }
 
 // Service_OCSP_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'OCSP'
@@ -519,11 +504,12 @@ type Service_OCSP_Call struct {
 // OCSP is a helper method to define mock.On call
 //   - ctx context.Context
 //   - serialNumber string
-func (_e *Service_Expecter) OCSP(ctx interface{}, serialNumber interface{}) *Service_OCSP_Call {
-	return &Service_OCSP_Call{Call: _e.mock.On("OCSP", ctx, serialNumber)}
+//   - ocspRequestDER []byte
+func (_e *Service_Expecter) OCSP(ctx interface{}, serialNumber interface{}, ocspRequestDER interface{}) *Service_OCSP_Call {
+	return &Service_OCSP_Call{Call: _e.mock.On("OCSP", ctx, serialNumber, ocspRequestDER)}
 }
 
-func (_c *Service_OCSP_Call) Run(run func(ctx context.Context, serialNumber string)) *Service_OCSP_Call {
+func (_c *Service_OCSP_Call) Run(run func(ctx context.Context, serialNumber string, ocspRequestDER []byte)) *Service_OCSP_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -533,96 +519,53 @@ func (_c *Service_OCSP_Call) Run(run func(ctx context.Context, serialNumber stri
 		if args[1] != nil {
 			arg1 = args[1].(string)
 		}
+		var arg2 []byte
+		if args[2] != nil {
+			arg2 = args[2].([]byte)
+		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
 }
 
-func (_c *Service_OCSP_Call) Return(certificate *certs.Certificate, n int, certificate1 *x509.Certificate, err error) *Service_OCSP_Call {
-	_c.Call.Return(certificate, n, certificate1, err)
+func (_c *Service_OCSP_Call) Return(bytes []byte, err error) *Service_OCSP_Call {
+	_c.Call.Return(bytes, err)
 	return _c
 }
 
-func (_c *Service_OCSP_Call) RunAndReturn(run func(ctx context.Context, serialNumber string) (*certs.Certificate, int, *x509.Certificate, error)) *Service_OCSP_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// RemoveCert provides a mock function for the type Service
-func (_mock *Service) RemoveCert(ctx context.Context, entityId string) error {
-	ret := _mock.Called(ctx, entityId)
-
-	if len(ret) == 0 {
-		panic("no return value specified for RemoveCert")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) error); ok {
-		r0 = returnFunc(ctx, entityId)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// Service_RemoveCert_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RemoveCert'
-type Service_RemoveCert_Call struct {
-	*mock.Call
-}
-
-// RemoveCert is a helper method to define mock.On call
-//   - ctx context.Context
-//   - entityId string
-func (_e *Service_Expecter) RemoveCert(ctx interface{}, entityId interface{}) *Service_RemoveCert_Call {
-	return &Service_RemoveCert_Call{Call: _e.mock.On("RemoveCert", ctx, entityId)}
-}
-
-func (_c *Service_RemoveCert_Call) Run(run func(ctx context.Context, entityId string)) *Service_RemoveCert_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *Service_RemoveCert_Call) Return(err error) *Service_RemoveCert_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *Service_RemoveCert_Call) RunAndReturn(run func(ctx context.Context, entityId string) error) *Service_RemoveCert_Call {
+func (_c *Service_OCSP_Call) RunAndReturn(run func(ctx context.Context, serialNumber string, ocspRequestDER []byte) ([]byte, error)) *Service_OCSP_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // RenewCert provides a mock function for the type Service
-func (_mock *Service) RenewCert(ctx context.Context, serialNumber string) error {
+func (_mock *Service) RenewCert(ctx context.Context, serialNumber string) (certs.Certificate, error) {
 	ret := _mock.Called(ctx, serialNumber)
 
 	if len(ret) == 0 {
 		panic("no return value specified for RenewCert")
 	}
 
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) error); ok {
+	var r0 certs.Certificate
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (certs.Certificate, error)); ok {
+		return returnFunc(ctx, serialNumber)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) certs.Certificate); ok {
 		r0 = returnFunc(ctx, serialNumber)
 	} else {
-		r0 = ret.Error(0)
+		r0 = ret.Get(0).(certs.Certificate)
 	}
-	return r0
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, serialNumber)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
 }
 
 // Service_RenewCert_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RenewCert'
@@ -655,12 +598,12 @@ func (_c *Service_RenewCert_Call) Run(run func(ctx context.Context, serialNumber
 	return _c
 }
 
-func (_c *Service_RenewCert_Call) Return(err error) *Service_RenewCert_Call {
-	_c.Call.Return(err)
+func (_c *Service_RenewCert_Call) Return(certificate certs.Certificate, err error) *Service_RenewCert_Call {
+	_c.Call.Return(certificate, err)
 	return _c
 }
 
-func (_c *Service_RenewCert_Call) RunAndReturn(run func(ctx context.Context, serialNumber string) error) *Service_RenewCert_Call {
+func (_c *Service_RenewCert_Call) RunAndReturn(run func(ctx context.Context, serialNumber string) (certs.Certificate, error)) *Service_RenewCert_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -871,69 +814,12 @@ func (_c *Service_RetrieveCertDownloadToken_Call) RunAndReturn(run func(ctx cont
 	return _c
 }
 
-// RevokeCert provides a mock function for the type Service
-func (_mock *Service) RevokeCert(ctx context.Context, serialNumber string) error {
-	ret := _mock.Called(ctx, serialNumber)
-
-	if len(ret) == 0 {
-		panic("no return value specified for RevokeCert")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) error); ok {
-		r0 = returnFunc(ctx, serialNumber)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// Service_RevokeCert_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RevokeCert'
-type Service_RevokeCert_Call struct {
-	*mock.Call
-}
-
-// RevokeCert is a helper method to define mock.On call
-//   - ctx context.Context
-//   - serialNumber string
-func (_e *Service_Expecter) RevokeCert(ctx interface{}, serialNumber interface{}) *Service_RevokeCert_Call {
-	return &Service_RevokeCert_Call{Call: _e.mock.On("RevokeCert", ctx, serialNumber)}
-}
-
-func (_c *Service_RevokeCert_Call) Run(run func(ctx context.Context, serialNumber string)) *Service_RevokeCert_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *Service_RevokeCert_Call) Return(err error) *Service_RevokeCert_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *Service_RevokeCert_Call) RunAndReturn(run func(ctx context.Context, serialNumber string) error) *Service_RevokeCert_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// RevokeCerts provides a mock function for the type Service
-func (_mock *Service) RevokeCerts(ctx context.Context, entityID string) error {
+// RevokeAll provides a mock function for the type Service
+func (_mock *Service) RevokeAll(ctx context.Context, entityID string) error {
 	ret := _mock.Called(ctx, entityID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for RevokeCerts")
+		panic("no return value specified for RevokeAll")
 	}
 
 	var r0 error
@@ -945,19 +831,19 @@ func (_mock *Service) RevokeCerts(ctx context.Context, entityID string) error {
 	return r0
 }
 
-// Service_RevokeCerts_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RevokeCerts'
-type Service_RevokeCerts_Call struct {
+// Service_RevokeAll_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RevokeAll'
+type Service_RevokeAll_Call struct {
 	*mock.Call
 }
 
-// RevokeCerts is a helper method to define mock.On call
+// RevokeAll is a helper method to define mock.On call
 //   - ctx context.Context
 //   - entityID string
-func (_e *Service_Expecter) RevokeCerts(ctx interface{}, entityID interface{}) *Service_RevokeCerts_Call {
-	return &Service_RevokeCerts_Call{Call: _e.mock.On("RevokeCerts", ctx, entityID)}
+func (_e *Service_Expecter) RevokeAll(ctx interface{}, entityID interface{}) *Service_RevokeAll_Call {
+	return &Service_RevokeAll_Call{Call: _e.mock.On("RevokeAll", ctx, entityID)}
 }
 
-func (_c *Service_RevokeCerts_Call) Run(run func(ctx context.Context, entityID string)) *Service_RevokeCerts_Call {
+func (_c *Service_RevokeAll_Call) Run(run func(ctx context.Context, entityID string)) *Service_RevokeAll_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -975,12 +861,69 @@ func (_c *Service_RevokeCerts_Call) Run(run func(ctx context.Context, entityID s
 	return _c
 }
 
-func (_c *Service_RevokeCerts_Call) Return(err error) *Service_RevokeCerts_Call {
+func (_c *Service_RevokeAll_Call) Return(err error) *Service_RevokeAll_Call {
 	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *Service_RevokeCerts_Call) RunAndReturn(run func(ctx context.Context, entityID string) error) *Service_RevokeCerts_Call {
+func (_c *Service_RevokeAll_Call) RunAndReturn(run func(ctx context.Context, entityID string) error) *Service_RevokeAll_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RevokeBySerial provides a mock function for the type Service
+func (_mock *Service) RevokeBySerial(ctx context.Context, serialNumber string) error {
+	ret := _mock.Called(ctx, serialNumber)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RevokeBySerial")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) error); ok {
+		r0 = returnFunc(ctx, serialNumber)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// Service_RevokeBySerial_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RevokeBySerial'
+type Service_RevokeBySerial_Call struct {
+	*mock.Call
+}
+
+// RevokeBySerial is a helper method to define mock.On call
+//   - ctx context.Context
+//   - serialNumber string
+func (_e *Service_Expecter) RevokeBySerial(ctx interface{}, serialNumber interface{}) *Service_RevokeBySerial_Call {
+	return &Service_RevokeBySerial_Call{Call: _e.mock.On("RevokeBySerial", ctx, serialNumber)}
+}
+
+func (_c *Service_RevokeBySerial_Call) Run(run func(ctx context.Context, serialNumber string)) *Service_RevokeBySerial_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *Service_RevokeBySerial_Call) Return(err error) *Service_RevokeBySerial_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *Service_RevokeBySerial_Call) RunAndReturn(run func(ctx context.Context, serialNumber string) error) *Service_RevokeBySerial_Call {
 	_c.Call.Return(run)
 	return _c
 }

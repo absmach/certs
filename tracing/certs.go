@@ -5,7 +5,6 @@ package tracing
 
 import (
 	"context"
-	"crypto/x509"
 
 	"github.com/absmach/certs"
 	"go.opentelemetry.io/otel/trace"
@@ -23,16 +22,22 @@ func New(svc certs.Service, tracer trace.Tracer) certs.Service {
 	return &tracingMiddleware{tracer, svc}
 }
 
-func (tm *tracingMiddleware) RenewCert(ctx context.Context, serialNumber string) error {
+func (tm *tracingMiddleware) RenewCert(ctx context.Context, serialNumber string) (certs.Certificate, error) {
 	ctx, span := tm.tracer.Start(ctx, "renew_cert")
 	defer span.End()
 	return tm.svc.RenewCert(ctx, serialNumber)
 }
 
-func (tm *tracingMiddleware) RevokeCert(ctx context.Context, serialNumber string) error {
-	ctx, span := tm.tracer.Start(ctx, "revoke_cert")
+func (tm *tracingMiddleware) RevokeBySerial(ctx context.Context, serialNumber string) error {
+	ctx, span := tm.tracer.Start(ctx, "revoke_by_serial")
 	defer span.End()
-	return tm.svc.RevokeCert(ctx, serialNumber)
+	return tm.svc.RevokeBySerial(ctx, serialNumber)
+}
+
+func (tm *tracingMiddleware) RevokeAll(ctx context.Context, entityID string) error {
+	ctx, span := tm.tracer.Start(ctx, "revoke_all")
+	defer span.End()
+	return tm.svc.RevokeAll(ctx, entityID)
 }
 
 func (tm *tracingMiddleware) RetrieveCert(ctx context.Context, token, serialNumber string) (certs.Certificate, []byte, error) {
@@ -65,22 +70,16 @@ func (tm *tracingMiddleware) ListCerts(ctx context.Context, pm certs.PageMetadat
 	return tm.svc.ListCerts(ctx, pm)
 }
 
-func (tm *tracingMiddleware) RemoveCert(ctx context.Context, entityId string) (err error) {
-	ctx, span := tm.tracer.Start(ctx, "remove_cert")
-	defer span.End()
-	return tm.svc.RemoveCert(ctx, entityId)
-}
-
 func (s *tracingMiddleware) ViewCert(ctx context.Context, serialNumber string) (certs.Certificate, error) {
 	ctx, span := s.tracer.Start(ctx, "view_cert")
 	defer span.End()
 	return s.svc.ViewCert(ctx, serialNumber)
 }
 
-func (tm *tracingMiddleware) OCSP(ctx context.Context, serialNumber string) (*certs.Certificate, int, *x509.Certificate, error) {
+func (tm *tracingMiddleware) OCSP(ctx context.Context, serialNumber string, ocspRequestDER []byte) ([]byte, error) {
 	ctx, span := tm.tracer.Start(ctx, "ocsp")
 	defer span.End()
-	return tm.svc.OCSP(ctx, serialNumber)
+	return tm.svc.OCSP(ctx, serialNumber, ocspRequestDER)
 }
 
 func (tm *tracingMiddleware) GetEntityID(ctx context.Context, serialNumber string) (string, error) {
@@ -105,10 +104,4 @@ func (tm *tracingMiddleware) IssueFromCSR(ctx context.Context, entityID, ttl str
 	ctx, span := tm.tracer.Start(ctx, "issue_from_csr")
 	defer span.End()
 	return tm.svc.IssueFromCSR(ctx, entityID, ttl, csr)
-}
-
-func (tm *tracingMiddleware) RevokeCerts(ctx context.Context, entityID string) error {
-	ctx, span := tm.tracer.Start(ctx, "revoke_certs")
-	defer span.End()
-	return tm.svc.RevokeCerts(ctx, entityID)
 }

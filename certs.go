@@ -63,14 +63,14 @@ type CA struct {
 }
 
 type Certificate struct {
-	SerialNumber string    `db:"serial_number"`
-	Certificate  []byte    `db:"certificate"`
-	Key          []byte    `db:"key"`
-	Revoked      bool      `db:"revoked"`
-	ExpiryTime   time.Time `db:"expiry_time"`
-	EntityID     string    `db:"entity_id"`
-	Type         CertType  `db:"type"`
-	DownloadUrl  string    `db:"-"`
+	SerialNumber string    `json:"serial_number"`
+	Certificate  []byte    `json:"certificate"`
+	Key          []byte    `json:"key"`
+	Revoked      bool      `json:"revoked"`
+	ExpiryTime   time.Time `json:"expiry_time"`
+	EntityID     string    `json:"entity_id"`
+	Type         CertType  `json:"type"`
+	DownloadUrl  string    `json:"-"`
 }
 
 type CertificatePage struct {
@@ -79,10 +79,10 @@ type CertificatePage struct {
 }
 
 type PageMetadata struct {
-	Total    uint64 `json:"total" db:"total"`
-	Offset   uint64 `json:"offset,omitempty" db:"offset"`
-	Limit    uint64 `json:"limit" db:"limit"`
-	EntityID string `json:"entity_id,omitempty" db:"entity_id"`
+	Total    uint64 `json:"total"`
+	Offset   uint64 `json:"offset,omitempty"`
+	Limit    uint64 `json:"limit,omitempty"`
+	EntityID string `json:"entity_id,omitempty"`
 }
 
 type CSRMetadata struct {
@@ -138,11 +138,15 @@ type Config struct {
 }
 
 type Service interface {
-	// RenewCert renews a certificate from the database.
-	RenewCert(ctx context.Context, serialNumber string) error
+	// RenewCert renews a certificate by issuing a new certificate with the same parameters.
+	// Returns the new certificate with extended TTL and a new serial number.
+	RenewCert(ctx context.Context, serialNumber string) (Certificate, error)
 
-	// RevokeCert revokes a certificate from the database.
-	RevokeCert(ctx context.Context, serialNumber string) error
+	// RevokeBySerial revokes a single certificate by its serial number.
+	RevokeBySerial(ctx context.Context, serialNumber string) error
+
+	// RevokeAll revokes all certificates for a given entity ID.
+	RevokeAll(ctx context.Context, entityID string) error
 
 	// RetrieveCert retrieves a certificate record from the database.
 	RetrieveCert(ctx context.Context, token, serialNumber string) (Certificate, []byte, error)
@@ -164,8 +168,9 @@ type Service interface {
 	// IssueCert issues a certificate from the database.
 	IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, option SubjectOptions) (Certificate, error)
 
-	// OCSP retrieves the OCSP response for a certificate.
-	OCSP(ctx context.Context, serialNumber string) (*Certificate, int, *x509.Certificate, error)
+	// OCSP forwards OCSP requests to OpenBao's OCSP endpoint.
+	// If ocspRequestDER is provided, it will be used directly; otherwise, a request will be built from the serialNumber.
+	OCSP(ctx context.Context, serialNumber string, ocspRequestDER []byte) ([]byte, error)
 
 	// GetEntityID retrieves the entity ID for a certificate.
 	GetEntityID(ctx context.Context, serialNumber string) (string, error)
@@ -176,38 +181,6 @@ type Service interface {
 	// GetChainCA retrieves the chain of CA i.e. root and intermediate cert concat together.
 	GetChainCA(ctx context.Context, token string) (Certificate, error)
 
-	// RemoveCert deletes a cert for a provided  entityID.
-	RemoveCert(ctx context.Context, entityId string) error
-
 	// IssueFromCSR creates a certificate from a given CSR.
 	IssueFromCSR(ctx context.Context, entityID, ttl string, csr CSR) (Certificate, error)
-
-	// RevokeCerts revokes all certificates for a given entity ID.
-	RevokeCerts(ctx context.Context, entityID string) error
-}
-
-type Repository interface {
-	// CreateCert adds a certificate record to the database.
-	CreateCert(ctx context.Context, cert Certificate) error
-
-	// RetrieveCert retrieves a certificate record from the database.
-	RetrieveCert(ctx context.Context, serialNumber string) (Certificate, error)
-
-	// UpdateCert updates a certificate record in the database.
-	UpdateCert(ctx context.Context, cert Certificate) error
-
-	// ListCerts retrieves the certificates from the database while applying filters.
-	ListCerts(ctx context.Context, pm PageMetadata) (CertificatePage, error)
-
-	// GetCAs retrieves rootCA and intermediateCA from database.
-	GetCAs(ctx context.Context, caType ...CertType) ([]Certificate, error)
-
-	// ListRevokedCerts retrieves revoked lists from database.
-	ListRevokedCerts(ctx context.Context) ([]Certificate, error)
-
-	// RemoveCert deletes cert from database.
-	RemoveCert(ctx context.Context, entityId string) error
-
-	// RevokeCertsByEntityID revokes all certificates for a given entity ID.
-	RevokeCertsByEntityID(ctx context.Context, entityID string) error
 }

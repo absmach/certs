@@ -190,12 +190,12 @@ func TestRevokeCert(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			svcCall := svc.On("RevokeCert", mock.Anything, tc.serial).Return(tc.svcerr)
+			svcCall := svc.On("RevokeBySerial", mock.Anything, tc.serial).Return(tc.svcerr)
 
 			err := ctsdk.RevokeCert(tc.serial)
 			assert.Equal(t, tc.err, err)
 			if tc.desc != "RevokeCert with empty serial" {
-				ok := svcCall.Parent.AssertCalled(t, "RevokeCert", mock.Anything, tc.serial)
+				ok := svcCall.Parent.AssertCalled(t, "RevokeBySerial", mock.Anything, tc.serial)
 				assert.True(t, ok)
 			}
 			svcCall.Unset()
@@ -244,12 +244,12 @@ func TestDeleteCert(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			svcCall := svc.On("RemoveCert", mock.Anything, tc.entityID).Return(tc.svcerr)
+			svcCall := svc.On("RevokeAll", mock.Anything, tc.entityID).Return(tc.svcerr)
 
 			err := ctsdk.DeleteCert(tc.entityID)
 			assert.Equal(t, tc.err, err)
 			if tc.desc != "DeleteCert with empty entity id" {
-				ok := svcCall.Parent.AssertCalled(t, "RemoveCert", mock.Anything, tc.entityID)
+				ok := svcCall.Parent.AssertCalled(t, "RevokeAll", mock.Anything, tc.entityID)
 				assert.True(t, ok)
 			}
 			svcCall.Unset()
@@ -270,38 +270,56 @@ func TestRenewCert(t *testing.T) {
 	ctsdk := sdk.NewSDK(sdkConfig)
 
 	cases := []struct {
-		desc    string
-		serial  string
-		svcresp string
-		svcerr  error
-		err     errors.SDKError
+		desc     string
+		serial   string
+		svcresp  certs.Certificate
+		svcerr   error
+		err      errors.SDKError
+		expected sdk.Certificate
 	}{
 		{
 			desc:   "RenewCert success",
 			serial: serialNum,
+			svcresp: certs.Certificate{
+				SerialNumber: "new-serial-123",
+				EntityID:     "test-entity",
+			},
 			svcerr: nil,
 			err:    nil,
+			expected: sdk.Certificate{
+				SerialNumber: "new-serial-123",
+				EntityID:     "test-entity",
+			},
 		},
 		{
-			desc:   "RenewCert failure",
-			serial: serialNum,
-			svcerr: certs.ErrUpdateEntity,
-			err:    errors.NewSDKErrorWithStatus(certs.ErrUpdateEntity, http.StatusUnprocessableEntity),
+			desc:     "RenewCert failure",
+			serial:   serialNum,
+			svcresp:  certs.Certificate{},
+			svcerr:   certs.ErrUpdateEntity,
+			err:      errors.NewSDKErrorWithStatus(certs.ErrUpdateEntity, http.StatusUnprocessableEntity),
+			expected: sdk.Certificate{},
 		},
 		{
-			desc:   "RenewCert with empty serial",
-			serial: "",
-			svcerr: certs.ErrMalformedEntity,
-			err:    errors.NewSDKErrorWithStatus(certs.ErrMalformedEntity, http.StatusBadRequest),
+			desc:     "RenewCert with empty serial",
+			serial:   "",
+			svcresp:  certs.Certificate{},
+			svcerr:   certs.ErrMalformedEntity,
+			err:      errors.NewSDKErrorWithStatus(certs.ErrMalformedEntity, http.StatusBadRequest),
+			expected: sdk.Certificate{},
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			svcCall := svc.On("RenewCert", mock.Anything, tc.serial).Return(tc.svcerr)
+			svcCall := svc.On("RenewCert", mock.Anything, tc.serial).Return(tc.svcresp, tc.svcerr)
 
-			err := ctsdk.RenewCert(tc.serial)
+			cert, err := ctsdk.RenewCert(tc.serial)
 			assert.Equal(t, tc.err, err)
+			if tc.err == nil {
+				assert.Equal(t, tc.expected, cert)
+			} else {
+				assert.Equal(t, sdk.Certificate{}, cert)
+			}
 			if tc.desc != "RenewCert with empty serial" {
 				ok := svcCall.Parent.AssertCalled(t, "RenewCert", mock.Anything, tc.serial)
 				assert.True(t, ok)

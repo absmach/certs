@@ -6,15 +6,11 @@ package sdk
 import (
 	"archive/zip"
 	"bytes"
-	"crypto"
 	"crypto/tls"
-	"crypto/x509"
 	"encoding/json"
-	"encoding/pem"
 	"fmt"
 	"io"
 	"log"
-	"math/big"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -29,7 +25,6 @@ const (
 	certsEndpoint     = "certs"
 	csrEndpoint       = "csrs"
 	issueCertEndpoint = "certs/issue"
-	emptyOCSPbody     = 22
 )
 
 const (
@@ -154,12 +149,15 @@ type CertificateBundle struct {
 }
 
 type OCSPResponse struct {
-	Status       CertStatus `json:"status"`
-	SerialNumber *big.Int   `json:"serial_number"`
-	RevokedAt    *time.Time `json:"revoked_at,omitempty"`
-	ProducedAt   *time.Time `json:"produced_at,omitempty"`
-	Certificate  []byte     `json:"certificate,omitempty"`
-	IssuerHash   string     `json:"issuer_hash,omitempty"`
+	Status           CertStatus `json:"status"`
+	SerialNumber     string     `json:"serial_number"`
+	RevokedAt        *time.Time `json:"revoked_at,omitempty"`
+	ProducedAt       *time.Time `json:"produced_at,omitempty"`
+	ThisUpdate       *time.Time `json:"this_update,omitempty"`
+	NextUpdate       *time.Time `json:"next_update,omitempty"`
+	Certificate      []byte     `json:"certificate,omitempty"`
+	IssuerHash       string     `json:"issuer_hash,omitempty"`
+	RevocationReason int        `json:"revocation_reason,omitempty"`
 }
 
 type CSRMetadata struct {
@@ -202,12 +200,12 @@ type SDK interface {
 	//  fmt.Println(err) // nil if successful
 	RevokeCert(serialNumber string) errors.SDKError
 
-	// RenewCert renews certificate for thing with thingID
+	// RenewCert renews certificate for entity with entityID and returns the new certificate
 	//
 	// example:
-	//  err := sdk.RenewCert("serialNumber")
-	//  fmt.Println(err) // nil if successful
-	RenewCert(serialNumber string) errors.SDKError
+	//  newCert, err := sdk.RenewCert("serialNumber")
+	//  fmt.Println(newCert.SerialNumber)
+	RenewCert(serialNumber string) (Certificate, errors.SDKError)
 
 	// ListCerts lists all certificates for a client
 	//
@@ -237,7 +235,8 @@ type SDK interface {
 	//  fmt.Println(token)
 	RetrieveCertDownloadToken(serialNumber string) (Token, errors.SDKError)
 
-	// OCSP checks the revocation status of a certificate
+	// OCSP checks the revocation status of a certificate using OpenBao's OCSP endpoint.
+	// Returns a binary OCSP response (RFC 6960) with detailed status information.
 	//
 	// example:
 	//  response, _ := sdk.OCSP("serialNumber", "")
@@ -358,10 +357,22 @@ func (sdk mgSDK) RevokeCert(serialNumber string) errors.SDKError {
 	return sdkerr
 }
 
-func (sdk mgSDK) RenewCert(serialNumber string) errors.SDKError {
+func (sdk mgSDK) RenewCert(serialNumber string) (Certificate, errors.SDKError) {
 	url := fmt.Sprintf("%s/%s/%s/renew", sdk.certsURL, certsEndpoint, serialNumber)
-	_, _, sdkerr := sdk.processRequest(http.MethodPatch, url, nil, nil, http.StatusOK)
-	return sdkerr
+	_, body, sdkerr := sdk.processRequest(http.MethodPatch, url, nil, nil, http.StatusOK)
+	if sdkerr != nil {
+		return Certificate{}, sdkerr
+	}
+
+	var renewRes struct {
+		Renewed     bool        `json:"renewed"`
+		Certificate Certificate `json:"certificate"`
+	}
+	if err := json.Unmarshal(body, &renewRes); err != nil {
+		return Certificate{}, errors.NewSDKError(err)
+	}
+
+	return renewRes.Certificate, nil
 }
 
 func (sdk mgSDK) ListCerts(pm PageMetadata) (CertificatePage, errors.SDKError) {
@@ -401,41 +412,24 @@ func (sdk mgSDK) RetrieveCertDownloadToken(serialNumber string) (Token, errors.S
 }
 
 func (sdk mgSDK) OCSP(serialNumber, cert string) (OCSPResponse, errors.SDKError) {
-	var sn *big.Int
-	var ok bool
-
 	if serialNumber == "" && cert == "" {
 		return OCSPResponse{}, errors.NewSDKError(errors.New("either serial number or certificate must be provided"))
 	}
 
+	ocspReq := struct {
+		SerialNumber string `json:"serial_number,omitempty"`
+		Certificate  string `json:"certificate,omitempty"`
+	}{}
+
 	if serialNumber != "" {
-		sn, ok = new(big.Int).SetString(serialNumber, 10)
-		if !ok {
-			return OCSPResponse{}, errors.NewSDKError(errors.New("invalid serial number"))
-		}
+		ocspReq.SerialNumber = serialNumber
 	}
 
 	if cert != "" {
-		block, _ := pem.Decode([]byte(cert))
-		if block == nil {
-			return OCSPResponse{}, errors.NewSDKError(errors.New("failed to decode PEM block"))
-		}
-
-		parsedCert, err := x509.ParseCertificate(block.Bytes)
-		if err != nil {
-			return OCSPResponse{}, errors.NewSDKError(err)
-		}
-		sn = parsedCert.SerialNumber
+		ocspReq.Certificate = cert
 	}
 
-	req := ocsp.Request{
-		SerialNumber:   sn,
-		HashAlgorithm:  crypto.SHA256,
-		IssuerNameHash: nil,
-		IssuerKeyHash:  nil,
-	}
-
-	requestBody, err := req.Marshal()
+	requestBody, err := json.Marshal(ocspReq)
 	if err != nil {
 		return OCSPResponse{}, errors.NewSDKError(err)
 	}
@@ -446,25 +440,46 @@ func (sdk mgSDK) OCSP(serialNumber, cert string) (OCSPResponse, errors.SDKError)
 		return OCSPResponse{}, sdkerr
 	}
 
-	if len(body) == emptyOCSPbody {
-		return OCSPResponse{
-			Status:       CertStatus(Unknown),
-			SerialNumber: sn,
-		}, nil
-	}
-	res, err := ocsp.ParseResponse(body, nil)
+	ocspResp, err := ocsp.ParseResponse(body, nil)
 	if err != nil {
-		return OCSPResponse{}, errors.NewSDKError(err)
+		return OCSPResponse{}, errors.NewSDKError(fmt.Errorf("failed to parse OCSP response: %w", err))
+	}
+
+	var status CertStatus
+	switch ocspResp.Status {
+	case ocsp.Good:
+		status = Valid
+	case ocsp.Revoked:
+		status = Revoked
+	case ocsp.Unknown:
+		status = Unknown
+	default:
+		status = Unknown
 	}
 
 	resp := OCSPResponse{
-		Status:       CertStatus(res.Status),
-		SerialNumber: res.SerialNumber,
-		Certificate:  res.Certificate.Raw,
-		RevokedAt:    &res.RevokedAt,
-		IssuerHash:   res.IssuerHash.String(),
-		ProducedAt:   &res.ProducedAt,
+		Status:       status,
+		SerialNumber: ocspResp.SerialNumber.String(),
+		Certificate:  body,
 	}
+
+	if ocspResp.RevokedAt != (time.Time{}) {
+		resp.RevokedAt = &ocspResp.RevokedAt
+	}
+
+	if ocspResp.ProducedAt != (time.Time{}) {
+		resp.ProducedAt = &ocspResp.ProducedAt
+	}
+
+	if ocspResp.ThisUpdate != (time.Time{}) {
+		resp.ThisUpdate = &ocspResp.ThisUpdate
+	}
+
+	if ocspResp.NextUpdate != (time.Time{}) {
+		resp.NextUpdate = &ocspResp.NextUpdate
+	}
+
+	resp.RevocationReason = int(ocspResp.RevocationReason)
 
 	return resp, nil
 }

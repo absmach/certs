@@ -48,7 +48,7 @@ jobs:
             mocks:
               - ".github/workflows/check-generated-files.yml"
               - "sdk/mocks/sdk.go"
-              - "mocks/repository.go"
+              - "mocks/agent.go"
               - "mocks/service.go"
 
       - name: Set up protoc

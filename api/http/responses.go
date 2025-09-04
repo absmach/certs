@@ -4,23 +4,22 @@
 package http
 
 import (
-	"crypto"
-	"crypto/x509"
 	"net/http"
 	"time"
 
-	"golang.org/x/crypto/ocsp"
+	"github.com/absmach/certs"
 )
 
 var (
 	_ Response = (*revokeCertRes)(nil)
 	_ Response = (*issueCertRes)(nil)
 	_ Response = (*renewCertRes)(nil)
-	_ Response = (*ocspRes)(nil)
+	_ Response = (*ocspRawRes)(nil)
 )
 
 type renewCertRes struct {
-	renewed bool
+	renewed     bool
+	Certificate certs.Certificate `json:"certificate,omitempty"`
 }
 
 func (res renewCertRes) Code() int {
@@ -36,7 +35,7 @@ func (res renewCertRes) Headers() map[string]string {
 }
 
 func (res renewCertRes) Empty() bool {
-	return true
+	return false
 }
 
 type revokeCertRes struct {
@@ -122,9 +121,9 @@ func (res issueCertRes) Empty() bool {
 
 type listCertsRes struct {
 	Total        uint64        `json:"total"`
-	Offset       uint64        `json:"offset"`
-	Limit        uint64        `json:"limit"`
-	Certificates []viewCertRes `json:"certificates"`
+	Offset       uint64        `json:"offset,omitempty"`
+	Limit        uint64        `json:"limit,omitempty"`
+	Certificates []viewCertRes `json:"certificates,omitempty"`
 }
 
 func (res listCertsRes) Code() int {
@@ -143,7 +142,7 @@ type viewCertRes struct {
 	SerialNumber string    `json:"serial_number,omitempty"`
 	Certificate  string    `json:"certificate,omitempty"`
 	Key          string    `json:"key,omitempty"`
-	Revoked      bool      `json:"revoked,omitempty"`
+	Revoked      bool      `json:"revoked"`
 	ExpiryTime   time.Time `json:"expiry_time,omitempty"`
 	EntityID     string    `json:"entity_id,omitempty"`
 }
@@ -176,21 +175,19 @@ func (res crlRes) Empty() bool {
 	return false
 }
 
-type ocspRes struct {
-	template   ocsp.Response
-	signer     crypto.Signer
-	issuerCert *x509.Certificate
+type ocspRawRes struct {
+	Data []byte `json:"-"`
 }
 
-func (res ocspRes) Code() int {
+func (res ocspRawRes) Code() int {
 	return http.StatusOK
 }
 
-func (res ocspRes) Headers() map[string]string {
+func (res ocspRawRes) Headers() map[string]string {
 	return map[string]string{}
 }
 
-func (res ocspRes) Empty() bool {
+func (res ocspRawRes) Empty() bool {
 	return false
 }
 
