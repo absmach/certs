@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/absmach/certs/errors"
+	"github.com/absmach/supermq/pkg/authn"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -73,7 +74,7 @@ func NewService(ctx context.Context, pki Agent, repo Repository) (Service, error
 // It uses the PKI agent to generate and issue a certificate.
 // The certificate is managed by OpenBao PKI internally.
 // EntityType is used to customize certificate properties based on the entity type.
-func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options SubjectOptions) (Certificate, error) {
+func (s *service) IssueCert(ctx context.Context, session authn.Session, entityID, ttl string, ipAddrs []string, options SubjectOptions) (Certificate, error) {
 	cert, err := s.pki.Issue(ttl, ipAddrs, options)
 	if err != nil {
 		return Certificate{}, errors.Wrap(ErrFailedCertCreation, err)
@@ -88,7 +89,7 @@ func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs [
 	return cert, nil
 }
 
-func (s *service) ListCerts(ctx context.Context, pm PageMetadata) (CertificatePage, error) {
+func (s *service) ListCerts(ctx context.Context, session authn.Session, pm PageMetadata) (CertificatePage, error) {
 	if pm.EntityID != "" {
 		serialNumbers, err := s.repo.ListCertsByEntityID(ctx, pm.EntityID)
 		if err != nil {
@@ -139,7 +140,7 @@ func (s *service) ListCerts(ctx context.Context, pm PageMetadata) (CertificatePa
 	return certPg, nil
 }
 
-func (s *service) RevokeBySerial(ctx context.Context, serialNumber string) error {
+func (s *service) RevokeBySerial(ctx context.Context, session authn.Session, serialNumber string) error {
 	err := s.pki.Revoke(serialNumber)
 	if err != nil {
 		return errors.Wrap(ErrUpdateEntity, err)
@@ -149,7 +150,7 @@ func (s *service) RevokeBySerial(ctx context.Context, serialNumber string) error
 
 // RevokeAll revokes all certificates for a given entity ID.
 // It uses the repository to find all certificates for the entity ID, then revokes each one.
-func (s *service) RevokeAll(ctx context.Context, entityID string) error {
+func (s *service) RevokeAll(ctx context.Context, session authn.Session, entityID string) error {
 	serialNumbers, err := s.repo.ListCertsByEntityID(ctx, entityID)
 	if err != nil {
 		return errors.Wrap(ErrViewEntity, err)
@@ -171,7 +172,7 @@ func (s *service) RevokeAll(ctx context.Context, entityID string) error {
 	return nil
 }
 
-func (s *service) ViewCert(ctx context.Context, serialNumber string) (Certificate, error) {
+func (s *service) ViewCert(ctx context.Context, session authn.Session, serialNumber string) (Certificate, error) {
 	cert, err := s.pki.View(serialNumber)
 	if err != nil {
 		return Certificate{}, errors.Wrap(ErrViewEntity, err)
@@ -228,7 +229,7 @@ func (s *service) ViewCA(ctx context.Context) (Certificate, error) {
 // Returns:
 //   - string: the signed JWT token string
 //   - error: an error if the authentication fails or any other error occurs
-func (s *service) RetrieveCAToken(ctx context.Context) (string, error) {
+func (s *service) RetrieveCAToken(ctx context.Context, session authn.Session) (string, error) {
 	caCert, err := s.ViewCA(ctx)
 	if err != nil {
 		return "", errors.Wrap(ErrGetToken, err)
@@ -245,7 +246,7 @@ func (s *service) RetrieveCAToken(ctx context.Context) (string, error) {
 
 // RenewCert renews a certificate by issuing a new certificate with the same parameters.
 // Returns the new certificate with extended TTL and a new serial number.
-func (s *service) RenewCert(ctx context.Context, serialNumber string) (Certificate, error) {
+func (s *service) RenewCert(ctx context.Context, session authn.Session, serialNumber string) (Certificate, error) {
 	cert, err := s.pki.View(serialNumber)
 	if err != nil {
 		return Certificate{}, errors.Wrap(ErrViewEntity, err)
@@ -263,11 +264,11 @@ func (s *service) RenewCert(ctx context.Context, serialNumber string) (Certifica
 
 // OCSP forwards OCSP requests to OpenBao's OCSP endpoint.
 // If ocspRequestDER is provided, it will be used directly; otherwise, a request will be built from the serialNumber.
-func (s *service) OCSP(ctx context.Context, serialNumber string, ocspRequestDER []byte) ([]byte, error) {
+func (s *service) OCSP(ctx context.Context, session authn.Session, serialNumber string, ocspRequestDER []byte) ([]byte, error) {
 	return s.pki.OCSP(serialNumber, ocspRequestDER)
 }
 
-func (s *service) GetEntityID(ctx context.Context, serialNumber string) (string, error) {
+func (s *service) GetEntityID(ctx context.Context, session authn.Session, serialNumber string) (string, error) {
 	entityID, err := s.repo.GetEntityIDBySerial(ctx, serialNumber)
 	if err != nil {
 		return "", errors.Wrap(ErrViewEntity, err)
@@ -275,7 +276,7 @@ func (s *service) GetEntityID(ctx context.Context, serialNumber string) (string,
 	return entityID, nil
 }
 
-func (s *service) GenerateCRL(ctx context.Context, caType CertType) ([]byte, error) {
+func (s *service) GenerateCRL(ctx context.Context, session authn.Session, caType CertType) ([]byte, error) {
 	crl, err := s.pki.GetCRL()
 	if err != nil {
 		return nil, errors.Wrap(ErrFailedCertCreation, err)
@@ -283,7 +284,7 @@ func (s *service) GenerateCRL(ctx context.Context, caType CertType) ([]byte, err
 	return crl, nil
 }
 
-func (s *service) GetChainCA(ctx context.Context, token string) (Certificate, error) {
+func (s *service) GetChainCA(ctx context.Context, session authn.Session, token string) (Certificate, error) {
 	caCert, err := s.ViewCA(ctx)
 	if err != nil {
 		return Certificate{}, errors.Wrap(ErrViewEntity, err)
@@ -298,7 +299,7 @@ func (s *service) GetChainCA(ctx context.Context, token string) (Certificate, er
 	return s.getConcatCAs(ctx)
 }
 
-func (s *service) IssueFromCSR(ctx context.Context, entityID, ttl string, csr CSR) (Certificate, error) {
+func (s *service) IssueFromCSR(ctx context.Context, session authn.Session, entityID, ttl string, csr CSR) (Certificate, error) {
 	cert, err := s.pki.SignCSR(csr.CSR, ttl)
 	if err != nil {
 		return Certificate{}, errors.Wrap(ErrFailedCertCreation, err)

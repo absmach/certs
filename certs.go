@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/absmach/certs/errors"
+	"github.com/absmach/supermq/pkg/authn"
 )
 
 type CertType int
@@ -140,42 +141,42 @@ type Config struct {
 type Service interface {
 	// RenewCert renews a certificate by issuing a new certificate with the same parameters.
 	// Returns the new certificate with extended TTL and a new serial number.
-	RenewCert(ctx context.Context, serialNumber string) (Certificate, error)
+	RenewCert(ctx context.Context, session authn.Session, serialNumber string) (Certificate, error)
 
 	// RevokeBySerial revokes a single certificate by its serial number.
-	RevokeBySerial(ctx context.Context, serialNumber string) error
+	RevokeBySerial(ctx context.Context, session authn.Session, serialNumber string) error
 
 	// RevokeAll revokes all certificates for a given entity ID.
-	RevokeAll(ctx context.Context, entityID string) error
+	RevokeAll(ctx context.Context, session authn.Session, entityID string) error
 
 	// ViewCert retrieves a certificate record from the database.
-	ViewCert(ctx context.Context, serialNumber string) (Certificate, error)
+	ViewCert(ctx context.Context, session authn.Session, serialNumber string) (Certificate, error)
 
 	// ListCerts retrieves the certificates from the database while applying filters.
-	ListCerts(ctx context.Context, pm PageMetadata) (CertificatePage, error)
+	ListCerts(ctx context.Context, session authn.Session, pm PageMetadata) (CertificatePage, error)
 
 	// RetrieveCAToken generates a CA download and view token.
 	// The token is needed to view and download the CA certificate.
-	RetrieveCAToken(ctx context.Context) (string, error)
+	RetrieveCAToken(ctx context.Context, session authn.Session) (string, error)
 
 	// IssueCert issues a certificate from the database.
-	IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, option SubjectOptions) (Certificate, error)
+	IssueCert(ctx context.Context, session authn.Session, entityID, ttl string, ipAddrs []string, option SubjectOptions) (Certificate, error)
 
 	// OCSP forwards OCSP requests to OpenBao's OCSP endpoint.
 	// If ocspRequestDER is provided, it will be used directly; otherwise, a request will be built from the serialNumber.
-	OCSP(ctx context.Context, serialNumber string, ocspRequestDER []byte) ([]byte, error)
+	OCSP(ctx context.Context, session authn.Session, serialNumber string, ocspRequestDER []byte) ([]byte, error)
 
 	// GetEntityID retrieves the entity ID for a certificate.
-	GetEntityID(ctx context.Context, serialNumber string) (string, error)
+	GetEntityID(ctx context.Context, session authn.Session, serialNumber string) (string, error)
 
 	// GenerateCRL creates cert revocation list.
-	GenerateCRL(ctx context.Context, caType CertType) ([]byte, error)
+	GenerateCRL(ctx context.Context, session authn.Session, caType CertType) ([]byte, error)
 
 	// GetChainCA retrieves the chain of CA i.e. root and intermediate cert concat together.
-	GetChainCA(ctx context.Context, token string) (Certificate, error)
+	GetChainCA(ctx context.Context, session authn.Session, token string) (Certificate, error)
 
 	// IssueFromCSR creates a certificate from a given CSR.
-	IssueFromCSR(ctx context.Context, entityID, ttl string, csr CSR) (Certificate, error)
+	IssueFromCSR(ctx context.Context, session authn.Session, entityID, ttl string, csr CSR) (Certificate, error)
 
 	// GetCA retieve CA certificates.
 	GetCA(ctx context.Context) (Certificate, error)
