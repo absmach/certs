@@ -15,8 +15,23 @@ empty:=
 space:= $(empty) $(empty)
 # Docker compose project name should follow this guidelines: https://docs.docker.com/compose/reference/#use--p-to-specify-a-project-name
 DOCKER_PROJECT ?= $(shell echo $(subst $(space),,$(USER_REPO)) | tr -c -s '[:alnum:][=-=]' '_' | tr '[:upper:]' '[:lower:]')
+DOCKER_COMPOSE_COMMANDS_SUPPORTED := up down config
+DEFAULT_DOCKER_COMPOSE_COMMAND  := up
+GRPC_MTLS_CERT_FILES_EXISTS = 0
 MOCKERY = $(GOBIN)/mockery
 MOCKERY_VERSION=3.5.3
+
+ifneq ($(filter run%,$(firstword $(MAKECMDGOALS))),)
+  temp_args := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
+  DOCKER_COMPOSE_COMMAND := $(if $(filter $(DOCKER_COMPOSE_COMMANDS_SUPPORTED),$(temp_args)), $(filter $(DOCKER_COMPOSE_COMMANDS_SUPPORTED),$(temp_args)), $(DEFAULT_DOCKER_COMPOSE_COMMAND))
+  $(eval $(DOCKER_COMPOSE_COMMAND):;@)
+endif
+
+ifneq ("$(wildcard docker/ssl/certs/*-grpc-*)","")
+GRPC_MTLS_CERT_FILES_EXISTS = 1
+else
+GRPC_MTLS_CERT_FILES_EXISTS = 0
+endif
 
 define compile_service
 	CGO_ENABLED=$(CGO_ENABLED) GOOS=$(GOOS) GOARCH=$(GOARCH) GOARM=$(GOARM) \
@@ -53,7 +68,7 @@ fetch_supermq:
 
 all: certs cli
 
-.PHONY: all certs docker docker_dev cli mocks 
+.PHONY: all certs docker docker_dev cli mocks run run_certs_only check_certs check_mtls check_tls grpc_mtls_certs 
 
 clean:
 	rm -rf ${BUILD_DIR}
@@ -99,9 +114,44 @@ $(DOCKER_DEV):
 docker: $(DOCKER)
 docker_dev: $(DOCKER_DEV)
 
-run:
-	docker compose -f docker/docker-compose.yml --env-file docker/.env -p absmach up
+run: check_certs
+	docker compose -f docker/docker-compose.yml --env-file docker/.env -p $(DOCKER_PROJECT) $(DOCKER_COMPOSE_COMMAND) $(args)
+
+run_certs_only: check_certs
+	docker compose -f docker/docker-compose.yml --env-file docker/.env -p $(DOCKER_PROJECT) up
 
 deploy:
 	docker compose -f docker/docker-compose.yml pull
 	docker compose -f docker/docker-compose.yml --env-file docker/.env -p absmach up -d
+
+grpc_mtls_certs:
+	$(MAKE) -C docker/ssl auth_grpc_certs things_grpc_certs
+
+check_tls:
+ifeq ($(GRPC_TLS),true)
+	@unset GRPC_MTLS
+	@echo "gRPC TLS is enabled"
+	GRPC_MTLS=
+else
+	@unset GRPC_TLS
+	GRPC_TLS=
+endif
+
+check_mtls:
+ifeq ($(GRPC_MTLS),true)
+	@unset GRPC_TLS
+	@echo "gRPC MTLS is enabled"
+	GRPC_TLS=
+else
+	@unset GRPC_MTLS
+	GRPC_MTLS=
+endif
+
+check_certs: check_mtls check_tls
+ifeq ($(GRPC_MTLS_CERT_FILES_EXISTS),0)
+ifeq ($(filter true,$(GRPC_MTLS) $(GRPC_TLS)),true)
+ifeq ($(filter $(DEFAULT_DOCKER_COMPOSE_COMMAND),$(DOCKER_COMPOSE_COMMAND)),$(DEFAULT_DOCKER_COMPOSE_COMMAND))
+	$(MAKE) -C docker/ssl auth_grpc_certs things_grpc_certs
+endif
+endif
+endif
