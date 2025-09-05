@@ -73,13 +73,13 @@ func issueEndpoint(svc certs.Service) endpoint.Endpoint {
 		if req.SubjectOptions != nil {
 			subjectOptions = certs.SubjectOptions{
 				CommonName:         req.SubjectOptions.CommonName,
-				Organization:       req.SubjectOptions.Organization,
-				Country:            req.SubjectOptions.Country,
-				OrganizationalUnit: req.SubjectOptions.OrganizationalUnit,
-				Province:           req.SubjectOptions.Province,
-				Locality:           req.SubjectOptions.Locality,
-				StreetAddress:      req.SubjectOptions.StreetAddress,
-				PostalCode:         req.SubjectOptions.PostalCode,
+				Organization:       req.SubjectOptions.Organizations,
+				Country:            req.SubjectOptions.Countries,
+				OrganizationalUnit: req.SubjectOptions.OrganizationalUnits,
+				Province:           req.SubjectOptions.Provinces,
+				Locality:           req.SubjectOptions.Localities,
+				StreetAddress:      req.SubjectOptions.StreetAddresses,
+				PostalCode:         req.SubjectOptions.PostalCodes,
 				DnsNames:           req.SubjectOptions.DnsNames,
 			}
 		}
