@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -17,6 +18,8 @@ import (
 
 	"github.com/absmach/certs"
 	"github.com/absmach/certs/errors"
+	api "github.com/absmach/supermq/api/http"
+	"github.com/absmach/supermq/pkg/authn"
 	"github.com/go-chi/chi/v5"
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -39,8 +42,10 @@ const (
 	defType         = 1
 )
 
+var useAuth bool = false
+
 // MakeHandler returns a HTTP handler for API endpoints.
-func MakeHandler(svc certs.Service, logger *slog.Logger, instanceID string) http.Handler {
+func MakeHandler(svc certs.Service, authn authn.Authentication, logger *slog.Logger, instanceID string) http.Handler {
 	opts := []kithttp.ServerOption{
 		kithttp.ServerErrorEncoder(loggingErrorEncoder(logger, EncodeError)),
 	}
@@ -48,6 +53,12 @@ func MakeHandler(svc certs.Service, logger *slog.Logger, instanceID string) http
 	r := chi.NewRouter()
 
 	r.Route("/certs", func(r chi.Router) {
+		log.Printf("Authn is %+v\n", authn)
+		if authn != nil {
+			useAuth = true
+		}
+		r.Use(api.AuthenticateMiddleware(authn, useAuth))
+
 		r.Post("/issue/{entityID}", otelhttp.NewHandler(kithttp.NewServer(
 			issueCertEndpoint(svc),
 			decodeIssueCert,
