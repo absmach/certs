@@ -1,6 +1,16 @@
 # Copyright (c) Abstract Machines
 # SPDX-License-Identifier: Apache-2.0
 
+name: "certs"
+
+include:
+  - path:
+      - ./supermq-docker/docker-compose.yaml
+      - ./supermq-docker-compose.override.yaml
+    project_directory: ./supermq-docker
+    env_file:
+      - ./supermq-docker/.env
+
 networks:
   certs-base-net:
     driver: bridge
@@ -39,11 +49,11 @@ services:
       AM_CERTS_DB_PASS: ${AM_CERTS_DB_PASS}
       AM_CERTS_DB: ${AM_CERTS_DB}
       AM_CERTS_DB_SSL_MODE: ${AM_CERTS_DB_SSL_MODE}
-      AM_AUTH_GRPC_URL: ${SMQ_AUTH_GRPC_URL}
-      AM_AUTH_GRPC_TIMEOUT: ${SMQ_AUTH_GRPC_TIMEOUT}
-      AM_AUTH_GRPC_CLIENT_CERT: ${SMQ_AUTH_GRPC_CLIENT_CERT}
-      AM_AUTH_GRPC_CLIENT_KEY: ${SMQ_AUTH_GRPC_CLIENT_KEY}
-      AM_AUTH_GRPC_SERVER_CA_CERTS: ${SMQ_AUTH_GRPC_SERVER_CA_CERTS}
+      AM_AUTH_GRPC_URL: ${AM_AUTH_GRPC_URL}
+      AM_AUTH_GRPC_TIMEOUT: ${AM_AUTH_GRPC_TIMEOUT}
+      AM_AUTH_GRPC_CLIENT_CERT: ${AM_AUTH_GRPC_CLIENT_CERT}
+      AM_AUTH_GRPC_CLIENT_KEY: ${AM_AUTH_GRPC_CLIENT_KEY}
+      AM_AUTH_GRPC_SERVER_CA_CERTS: ${AM_AUTH_GRPC_SERVER_CA_CERTS}
     ports:
       - ${AM_CERTS_HTTP_PORT}:${AM_CERTS_HTTP_PORT}
       - ${AM_CERTS_GRPC_PORT}:${AM_CERTS_GRPC_PORT}
@@ -104,16 +114,3 @@ services:
       - ./openbao-entrypoint.sh:/entrypoint.sh
     entrypoint: /bin/sh
     command: /entrypoint.sh
-
-  jaeger:
-    image: jaegertracing/all-in-one:1.53.0
-    container_name: certs-jaeger
-    environment:
-      COLLECTOR_OTLP_ENABLED: ${AM_JAEGER_COLLECTOR_OTLP_ENABLED}
-    command: --memory.max-traces ${AM_JAEGER_MEMORY_MAX_TRACES}
-    restart: on-failure
-    networks:
-      - certs-base-net
-    ports:
-      - ${AM_JAEGER_FRONTEND}:${AM_JAEGER_FRONTEND}
-      - ${AM_JAEGER_OLTP_HTTP_PORT}:${AM_JAEGER_OLTP_HTTP_PORT}
