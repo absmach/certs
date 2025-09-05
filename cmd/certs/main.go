@@ -24,7 +24,6 @@ import (
 	"github.com/absmach/certs/pki"
 	"github.com/absmach/certs/postgres"
 	"github.com/absmach/certs/tracing"
-	"github.com/absmach/supermq/pkg/authn"
 	authsvcAuthn "github.com/absmach/supermq/pkg/authn/authsvc"
 	smqauthz "github.com/absmach/supermq/pkg/authz"
 	authsvcAuthz "github.com/absmach/supermq/pkg/authz/authsvc"
@@ -131,27 +130,21 @@ func main() {
 		return
 	}
 
-	var authn authn.Authentication
-	var authz smqauthz.Authorization
-
-	if authClientConfig.URL != "" {
-		var authnHandler, authzHandler grpcclient.Handler
-		authn, authnHandler, err = authsvcAuthn.NewAuthentication(ctx, authClientConfig)
-		if err != nil {
-			logger.Error("failed to create authn " + err.Error())
-			return
-		}
-		defer authnHandler.Close()
-		logger.Info("Authn successfully connected to auth gRPC server " + authnHandler.Secure())
-
-		authz, authzHandler, err = authsvcAuthz.NewAuthorization(ctx, authClientConfig, nil)
-		if err != nil {
-			logger.Error("failed to create authz " + err.Error())
-			return
-		}
-		defer authzHandler.Close()
-		logger.Info("Authz successfully connected to auth gRPC server " + authzHandler.Secure())
+	authn, authnHandler, err := authsvcAuthn.NewAuthentication(ctx, authClientConfig)
+	if err != nil {
+		logger.Error("failed to create authn " + err.Error())
+		return
 	}
+	defer authnHandler.Close()
+	logger.Info("Authn successfully connected to auth gRPC server " + authnHandler.Secure())
+
+	authz, authzHandler, err := authsvcAuthz.NewAuthorization(ctx, authClientConfig, nil)
+	if err != nil {
+		logger.Error("failed to create authz " + err.Error())
+		return
+	}
+	defer authzHandler.Close()
+	logger.Info("Authz successfully connected to auth gRPC server " + authzHandler.Secure())
 	httpServerConfig := smq.Config{Port: defSvcHTTPPort}
 	if err := env.ParseWithOptions(&httpServerConfig, env.Options{Prefix: envPrefixHTTP}); err != nil {
 		logger.Error(fmt.Sprintf("failed to load %s gRPC server configuration : %s", svcName, err))

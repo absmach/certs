@@ -48,6 +48,9 @@ define make_docker_dev
 		-f docker/Dockerfile.dev .
 endef
 
+fetch_supermq:
+	@./scripts/supermq.sh
+
 all: certs cli
 
 .PHONY: all certs docker docker_dev cli mocks 

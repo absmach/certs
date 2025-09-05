@@ -89,11 +89,11 @@ func (am *authorizationMiddleware) RetrieveCAToken(ctx context.Context, session 
 	return am.svc.RetrieveCAToken(ctx, session)
 }
 
-func (am *authorizationMiddleware) OCSP(ctx context.Context, session authn.Session, serialNumber string) ([]byte, error) {
+func (am *authorizationMiddleware) OCSP(ctx context.Context, session authn.Session, serialNumber string, ocspRequestDER []byte) ([]byte, error) {
 	if err := am.checkUserDomainPermission(ctx, session, policies.MembershipPermission); err != nil {
 		return nil, err
 	}
-	return am.svc.OCSP(ctx, session, serialNumber)
+	return am.svc.OCSP(ctx, session, serialNumber, ocspRequestDER)
 }
 
 func (am *authorizationMiddleware) GenerateCRL(ctx context.Context, session authn.Session, caType crt.CertType) ([]byte, error) {

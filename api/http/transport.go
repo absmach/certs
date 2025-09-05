@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -42,8 +41,6 @@ const (
 	defType         = 1
 )
 
-var useAuth bool = false
-
 // MakeHandler returns a HTTP handler for API endpoints.
 func MakeHandler(svc certs.Service, authn authn.Authentication, logger *slog.Logger, instanceID string) http.Handler {
 	opts := []kithttp.ServerOption{
@@ -53,11 +50,7 @@ func MakeHandler(svc certs.Service, authn authn.Authentication, logger *slog.Log
 	r := chi.NewRouter()
 
 	r.Route("/certs", func(r chi.Router) {
-		log.Printf("Authn is %+v\n", authn)
-		if authn != nil {
-			useAuth = true
-		}
-		r.Use(api.AuthenticateMiddleware(authn, useAuth))
+		r.Use(api.AuthenticateMiddleware(authn, false))
 
 		r.Post("/issue/{entityID}", otelhttp.NewHandler(kithttp.NewServer(
 			issueCertEndpoint(svc),
