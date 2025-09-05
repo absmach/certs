@@ -24,11 +24,15 @@ import (
 	"github.com/absmach/certs/pki"
 	"github.com/absmach/certs/postgres"
 	"github.com/absmach/certs/tracing"
+	"github.com/absmach/supermq/pkg/authn"
+	authsvcAuthn "github.com/absmach/supermq/pkg/authn/authsvc"
+	smqauthz "github.com/absmach/supermq/pkg/authz"
+	authsvcAuthz "github.com/absmach/supermq/pkg/authz/authsvc"
+	"github.com/absmach/supermq/pkg/grpcclient"
 	pgclient "github.com/absmach/supermq/pkg/postgres"
 	smq "github.com/absmach/supermq/pkg/server"
 	httpserver "github.com/absmach/supermq/pkg/server/http"
 	"github.com/caarlos0/env/v10"
-	"github.com/jmoiron/sqlx"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
@@ -121,12 +125,39 @@ func main() {
 	}()
 	tracer := tp.Tracer(svcName)
 
+	authClientConfig := grpcclient.Config{}
+	if err := env.ParseWithOptions(&authClientConfig, env.Options{Prefix: envPrefixAuth}); err != nil {
+		logger.Error(fmt.Sprintf("failed to load %s auth configuration : %s", svcName, err))
+		return
+	}
+
+	var authn authn.Authentication
+	var authz smqauthz.Authorization
+
+	if authClientConfig.URL != "" {
+		var authnHandler, authzHandler grpcclient.Handler
+		authn, authnHandler, err = authsvcAuthn.NewAuthentication(ctx, authClientConfig)
+		if err != nil {
+			logger.Error("failed to create authn " + err.Error())
+			return
+		}
+		defer authnHandler.Close()
+		logger.Info("Authn successfully connected to auth gRPC server " + authnHandler.Secure())
+
+		authz, authzHandler, err = authsvcAuthz.NewAuthorization(ctx, authClientConfig, nil)
+		if err != nil {
+			logger.Error("failed to create authz " + err.Error())
+			return
+		}
+		defer authzHandler.Close()
+		logger.Info("Authz successfully connected to auth gRPC server " + authzHandler.Secure())
+	}
 	httpServerConfig := smq.Config{Port: defSvcHTTPPort}
 	if err := env.ParseWithOptions(&httpServerConfig, env.Options{Prefix: envPrefixHTTP}); err != nil {
 		logger.Error(fmt.Sprintf("failed to load %s gRPC server configuration : %s", svcName, err))
 	}
 
-	svc := newService(ctx, db, dbConfig, tracer, logger, pkiAgent)
+	svc := newService(ctx, db, dbConfig, tracer, logger, pkiAgent, authz)
 
 	grpcServerConfig := smq.Config{Port: defSvcGRPCPort}
 	if err := env.ParseWithOptions(&grpcServerConfig, env.Options{Prefix: envPrefixGRPC}); err != nil {
@@ -140,7 +171,7 @@ func main() {
 	}
 	gs := grpcserver.NewServer(ctx, cancel, svcName, grpcServerConfig, registerCertsServiceServer, logger, nil, nil)
 
-	hs := httpserver.NewServer(ctx, cancel, svcName, httpServerConfig, httpapi.MakeHandler(svc, logger, cfg.InstanceID), logger)
+	hs := httpserver.NewServer(ctx, cancel, svcName, httpServerConfig, httpapi.MakeHandler(svc, authn, logger, cfg.InstanceID), logger)
 
 	g.Go(func() error {
 		return hs.Start()
@@ -159,13 +190,16 @@ func main() {
 	}
 }
 
-func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, tracer trace.Tracer, logger *slog.Logger, pkiAgent certs.Agent) certs.Service {
+func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, tracer trace.Tracer, logger *slog.Logger, pkiAgent certs.Agent, authz smqauthz.Authorization) certs.Service {
 	database := pgclient.NewDatabase(db, dbConfig, tracer)
 	repo := postgres.NewRepository(database)
 	svc, err := certs.NewService(ctx, pkiAgent, repo)
 	if err != nil {
 		logger.Error(fmt.Sprintf("failed to create service: %s", err))
 		return nil
+	}
+	if authz != nil {
+		svc = api.AuthorizationMiddleware(authz, svc)
 	}
 	svc = api.LoggingMiddleware(svc, logger)
 	counter, latency := prometheus.MakeMetrics(svcName, "api")
