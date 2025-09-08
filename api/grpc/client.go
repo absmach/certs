@@ -81,7 +81,6 @@ func (c *grpcClient) RevokeCerts(ctx context.Context, req *certs.RevokeReq, _ ..
 	return res.(*emptypb.Empty), nil
 }
 
-
 func (client *grpcClient) GetCA(ctx context.Context, req *certs.GetCAReq, opts ...grpc.CallOption) (*certs.Cert, error) {
 	ctx, cancel := context.WithTimeout(ctx, client.timeout)
 	defer cancel()
@@ -136,7 +135,6 @@ func decodeRevokeCertsResponse(_ context.Context, response any) (any, error) {
 	return &emptypb.Empty{}, nil
 }
 
-
 func encodeGetCARequest(ctx context.Context, request interface{}) (interface{}, error) {
 	req, ok := request.(*certs.GetCAReq)
 	if !ok {
@@ -144,7 +142,6 @@ func encodeGetCARequest(ctx context.Context, request interface{}) (interface{}, 
 	}
 	return req, nil
 }
-
 
 func decodeGetCAResponse(ctx context.Context, response interface{}) (interface{}, error) {
 	res, ok := response.(*certs.Cert)
