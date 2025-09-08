@@ -174,7 +174,7 @@ type Service interface {
 	RetrieveCAToken(ctx context.Context) (string, error)
 
 	// IssueCert issues a certificate from the database.
-	IssueCert(ctx context.Context, entityID, entityType, ttl string, ipAddrs []string, option SubjectOptions) (Certificate, error)
+	IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, option SubjectOptions) (Certificate, error)
 
 	// OCSP forwards OCSP requests to OpenBao's OCSP endpoint.
 	// If ocspRequestDER is provided, it will be used directly; otherwise, a request will be built from the serialNumber.

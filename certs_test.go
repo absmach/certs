@@ -70,7 +70,7 @@ func TestIssueCert(t *testing.T) {
 			}
 			agentCall := agent.On("Issue", tc.entityID, tc.ttl, []string{}, expectedOptions).Return(tc.cert, tc.agentErr)
 
-			cert, err := svc.IssueCert(context.Background(), tc.entityID, "thing", tc.ttl, []string{}, certs.SubjectOptions{})
+			cert, err := svc.IssueCert(context.Background(), tc.entityID, tc.ttl, []string{}, certs.SubjectOptions{})
 			if tc.err != nil {
 				require.True(t, errors.Contains(err, tc.err), "expected error %v, got %v", tc.err, err)
 			} else {

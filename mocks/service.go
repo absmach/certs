@@ -301,8 +301,8 @@ func (_c *Service_GetEntityID_Call) RunAndReturn(run func(ctx context.Context, s
 }
 
 // IssueCert provides a mock function for the type Service
-func (_mock *Service) IssueCert(ctx context.Context, entityID string, entityType string, ttl string, ipAddrs []string, option certs.SubjectOptions) (certs.Certificate, error) {
-	ret := _mock.Called(ctx, entityID, entityType, ttl, ipAddrs, option)
+func (_mock *Service) IssueCert(ctx context.Context, entityID string, ttl string, ipAddrs []string, option certs.SubjectOptions) (certs.Certificate, error) {
+	ret := _mock.Called(ctx, entityID, ttl, ipAddrs, option)
 
 	if len(ret) == 0 {
 		panic("no return value specified for IssueCert")
@@ -310,16 +310,16 @@ func (_mock *Service) IssueCert(ctx context.Context, entityID string, entityType
 
 	var r0 certs.Certificate
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string, []string, certs.SubjectOptions) (certs.Certificate, error)); ok {
-		return returnFunc(ctx, entityID, entityType, ttl, ipAddrs, option)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, []string, certs.SubjectOptions) (certs.Certificate, error)); ok {
+		return returnFunc(ctx, entityID, ttl, ipAddrs, option)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string, []string, certs.SubjectOptions) certs.Certificate); ok {
-		r0 = returnFunc(ctx, entityID, entityType, ttl, ipAddrs, option)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, []string, certs.SubjectOptions) certs.Certificate); ok {
+		r0 = returnFunc(ctx, entityID, ttl, ipAddrs, option)
 	} else {
 		r0 = ret.Get(0).(certs.Certificate)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, string, []string, certs.SubjectOptions) error); ok {
-		r1 = returnFunc(ctx, entityID, entityType, ttl, ipAddrs, option)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, []string, certs.SubjectOptions) error); ok {
+		r1 = returnFunc(ctx, entityID, ttl, ipAddrs, option)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -334,15 +334,14 @@ type Service_IssueCert_Call struct {
 // IssueCert is a helper method to define mock.On call
 //   - ctx context.Context
 //   - entityID string
-//   - entityType string
 //   - ttl string
 //   - ipAddrs []string
 //   - option certs.SubjectOptions
-func (_e *Service_Expecter) IssueCert(ctx interface{}, entityID interface{}, entityType interface{}, ttl interface{}, ipAddrs interface{}, option interface{}) *Service_IssueCert_Call {
-	return &Service_IssueCert_Call{Call: _e.mock.On("IssueCert", ctx, entityID, entityType, ttl, ipAddrs, option)}
+func (_e *Service_Expecter) IssueCert(ctx interface{}, entityID interface{}, ttl interface{}, ipAddrs interface{}, option interface{}) *Service_IssueCert_Call {
+	return &Service_IssueCert_Call{Call: _e.mock.On("IssueCert", ctx, entityID, ttl, ipAddrs, option)}
 }
 
-func (_c *Service_IssueCert_Call) Run(run func(ctx context.Context, entityID string, entityType string, ttl string, ipAddrs []string, option certs.SubjectOptions)) *Service_IssueCert_Call {
+func (_c *Service_IssueCert_Call) Run(run func(ctx context.Context, entityID string, ttl string, ipAddrs []string, option certs.SubjectOptions)) *Service_IssueCert_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -356,17 +355,13 @@ func (_c *Service_IssueCert_Call) Run(run func(ctx context.Context, entityID str
 		if args[2] != nil {
 			arg2 = args[2].(string)
 		}
-		var arg3 string
+		var arg3 []string
 		if args[3] != nil {
-			arg3 = args[3].(string)
+			arg3 = args[3].([]string)
 		}
-		var arg4 []string
+		var arg4 certs.SubjectOptions
 		if args[4] != nil {
-			arg4 = args[4].([]string)
-		}
-		var arg5 certs.SubjectOptions
-		if args[5] != nil {
-			arg5 = args[5].(certs.SubjectOptions)
+			arg4 = args[4].(certs.SubjectOptions)
 		}
 		run(
 			arg0,
@@ -374,7 +369,6 @@ func (_c *Service_IssueCert_Call) Run(run func(ctx context.Context, entityID str
 			arg2,
 			arg3,
 			arg4,
-			arg5,
 		)
 	})
 	return _c
@@ -385,7 +379,7 @@ func (_c *Service_IssueCert_Call) Return(certificate certs.Certificate, err erro
 	return _c
 }
 
-func (_c *Service_IssueCert_Call) RunAndReturn(run func(ctx context.Context, entityID string, entityType string, ttl string, ipAddrs []string, option certs.SubjectOptions) (certs.Certificate, error)) *Service_IssueCert_Call {
+func (_c *Service_IssueCert_Call) RunAndReturn(run func(ctx context.Context, entityID string, ttl string, ipAddrs []string, option certs.SubjectOptions) (certs.Certificate, error)) *Service_IssueCert_Call {
 	_c.Call.Return(run)
 	return _c
 }
