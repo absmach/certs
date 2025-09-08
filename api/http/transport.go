@@ -16,9 +16,9 @@ import (
 	"strings"
 
 	"github.com/absmach/certs"
-	"github.com/absmach/certs/errors"
 	api "github.com/absmach/supermq/api/http"
 	"github.com/absmach/supermq/pkg/authn"
+	"github.com/absmach/supermq/pkg/errors"
 	"github.com/go-chi/chi/v5"
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -42,96 +42,97 @@ const (
 )
 
 // MakeHandler returns a HTTP handler for API endpoints.
-func MakeHandler(svc certs.Service, authn authn.Authentication, logger *slog.Logger, instanceID string) http.Handler {
+func MakeHandler(svc certs.Service, authn authn.Authentication, mux *chi.Mux, logger *slog.Logger, instanceID string) http.Handler {
 	opts := []kithttp.ServerOption{
 		kithttp.ServerErrorEncoder(loggingErrorEncoder(logger, EncodeError)),
 	}
 
-	r := chi.NewRouter()
-
-	r.Route("/certs", func(r chi.Router) {
-		r.Use(api.AuthenticateMiddleware(authn, false))
-
-		r.Post("/issue/{entityID}", otelhttp.NewHandler(kithttp.NewServer(
-			issueCertEndpoint(svc),
-			decodeIssueCert,
-			EncodeResponse,
-			opts...,
-		), "issue_cert").ServeHTTP)
-		r.Patch("/{id}/renew", otelhttp.NewHandler(kithttp.NewServer(
-			renewCertEndpoint(svc),
-			decodeView,
-			EncodeResponse,
-			opts...,
-		), "renew_cert").ServeHTTP)
-		r.Patch("/{id}/revoke", otelhttp.NewHandler(kithttp.NewServer(
-			revokeCertEndpoint(svc),
-			decodeView,
-			EncodeResponse,
-			opts...,
-		), "revoke_cert").ServeHTTP)
-		r.Delete("/{entityID}/delete", otelhttp.NewHandler(kithttp.NewServer(
-			deleteCertEndpoint(svc),
-			decodeDelete,
-			EncodeResponse,
-			opts...,
-		), "delete_cert").ServeHTTP)
-		r.Get("/", otelhttp.NewHandler(kithttp.NewServer(
-			listCertsEndpoint(svc),
-			decodeListCerts,
-			EncodeResponse,
-			opts...,
-		), "list_certs").ServeHTTP)
-		r.Get("/{id}", otelhttp.NewHandler(kithttp.NewServer(
-			viewCertEndpoint(svc),
-			decodeView,
-			EncodeResponse,
-			opts...,
-		), "view_cert").ServeHTTP)
-		r.Post("/ocsp", otelhttp.NewHandler(kithttp.NewServer(
-			ocspEndpoint(svc),
-			decodeOCSPRequest,
-			encodeOSCPResponse,
-			opts...,
-		), "ocsp").ServeHTTP)
-		r.Get("/crl", otelhttp.NewHandler(kithttp.NewServer(
-			generateCRLEndpoint(svc),
-			decodeCRL,
-			EncodeResponse,
-			opts...,
-		), "generate_crl").ServeHTTP)
-		r.Get("/get-ca/token", otelhttp.NewHandler(kithttp.NewServer(
-			getDownloadCATokenEndpoint(svc),
-			decodeView,
-			EncodeResponse,
-			opts...,
-		), "get_ca_token").ServeHTTP)
-		r.Get("/view-ca", otelhttp.NewHandler(kithttp.NewServer(
-			viewCAEndpoint(svc),
-			decodeDownloadCA,
-			EncodeResponse,
-			opts...,
-		), "view_ca").ServeHTTP)
-		r.Get("/download-ca", otelhttp.NewHandler(kithttp.NewServer(
-			downloadCAEndpoint(svc),
-			decodeDownloadCA,
-			encodeCADownloadResponse,
-			opts...,
-		), "download_ca").ServeHTTP)
-		r.Route("/csrs", func(r chi.Router) {
-			r.Post("/{entityID}", otelhttp.NewHandler(kithttp.NewServer(
-				issueFromCSREndpoint(svc),
-				decodeIssueFromCSR,
-				EncodeResponse,
-				opts...,
-			), "issue_from_csr").ServeHTTP)
+	mux.Group(func(r chi.Router) {
+		r.Use(api.AuthenticateMiddleware(authn, true))
+		r.Route("/{domainID}", func(r chi.Router) {
+			r.Route("/certs", func(r chi.Router) {
+				r.Post("/issue/{entityID}", otelhttp.NewHandler(kithttp.NewServer(
+					issueCertEndpoint(svc),
+					decodeIssueCert,
+					EncodeResponse,
+					opts...,
+				), "issue_cert").ServeHTTP)
+				r.Patch("/{id}/renew", otelhttp.NewHandler(kithttp.NewServer(
+					renewCertEndpoint(svc),
+					decodeView,
+					EncodeResponse,
+					opts...,
+				), "renew_cert").ServeHTTP)
+				r.Patch("/{id}/revoke", otelhttp.NewHandler(kithttp.NewServer(
+					revokeCertEndpoint(svc),
+					decodeView,
+					EncodeResponse,
+					opts...,
+				), "revoke_cert").ServeHTTP)
+				r.Delete("/{entityID}/delete", otelhttp.NewHandler(kithttp.NewServer(
+					deleteCertEndpoint(svc),
+					decodeDelete,
+					EncodeResponse,
+					opts...,
+				), "delete_cert").ServeHTTP)
+				r.Get("/", otelhttp.NewHandler(kithttp.NewServer(
+					listCertsEndpoint(svc),
+					decodeListCerts,
+					EncodeResponse,
+					opts...,
+				), "list_certs").ServeHTTP)
+				r.Get("/{id}", otelhttp.NewHandler(kithttp.NewServer(
+					viewCertEndpoint(svc),
+					decodeView,
+					EncodeResponse,
+					opts...,
+				), "view_cert").ServeHTTP)
+				r.Post("/ocsp", otelhttp.NewHandler(kithttp.NewServer(
+					ocspEndpoint(svc),
+					decodeOCSPRequest,
+					encodeOSCPResponse,
+					opts...,
+				), "ocsp").ServeHTTP)
+				r.Get("/crl", otelhttp.NewHandler(kithttp.NewServer(
+					generateCRLEndpoint(svc),
+					decodeCRL,
+					EncodeResponse,
+					opts...,
+				), "generate_crl").ServeHTTP)
+				r.Get("/get-ca/token", otelhttp.NewHandler(kithttp.NewServer(
+					getDownloadCATokenEndpoint(svc),
+					decodeView,
+					EncodeResponse,
+					opts...,
+				), "get_ca_token").ServeHTTP)
+				r.Get("/view-ca", otelhttp.NewHandler(kithttp.NewServer(
+					viewCAEndpoint(svc),
+					decodeDownloadCA,
+					EncodeResponse,
+					opts...,
+				), "view_ca").ServeHTTP)
+				r.Get("/download-ca", otelhttp.NewHandler(kithttp.NewServer(
+					downloadCAEndpoint(svc),
+					decodeDownloadCA,
+					encodeCADownloadResponse,
+					opts...,
+				), "download_ca").ServeHTTP)
+				r.Route("/csrs", func(r chi.Router) {
+					r.Post("/{entityID}", otelhttp.NewHandler(kithttp.NewServer(
+						issueFromCSREndpoint(svc),
+						decodeIssueFromCSR,
+						EncodeResponse,
+						opts...,
+					), "issue_from_csr").ServeHTTP)
+				})
+			})
 		})
 	})
 
-	r.Get("/health", certs.Health("certs", instanceID))
-	r.Handle("/metrics", promhttp.Handler())
+	mux.Get("/health", certs.Health("certs", instanceID))
+	mux.Handle("/metrics", promhttp.Handler())
 
-	return r
+	return mux
 }
 
 func decodeView(_ context.Context, r *http.Request) (any, error) {
@@ -208,6 +209,9 @@ func decodeJsonOCSPRequest(body []byte) (any, error) {
 }
 
 func decodeIssueCert(_ context.Context, r *http.Request) (any, error) {
+	domain := chi.URLParam(r, "domainID")
+	fmt.Println("Domain ID: ", domain)
+
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		return nil, err
