@@ -1,4 +1,5 @@
-// Copyright (c) Ultraviolet
+// Copyright (c) Abstract Machines
+// SPDX-License-Identifier: Apache-2.0
 
 package api
 
@@ -132,7 +133,7 @@ func (am *authorizationMiddleware) checkSuperAdmin(ctx context.Context, adminID 
 
 func (am *authorizationMiddleware) checkUserDomainPermission(ctx context.Context, session authn.Session, permission string) error {
 	if err := am.checkAdmin(ctx, session.UserID); err != nil {
-		return  err
+		return err
 	}
 
 	if err := am.checkDomainAdmin(ctx, session.UserID, session.DomainID); err != nil {
