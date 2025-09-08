@@ -14,14 +14,6 @@ import (
 	"github.com/absmach/certs/errors"
 )
 
-type EntityType string
-
-const (
-	EntityTypeBackend EntityType = "backend"
-	EntityTypeCVM     EntityType = "cvm"
-	CommonName                   = "Ultraviolet"
-)
-
 type CertType int
 
 const (
