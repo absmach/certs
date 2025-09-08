@@ -3,7 +3,7 @@
 
 package http
 
-import "github.com/absmach/certs/errors"
+import "github.com/absmach/supermq/pkg/errors"
 
 var (
 	// ErrEmptySerialNo indicates that the serial number is empty.

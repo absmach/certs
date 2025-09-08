@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/absmach/certs"
-	"github.com/absmach/certs/errors"
+	"github.com/absmach/supermq/pkg/errors"
 	"golang.org/x/crypto/ocsp"
 )
 

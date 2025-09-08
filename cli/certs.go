@@ -17,8 +17,8 @@ import (
 	"os"
 
 	"github.com/absmach/certs"
-	"github.com/absmach/certs/errors"
 	ctxsdk "github.com/absmach/certs/sdk"
+	"github.com/absmach/supermq/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -31,20 +31,21 @@ func SetSDK(s ctxsdk.SDK) {
 
 var cmdCerts = []cobra.Command{
 	{
-		Use:   "get [all | <entity_id>]",
+		Use:   "get [all | <entity_id>] <domain_id> <token>",
 		Short: "Get certificate",
 		Long:  `Gets a certificate for a given entity ID or all certificates.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 1 {
+			if len(args) != 3 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
+
 			if args[0] == "all" {
 				pm := ctxsdk.PageMetadata{
 					Limit:  Limit,
 					Offset: Offset,
 				}
-				page, err := sdk.ListCerts(pm)
+				page, err := sdk.ListCerts(pm, args[1], args[2])
 				if err != nil {
 					logErrorCmd(*cmd, err)
 					return
@@ -57,7 +58,7 @@ var cmdCerts = []cobra.Command{
 				Limit:    Limit,
 				Offset:   Offset,
 			}
-			page, err := sdk.ListCerts(pm)
+			page, err := sdk.ListCerts(pm, args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -66,15 +67,15 @@ var cmdCerts = []cobra.Command{
 		},
 	},
 	{
-		Use:   "revoke <serial_number> ",
+		Use:   "revoke <serial_number> <domain_id> <token>",
 		Short: "Revoke certificate",
 		Long:  `Revokes a certificate for a given serial number.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 1 {
+			if len(args) != 3 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			err := sdk.RevokeCert(args[0])
+			err := sdk.RevokeCert(args[0], args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -83,15 +84,15 @@ var cmdCerts = []cobra.Command{
 		},
 	},
 	{
-		Use:   "delete <entity_id> ",
+		Use:   "delete <entity_id> <domain_id> <token>",
 		Short: "Delete certificate",
 		Long:  `Deletes certificates for a given entity id.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 1 {
+			if len(args) != 3 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			err := sdk.DeleteCert(args[0])
+			err := sdk.DeleteCert(args[0], args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -100,15 +101,15 @@ var cmdCerts = []cobra.Command{
 		},
 	},
 	{
-		Use:   "renew <serial_number> ",
+		Use:   "renew <serial_number> <domain_id> <token>",
 		Short: "Renew certificate",
 		Long:  `Renews a certificate for a given serial number.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 1 {
+			if len(args) != 3 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			_, err := sdk.RenewCert(args[0])
+			_, err := sdk.RenewCert(args[0], args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -117,11 +118,11 @@ var cmdCerts = []cobra.Command{
 		},
 	},
 	{
-		Use:   "ocsp <serial_number_or_certificate_path>",
+		Use:   "ocsp <serial_number_or_certificate_path> <domain_id> <token>",
 		Short: "OCSP",
 		Long:  `OCSP for a given serial number or certificate.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 1 {
+			if len(args) != 3 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
@@ -139,7 +140,7 @@ var cmdCerts = []cobra.Command{
 				serialNumber = args[0]
 			}
 
-			response, err := sdk.OCSP(serialNumber, certContent)
+			response, err := sdk.OCSP(serialNumber, certContent, args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -148,15 +149,15 @@ var cmdCerts = []cobra.Command{
 		},
 	},
 	{
-		Use:   "view <serial_number>",
+		Use:   "view <serial_number> <domain_id> <token>",
 		Short: "View certificate",
 		Long:  `Views a certificate for a given serial number.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 1 {
+			if len(args) != 3 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			cert, err := sdk.ViewCert(args[0])
+			cert, err := sdk.ViewCert(args[0], args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -165,15 +166,15 @@ var cmdCerts = []cobra.Command{
 		},
 	},
 	{
-		Use:   "view-ca <token>",
+		Use:   "view-ca <ca_token> <domain_id> <token>",
 		Short: "View-ca certificate",
 		Long:  `Views ca certificate key with a given token.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 1 {
+			if len(args) != 3 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			cert, err := sdk.ViewCA(args[0])
+			cert, err := sdk.ViewCA(args[0], args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -182,15 +183,15 @@ var cmdCerts = []cobra.Command{
 		},
 	},
 	{
-		Use:   "download-ca <token>",
+		Use:   "download-ca <ca_token> <domain_id> <token>",
 		Short: "Download signing CA",
 		Long:  `Download intermediate cert and ca with a given token.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 1 {
+			if len(args) != 3 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			bundle, err := sdk.DownloadCA(args[0])
+			bundle, err := sdk.DownloadCA(args[0], args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -199,15 +200,15 @@ var cmdCerts = []cobra.Command{
 		},
 	},
 	{
-		Use:   "token-ca",
+		Use:   "token-ca <domain_id> <token>",
 		Short: "Get CA token",
 		Long:  `Gets a download token for CA.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 0 {
+			if len(args) != 2 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			token, err := sdk.GetCAToken()
+			token, err := sdk.GetCAToken(args[0], args[1])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -247,11 +248,11 @@ var cmdCerts = []cobra.Command{
 		},
 	},
 	{
-		Use:   "issue-csr <entity_id> <ttl> <path_to_csr>",
+		Use:   "issue-csr <entity_id> <ttl> <path_to_csr> <domain_id> <token>",
 		Short: "Issue from CSR",
 		Long:  `issues a certificate for a given csr.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 3 {
+			if len(args) != 5 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
@@ -262,7 +263,7 @@ var cmdCerts = []cobra.Command{
 				return
 			}
 
-			cert, err := sdk.IssueFromCSR(args[0], args[1], string(csrData))
+			cert, err := sdk.IssueFromCSR(args[0], args[1], string(csrData), args[3], args[4])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -339,11 +340,11 @@ var cmdCerts = []cobra.Command{
 func NewCertsCmd() *cobra.Command {
 	var ttl string
 	issueCmd := cobra.Command{
-		Use:   "issue <entity_id> <common_name> '[\"<ip_addr_1>\", \"<ip_addr_2>\"] '{\"organization\":[\"organization_name\"]}' [--ttl=8760h]",
+		Use:   "issue <entity_id> <common_name> <ip_addrs_json> <domain_id> <token> [<options_json>] [--ttl=8760h]",
 		Short: "Issue certificate",
 		Long:  `Issues a certificate for a given entity ID.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) < 3 || len(args) > 4 {
+			if len(args) < 5 || len(args) > 6 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
@@ -356,14 +357,14 @@ func NewCertsCmd() *cobra.Command {
 			var option ctxsdk.Options
 			option.CommonName = args[1]
 
-			if len(args) == 4 {
-				if err := json.Unmarshal([]byte(args[3]), &option); err != nil {
+			if len(args) == 6 {
+				if err := json.Unmarshal([]byte(args[5]), &option); err != nil {
 					logErrorCmd(*cmd, err)
 					return
 				}
 			}
 
-			cert, err := sdk.IssueCert(args[0], ttl, ipAddrs, option)
+			cert, err := sdk.IssueCert(args[0], ttl, ipAddrs, option, args[3], args[4])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return

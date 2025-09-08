@@ -8,7 +8,7 @@ import (
 
 	"github.com/absmach/certs"
 	"github.com/absmach/certs/api/http"
-	"github.com/absmach/certs/errors"
+	"github.com/absmach/supermq/pkg/errors"
 	kitgrpc "github.com/go-kit/kit/transport/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
