@@ -23,18 +23,15 @@ import (
 )
 
 const (
-	instanceID   = "5de9b29a-feb9-11ed-be56-0242ac120002"
-	contentType  = "application/senml+json"
-	serialNum    = "8e7a30c-bc9f-22de-ae67-1342bc139507"
-	id           = "c333e6f-59bb-4c39-9e13-3a2766af8ba5"
-	validID      = "c333e6f-59bb-4c39-9e13-3a2766af8ba5"
-	invalidID    = "invalid-id"
-	ttl          = "10h"
-	commonName   = "test"
-	token        = "token"
-	invalidToken = "invalid-token"
-	domainID     = "domain-id"
-	ipAddr       = "127.0.0.1"
+	instanceID  = "5de9b29a-feb9-11ed-be56-0242ac120002"
+	contentType = "application/senml+json"
+	serialNum   = "8e7a30c-bc9f-22de-ae67-1342bc139507"
+	id          = "c333e6f-59bb-4c39-9e13-3a2766af8ba5"
+	validID     = "c333e6f-59bb-4c39-9e13-3a2766af8ba5"
+	ttl         = "10h"
+	commonName  = "test"
+	token       = "token"
+	domainID    = "domain-id"
 )
 
 func setupCerts() (*httptest.Server, *mocks.Service, *authnmocks.Authentication) {
