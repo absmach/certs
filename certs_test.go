@@ -64,7 +64,6 @@ func TestIssueCert(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			// Expected SubjectOptions with defaults set by service
 			expectedOptions := certs.SubjectOptions{
 				CommonName: tc.entityID,
 			}

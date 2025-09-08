@@ -272,11 +272,6 @@ func decodeIssueCert(_ context.Context, r *http.Request) (any, error) {
 		return nil, errors.Wrap(ErrInvalidRequest, err)
 	}
 
-	// Set default entityType if not provided
-	if req.entityType == "" {
-		req.entityType = "backend" // Default to backend entity type
-	}
-
 	return req, nil
 }
 

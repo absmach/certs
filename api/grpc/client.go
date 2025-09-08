@@ -5,7 +5,6 @@ package grpc
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/absmach/certs"
@@ -17,16 +16,10 @@ import (
 
 const svcName = "certs.ClientService"
 
-var (
-	errResponse = errors.New("invalid response type")
-	errRequest  = errors.New("invalid request type")
-)
-
 type grpcClient struct {
 	timeout     time.Duration
 	getEntityID endpoint.Endpoint
 	revokeCerts endpoint.Endpoint
-	getCA       endpoint.Endpoint
 }
 
 func NewClient(conn *grpc.ClientConn, timeout time.Duration) certs.CertsServiceClient {
@@ -47,14 +40,6 @@ func NewClient(conn *grpc.ClientConn, timeout time.Duration) certs.CertsServiceC
 			encodeRevokeCertsRequest,
 			decodeRevokeCertsResponse,
 			emptypb.Empty{},
-		).Endpoint(),
-		getCA: kitgrpc.NewClient(
-			conn,
-			svcName,
-			"GetCA",
-			encodeGetCARequest,
-			decodeGetCAResponse,
-			certs.Cert{},
 		).Endpoint(),
 
 		timeout: timeout,
@@ -81,17 +66,6 @@ func (c *grpcClient) RevokeCerts(ctx context.Context, req *certs.RevokeReq, _ ..
 	return res.(*emptypb.Empty), nil
 }
 
-func (client *grpcClient) GetCA(ctx context.Context, req *certs.GetCAReq, opts ...grpc.CallOption) (*certs.Cert, error) {
-	ctx, cancel := context.WithTimeout(ctx, client.timeout)
-	defer cancel()
-
-	res, err := client.getCA(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-	return res.(*certs.Cert), nil
-}
-
 func encodeGetEntityIDRequest(_ context.Context, request any) (any, error) {
 	req := request.(*certs.EntityReq)
 	return &certs.EntityReq{
@@ -115,20 +89,4 @@ func encodeRevokeCertsRequest(_ context.Context, request any) (any, error) {
 
 func decodeRevokeCertsResponse(_ context.Context, response any) (any, error) {
 	return &emptypb.Empty{}, nil
-}
-
-func encodeGetCARequest(ctx context.Context, request interface{}) (interface{}, error) {
-	req, ok := request.(*certs.GetCAReq)
-	if !ok {
-		return nil, errRequest
-	}
-	return req, nil
-}
-
-func decodeGetCAResponse(ctx context.Context, response interface{}) (interface{}, error) {
-	res, ok := response.(*certs.Cert)
-	if !ok {
-		return nil, errResponse
-	}
-	return res, nil
 }
