@@ -92,24 +92,6 @@ func (client *grpcClient) GetCA(ctx context.Context, req *certs.GetCAReq, opts .
 	return res.(*certs.Cert), nil
 }
 
-// RetrieveCertDownloadToken is not supported in private gRPC client.
-// Use HTTP API instead.
-func (client *grpcClient) RetrieveCertDownloadToken(ctx context.Context, req *certs.RetrieveCertDownloadTokenReq, opts ...grpc.CallOption) (*certs.RetrieveCertDownloadTokenRes, error) {
-	return nil, errors.New("RetrieveCertDownloadToken not supported in private gRPC client - use HTTP API instead")
-}
-
-// RetrieveCert is not supported in private gRPC client.
-// Use HTTP API instead.
-func (client *grpcClient) RetrieveCert(ctx context.Context, req *certs.RetrieveCertReq, opts ...grpc.CallOption) (*certs.CertificateBundle, error) {
-	return nil, errors.New("RetrieveCert not supported in private gRPC client - use HTTP API instead")
-}
-
-// IssueCert is not supported in private gRPC client.
-// Use HTTP API instead.
-func (client *grpcClient) IssueCert(ctx context.Context, req *certs.IssueCertReq, opts ...grpc.CallOption) (*certs.IssueCertRes, error) {
-	return nil, errors.New("IssueCert not supported in private gRPC client - use HTTP API instead")
-}
-
 func encodeGetEntityIDRequest(_ context.Context, request any) (any, error) {
 	req := request.(*certs.EntityReq)
 	return &certs.EntityReq{

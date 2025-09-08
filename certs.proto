@@ -14,11 +14,6 @@ option go_package = "./certs";
 service CertsService {
   rpc GetEntityID(EntityReq) returns (EntityRes) {}
   rpc RevokeCerts(RevokeReq) returns (google.protobuf.Empty) {}
-  rpc RetrieveCert(RetrieveCertReq) returns (CertificateBundle) {}
-  rpc RetrieveCertDownloadToken(RetrieveCertDownloadTokenReq) returns (
-      RetrieveCertDownloadTokenRes) {}
-  rpc IssueCert(IssueCertReq) returns (IssueCertRes) {}
-  rpc GetCA(GetCAReq) returns (Cert) {}
 }
 
 message EntityReq {

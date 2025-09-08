@@ -815,14 +815,10 @@ const file_certs_proto_rawDesc = "" +
 	"\fIssueCertRes\x12#\n" +
 	"\rserial_number\x18\x01 \x01(\tR\fserialNumber\"\n" +
 	"\n" +
-	"\bGetCAReq2\xe5\x03\n" +
+	"\bGetCAReq2\x96\x01\n" +
 	"\fCertsService\x12C\n" +
 	"\vGetEntityID\x12\x18.absmach.certs.EntityReq\x1a\x18.absmach.certs.EntityRes\"\x00\x12A\n" +
-	"\vRevokeCerts\x12\x18.absmach.certs.RevokeReq\x1a\x16.google.protobuf.Empty\"\x00\x12R\n" +
-	"\fRetrieveCert\x12\x1e.absmach.certs.RetrieveCertReq\x1a .absmach.certs.CertificateBundle\"\x00\x12w\n" +
-	"\x19RetrieveCertDownloadToken\x12+.absmach.certs.RetrieveCertDownloadTokenReq\x1a+.absmach.certs.RetrieveCertDownloadTokenRes\"\x00\x12G\n" +
-	"\tIssueCert\x12\x1b.absmach.certs.IssueCertReq\x1a\x1b.absmach.certs.IssueCertRes\"\x00\x127\n" +
-	"\x05GetCA\x12\x17.absmach.certs.GetCAReq\x1a\x13.absmach.certs.Cert\"\x00B\tZ\a./certsb\x06proto3"
+	"\vRevokeCerts\x12\x18.absmach.certs.RevokeReq\x1a\x16.google.protobuf.Empty\"\x00B\tZ\a./certsb\x06proto3"
 
 var (
 	file_certs_proto_rawDescOnce sync.Once
@@ -858,18 +854,10 @@ var file_certs_proto_depIdxs = []int32{
 	8,  // 1: absmach.certs.IssueCertReq.subject_options:type_name -> absmach.certs.Options
 	0,  // 2: absmach.certs.CertsService.GetEntityID:input_type -> absmach.certs.EntityReq
 	2,  // 3: absmach.certs.CertsService.RevokeCerts:input_type -> absmach.certs.RevokeReq
-	5,  // 4: absmach.certs.CertsService.RetrieveCert:input_type -> absmach.certs.RetrieveCertReq
-	6,  // 5: absmach.certs.CertsService.RetrieveCertDownloadToken:input_type -> absmach.certs.RetrieveCertDownloadTokenReq
-	9,  // 6: absmach.certs.CertsService.IssueCert:input_type -> absmach.certs.IssueCertReq
-	11, // 7: absmach.certs.CertsService.GetCA:input_type -> absmach.certs.GetCAReq
-	1,  // 8: absmach.certs.CertsService.GetEntityID:output_type -> absmach.certs.EntityRes
-	13, // 9: absmach.certs.CertsService.RevokeCerts:output_type -> google.protobuf.Empty
-	4,  // 10: absmach.certs.CertsService.RetrieveCert:output_type -> absmach.certs.CertificateBundle
-	7,  // 11: absmach.certs.CertsService.RetrieveCertDownloadToken:output_type -> absmach.certs.RetrieveCertDownloadTokenRes
-	10, // 12: absmach.certs.CertsService.IssueCert:output_type -> absmach.certs.IssueCertRes
-	3,  // 13: absmach.certs.CertsService.GetCA:output_type -> absmach.certs.Cert
-	8,  // [8:14] is the sub-list for method output_type
-	2,  // [2:8] is the sub-list for method input_type
+	1,  // 4: absmach.certs.CertsService.GetEntityID:output_type -> absmach.certs.EntityRes
+	13, // 5: absmach.certs.CertsService.RevokeCerts:output_type -> google.protobuf.Empty
+	4,  // [4:6] is the sub-list for method output_type
+	2,  // [2:4] is the sub-list for method input_type
 	2,  // [2:2] is the sub-list for extension type_name
 	2,  // [2:2] is the sub-list for extension extendee
 	0,  // [0:2] is the sub-list for field type_name

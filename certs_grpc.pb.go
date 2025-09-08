@@ -23,12 +23,8 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	CertsService_GetEntityID_FullMethodName               = "/absmach.certs.CertsService/GetEntityID"
-	CertsService_RevokeCerts_FullMethodName               = "/absmach.certs.CertsService/RevokeCerts"
-	CertsService_RetrieveCert_FullMethodName              = "/absmach.certs.CertsService/RetrieveCert"
-	CertsService_RetrieveCertDownloadToken_FullMethodName = "/absmach.certs.CertsService/RetrieveCertDownloadToken"
-	CertsService_IssueCert_FullMethodName                 = "/absmach.certs.CertsService/IssueCert"
-	CertsService_GetCA_FullMethodName                     = "/absmach.certs.CertsService/GetCA"
+	CertsService_GetEntityID_FullMethodName = "/absmach.certs.CertsService/GetEntityID"
+	CertsService_RevokeCerts_FullMethodName = "/absmach.certs.CertsService/RevokeCerts"
 )
 
 // CertsServiceClient is the client API for CertsService service.
@@ -37,10 +33,6 @@ const (
 type CertsServiceClient interface {
 	GetEntityID(ctx context.Context, in *EntityReq, opts ...grpc.CallOption) (*EntityRes, error)
 	RevokeCerts(ctx context.Context, in *RevokeReq, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	RetrieveCert(ctx context.Context, in *RetrieveCertReq, opts ...grpc.CallOption) (*CertificateBundle, error)
-	RetrieveCertDownloadToken(ctx context.Context, in *RetrieveCertDownloadTokenReq, opts ...grpc.CallOption) (*RetrieveCertDownloadTokenRes, error)
-	IssueCert(ctx context.Context, in *IssueCertReq, opts ...grpc.CallOption) (*IssueCertRes, error)
-	GetCA(ctx context.Context, in *GetCAReq, opts ...grpc.CallOption) (*Cert, error)
 }
 
 type certsServiceClient struct {
@@ -71,56 +63,12 @@ func (c *certsServiceClient) RevokeCerts(ctx context.Context, in *RevokeReq, opt
 	return out, nil
 }
 
-func (c *certsServiceClient) RetrieveCert(ctx context.Context, in *RetrieveCertReq, opts ...grpc.CallOption) (*CertificateBundle, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(CertificateBundle)
-	err := c.cc.Invoke(ctx, CertsService_RetrieveCert_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *certsServiceClient) RetrieveCertDownloadToken(ctx context.Context, in *RetrieveCertDownloadTokenReq, opts ...grpc.CallOption) (*RetrieveCertDownloadTokenRes, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RetrieveCertDownloadTokenRes)
-	err := c.cc.Invoke(ctx, CertsService_RetrieveCertDownloadToken_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *certsServiceClient) IssueCert(ctx context.Context, in *IssueCertReq, opts ...grpc.CallOption) (*IssueCertRes, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(IssueCertRes)
-	err := c.cc.Invoke(ctx, CertsService_IssueCert_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *certsServiceClient) GetCA(ctx context.Context, in *GetCAReq, opts ...grpc.CallOption) (*Cert, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(Cert)
-	err := c.cc.Invoke(ctx, CertsService_GetCA_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // CertsServiceServer is the server API for CertsService service.
 // All implementations must embed UnimplementedCertsServiceServer
 // for forward compatibility.
 type CertsServiceServer interface {
 	GetEntityID(context.Context, *EntityReq) (*EntityRes, error)
 	RevokeCerts(context.Context, *RevokeReq) (*emptypb.Empty, error)
-	RetrieveCert(context.Context, *RetrieveCertReq) (*CertificateBundle, error)
-	RetrieveCertDownloadToken(context.Context, *RetrieveCertDownloadTokenReq) (*RetrieveCertDownloadTokenRes, error)
-	IssueCert(context.Context, *IssueCertReq) (*IssueCertRes, error)
-	GetCA(context.Context, *GetCAReq) (*Cert, error)
 	mustEmbedUnimplementedCertsServiceServer()
 }
 
@@ -136,18 +84,6 @@ func (UnimplementedCertsServiceServer) GetEntityID(context.Context, *EntityReq) 
 }
 func (UnimplementedCertsServiceServer) RevokeCerts(context.Context, *RevokeReq) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RevokeCerts not implemented")
-}
-func (UnimplementedCertsServiceServer) RetrieveCert(context.Context, *RetrieveCertReq) (*CertificateBundle, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RetrieveCert not implemented")
-}
-func (UnimplementedCertsServiceServer) RetrieveCertDownloadToken(context.Context, *RetrieveCertDownloadTokenReq) (*RetrieveCertDownloadTokenRes, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RetrieveCertDownloadToken not implemented")
-}
-func (UnimplementedCertsServiceServer) IssueCert(context.Context, *IssueCertReq) (*IssueCertRes, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method IssueCert not implemented")
-}
-func (UnimplementedCertsServiceServer) GetCA(context.Context, *GetCAReq) (*Cert, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetCA not implemented")
 }
 func (UnimplementedCertsServiceServer) mustEmbedUnimplementedCertsServiceServer() {}
 func (UnimplementedCertsServiceServer) testEmbeddedByValue()                      {}
@@ -206,78 +142,6 @@ func _CertsService_RevokeCerts_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
-func _CertsService_RetrieveCert_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RetrieveCertReq)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CertsServiceServer).RetrieveCert(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: CertsService_RetrieveCert_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CertsServiceServer).RetrieveCert(ctx, req.(*RetrieveCertReq))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _CertsService_RetrieveCertDownloadToken_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RetrieveCertDownloadTokenReq)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CertsServiceServer).RetrieveCertDownloadToken(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: CertsService_RetrieveCertDownloadToken_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CertsServiceServer).RetrieveCertDownloadToken(ctx, req.(*RetrieveCertDownloadTokenReq))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _CertsService_IssueCert_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(IssueCertReq)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CertsServiceServer).IssueCert(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: CertsService_IssueCert_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CertsServiceServer).IssueCert(ctx, req.(*IssueCertReq))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _CertsService_GetCA_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetCAReq)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CertsServiceServer).GetCA(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: CertsService_GetCA_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CertsServiceServer).GetCA(ctx, req.(*GetCAReq))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // CertsService_ServiceDesc is the grpc.ServiceDesc for CertsService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -292,22 +156,6 @@ var CertsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RevokeCerts",
 			Handler:    _CertsService_RevokeCerts_Handler,
-		},
-		{
-			MethodName: "RetrieveCert",
-			Handler:    _CertsService_RetrieveCert_Handler,
-		},
-		{
-			MethodName: "RetrieveCertDownloadToken",
-			Handler:    _CertsService_RetrieveCertDownloadToken_Handler,
-		},
-		{
-			MethodName: "IssueCert",
-			Handler:    _CertsService_IssueCert_Handler,
-		},
-		{
-			MethodName: "GetCA",
-			Handler:    _CertsService_GetCA_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
