@@ -209,9 +209,6 @@ func decodeJsonOCSPRequest(body []byte) (any, error) {
 }
 
 func decodeIssueCert(_ context.Context, r *http.Request) (any, error) {
-	domain := chi.URLParam(r, "domainID")
-	fmt.Println("Domain ID: ", domain)
-
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		return nil, err

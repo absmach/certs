@@ -140,8 +140,6 @@ func (am *authorizationMiddleware) checkUserDomainPermission(ctx context.Context
 		return err
 	}
 
-	fmt.Printf("session is %+v\n", session)
-
 	req := authz.PolicyReq{
 		Domain:      session.DomainID,
 		SubjectType: policies.UserType,
