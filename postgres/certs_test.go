@@ -104,7 +104,7 @@ func TestListCertsByEntityID(t *testing.T) {
 	// Setup: save multiple mappings for the same entity
 	testEntityID := "test-entity-list"
 	testSerials := []string{"serial-1", "serial-2", "serial-3"}
-	
+
 	for _, serial := range testSerials {
 		err := repo.SaveCertEntityMapping(context.Background(), serial, testEntityID)
 		require.NoError(t, err)
@@ -142,7 +142,7 @@ func TestListCertsByEntityID(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				assert.Len(t, serials, tc.expectedCount)
-				
+
 				if tc.expectedCount > 0 {
 					for _, expectedSerial := range tc.expectedContains {
 						assert.Contains(t, serials, expectedSerial)
@@ -186,7 +186,7 @@ func TestRemoveCertEntityMapping(t *testing.T) {
 				assert.True(t, errors.Contains(err, tc.err), "expected error %v, got %v", tc.err, err)
 			} else {
 				require.NoError(t, err)
-				
+
 				// Verify the mapping was actually removed
 				_, err := repo.GetEntityIDBySerial(context.Background(), tc.serialNumber)
 				assert.True(t, errors.Contains(err, postgres.ErrNotFound))
@@ -242,4 +242,3 @@ func TestCertEntityMappingWorkflow(t *testing.T) {
 	assert.Len(t, listedSerials, 1)
 	assert.Contains(t, listedSerials, serials[1])
 }
-

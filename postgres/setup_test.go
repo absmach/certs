@@ -75,7 +75,7 @@ func TestMain(m *testing.M) {
 		SSLRootCert: "",
 	}
 
-	mig := postgres.Migration()  // Use our local migration instead
+	mig := postgres.Migration()
 	if db, err = pgclient.Setup(dbConfig, *mig); err != nil {
 		log.Fatalf("Could not setup test DB connection: %s", err)
 	}
