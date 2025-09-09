@@ -71,11 +71,6 @@ func NewService(ctx context.Context, pki Agent) (Service, error) {
 // The certificate is managed by OpenBao PKI internally.
 // EntityType is used to customize certificate properties based on the entity type.
 func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options SubjectOptions) (Certificate, error) {
-	// Set default common name if not provided
-	if options.CommonName == "" {
-		options.CommonName = entityID
-	}
-
 	cert, err := s.pki.Issue(entityID, ttl, ipAddrs, options)
 	if err != nil {
 		return Certificate{}, errors.Wrap(ErrFailedCertCreation, err)

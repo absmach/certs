@@ -67,9 +67,14 @@ type issueCertReq struct {
 }
 
 func (req issueCertReq) validate() error {
-	if req.entityID == `""` {
+	if req.entityID == "" {
 		return errors.Wrap(certs.ErrMalformedEntity, ErrMissingEntityID)
 	}
+
+	if req.Options.CommonName == "" {
+		return errors.Wrap(certs.ErrMalformedEntity, ErrMissingCommonName)
+	}
+
 	return nil
 }
 

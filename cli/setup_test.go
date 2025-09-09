@@ -9,6 +9,7 @@ import (
 
 	"github.com/absmach/certs/cli"
 	"github.com/spf13/cobra"
+	"github.com/stretchr/testify/require"
 )
 
 type outputLog uint8
@@ -25,7 +26,8 @@ func executeCommand(t *testing.T, root *cobra.Command, args ...string) string {
 	root.SetOut(buffer)
 	root.SetErr(buffer)
 	root.SetArgs(args)
-	_ = root.Execute()
+	err := root.Execute()
+	require.NoError(t, err)
 	return buffer.String()
 }
 
