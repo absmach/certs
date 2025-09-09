@@ -208,9 +208,6 @@ func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, trac
 		logger.Error(fmt.Sprintf("failed to create service: %s", err))
 		return nil
 	}
-	fmt.Printf("authz is %+v\n", authz)
-	fmt.Printf("authz is %+v\n", authz)
-	fmt.Printf("authz is %+v\n", authz)
 	svc = api.AuthorizationMiddleware(authz, svc)
 	svc = api.LoggingMiddleware(svc, logger)
 	counter, latency := prometheus.MakeMetrics(svcName, "api")
