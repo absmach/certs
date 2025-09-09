@@ -6,7 +6,7 @@ require (
 	github.com/absmach/supermq v0.18.0
 	github.com/caarlos0/env/v10 v10.0.0
 	github.com/fatih/color v1.18.0
-	github.com/go-chi/chi/v5 v5.2.2
+	github.com/go-chi/chi/v5 v5.2.3
 	github.com/go-kit/kit v0.13.0
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/golang-jwt/jwt/v5 v5.3.0
