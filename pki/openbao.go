@@ -102,7 +102,7 @@ func NewAgent(appRole, appSecret, host, namespace, path, role string, logger *sl
 	return &p, nil
 }
 
-func (va *openbaoPKIAgent) Issue(entityId, ttl string, ipAddrs []string, options certs.SubjectOptions) (certs.Certificate, error) {
+func (va *openbaoPKIAgent) Issue(ttl string, ipAddrs []string, options certs.SubjectOptions) (certs.Certificate, error) {
 	err := va.LoginAndRenew()
 	if err != nil {
 		return certs.Certificate{}, err
@@ -160,9 +160,7 @@ func (va *openbaoPKIAgent) Issue(entityId, ttl string, ipAddrs []string, options
 		return certs.Certificate{}, fmt.Errorf("no certificate data returned from OpenBao")
 	}
 
-	cert := certs.Certificate{
-		EntityID: entityId,
-	}
+	cert := certs.Certificate{}
 
 	if certData, ok := secret.Data["certificate"].(string); ok {
 		cert.Certificate = []byte(certData)
@@ -224,10 +222,6 @@ func (va *openbaoPKIAgent) View(serialNumber string) (certs.Certificate, error) 
 		if expiry, err := va.parseCertificateExpiry(string(cert.Certificate)); err == nil {
 			cert.ExpiryTime = expiry
 		}
-
-		if entityID, err := va.parseCertificateEntityID(string(cert.Certificate)); err == nil {
-			cert.EntityID = entityID
-		}
 	}
 	return cert, nil
 }
@@ -244,20 +238,6 @@ func (va *openbaoPKIAgent) parseCertificateExpiry(certPEM string) (time.Time, er
 	}
 
 	return cert.NotAfter, nil
-}
-
-func (va *openbaoPKIAgent) parseCertificateEntityID(certPEM string) (string, error) {
-	block, _ := pem.Decode([]byte(certPEM))
-	if block == nil {
-		return "", fmt.Errorf("failed to decode PEM certificate")
-	}
-
-	cert, err := x509.ParseCertificate(block.Bytes)
-	if err != nil {
-		return "", fmt.Errorf("failed to parse X509 certificate: %w", err)
-	}
-
-	return cert.Subject.CommonName, nil
 }
 
 func (va *openbaoPKIAgent) Renew(existingCert certs.Certificate, increment string) (certs.Certificate, error) {
@@ -277,7 +257,8 @@ func (va *openbaoPKIAgent) Renew(existingCert certs.Certificate, increment strin
 	}
 
 	options := certs.SubjectOptions{
-		DnsNames: x509Cert.DNSNames,
+		CommonName: x509Cert.Subject.CommonName,
+		DnsNames:   x509Cert.DNSNames,
 	}
 
 	options.IpAddresses = append(options.IpAddresses, x509Cert.IPAddresses...)
@@ -309,7 +290,7 @@ func (va *openbaoPKIAgent) Renew(existingCert certs.Certificate, increment strin
 		ipAddrs = append(ipAddrs, ip.String())
 	}
 
-	newCert, err := va.Issue(existingCert.EntityID, increment, ipAddrs, options)
+	newCert, err := va.Issue(increment, ipAddrs, options)
 	if err != nil {
 		return certs.Certificate{}, fmt.Errorf("failed to issue renewed certificate: %w", err)
 	}
@@ -364,7 +345,7 @@ func (va *openbaoPKIAgent) ListCerts(pm certs.PageMetadata) (certs.CertificatePa
 		return certPage, fmt.Errorf("failed to decode certificate serial numbers: %w", err)
 	}
 
-	var filteredCerts []certs.Certificate
+	var allCerts []certs.Certificate
 	for _, serialNumber := range serialNumbers {
 		cert, err := va.View(serialNumber)
 		if err != nil {
@@ -372,31 +353,25 @@ func (va *openbaoPKIAgent) ListCerts(pm certs.PageMetadata) (certs.CertificatePa
 			continue
 		}
 
-		if pm.EntityID != "" {
-			if cert.EntityID != pm.EntityID {
-				continue
-			}
-		}
-
-		filteredCerts = append(filteredCerts, cert)
+		allCerts = append(allCerts, cert)
 	}
 
-	certPage.Total = uint64(len(filteredCerts))
+	certPage.Total = uint64(len(allCerts))
 
 	start := pm.Offset
 	end := pm.Offset + pm.Limit
 	if pm.Limit == 0 {
-		end = uint64(len(filteredCerts))
+		end = uint64(len(allCerts))
 	}
-	if start >= uint64(len(filteredCerts)) {
+	if start >= uint64(len(allCerts)) {
 		return certPage, nil
 	}
-	if end > uint64(len(filteredCerts)) {
-		end = uint64(len(filteredCerts))
+	if end > uint64(len(allCerts)) {
+		end = uint64(len(allCerts))
 	}
 
 	for i := start; i < end; i++ {
-		certPage.Certificates = append(certPage.Certificates, filteredCerts[i])
+		certPage.Certificates = append(certPage.Certificates, allCerts[i])
 	}
 
 	return certPage, nil
@@ -594,7 +569,7 @@ func (va *openbaoPKIAgent) GetCRL() ([]byte, error) {
 	return crlData, nil
 }
 
-func (va *openbaoPKIAgent) SignCSR(csr []byte, entityId, ttl string) (certs.Certificate, error) {
+func (va *openbaoPKIAgent) SignCSR(csr []byte, ttl string) (certs.Certificate, error) {
 	err := va.LoginAndRenew()
 	if err != nil {
 		return certs.Certificate{}, err
@@ -614,9 +589,7 @@ func (va *openbaoPKIAgent) SignCSR(csr []byte, entityId, ttl string) (certs.Cert
 		return certs.Certificate{}, fmt.Errorf("no certificate data returned from OpenBao")
 	}
 
-	cert := certs.Certificate{
-		EntityID: entityId,
-	}
+	cert := certs.Certificate{}
 
 	if certData, ok := secret.Data["certificate"].(string); ok {
 		cert.Certificate = []byte(certData)

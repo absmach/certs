@@ -5,14 +5,14 @@ package certs
 
 // Agent represents the PKI interface that all PKI implementations must satisfy.
 type Agent interface {
-	Issue(entityId, ttl string, ipAddrs []string, options SubjectOptions) (Certificate, error)
+	Issue(ttl string, ipAddrs []string, options SubjectOptions) (Certificate, error)
 	View(serialNumber string) (Certificate, error)
 	Revoke(serialNumber string) error
 	ListCerts(pm PageMetadata) (CertificatePage, error)
 	GetCA() ([]byte, error)
 	GetCAChain() ([]byte, error)
 	GetCRL() ([]byte, error)
-	SignCSR(csr []byte, entityId, ttl string) (Certificate, error)
+	SignCSR(csr []byte, ttl string) (Certificate, error)
 	Renew(cert Certificate, increment string) (Certificate, error)
 	OCSP(serialNumber string, ocspRequestDER []byte) ([]byte, error)
 }

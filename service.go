@@ -38,6 +38,7 @@ var (
 	ErrViewEntity             = errors.New("view entity failed")
 	ErrGetToken               = errors.New("failed to get token")
 	ErrUpdateEntity           = errors.New("update entity failed")
+	ErrDeleteEntity           = errors.New("delete entity failed")
 	ErrMalformedEntity        = errors.New("malformed entity specification")
 	ErrRootCANotFound         = errors.New("root CA not found")
 	ErrIntermediateCANotFound = errors.New("intermediate CA not found")
@@ -53,15 +54,17 @@ var (
 )
 
 type service struct {
-	pki Agent
+	pki  Agent
+	repo Repository
 }
 
 var _ Service = (*service)(nil)
 
-func NewService(ctx context.Context, pki Agent) (Service, error) {
+func NewService(ctx context.Context, pki Agent, repo Repository) (Service, error) {
 	var svc service
 
 	svc.pki = pki
+	svc.repo = repo
 
 	return &svc, nil
 }
@@ -71,10 +74,16 @@ func NewService(ctx context.Context, pki Agent) (Service, error) {
 // The certificate is managed by OpenBao PKI internally.
 // EntityType is used to customize certificate properties based on the entity type.
 func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options SubjectOptions) (Certificate, error) {
-	cert, err := s.pki.Issue(entityID, ttl, ipAddrs, options)
+	cert, err := s.pki.Issue(ttl, ipAddrs, options)
 	if err != nil {
 		return Certificate{}, errors.Wrap(ErrFailedCertCreation, err)
 	}
+
+	if err := s.repo.SaveCertEntityMapping(ctx, cert.SerialNumber, entityID); err != nil {
+		return Certificate{}, errors.Wrap(ErrFailedCertCreation, err)
+	}
+
+	cert.EntityID = entityID
 
 	return cert, nil
 }
@@ -102,9 +111,51 @@ func (s *service) RetrieveCert(ctx context.Context, token, serialNumber string) 
 }
 
 func (s *service) ListCerts(ctx context.Context, pm PageMetadata) (CertificatePage, error) {
+	if pm.EntityID != "" {
+		serialNumbers, err := s.repo.ListCertsByEntityID(ctx, pm.EntityID)
+		if err != nil {
+			return CertificatePage{}, errors.Wrap(ErrViewEntity, err)
+		}
+
+		certPg := CertificatePage{
+			PageMetadata: pm,
+			Certificates: make([]Certificate, 0),
+		}
+
+		start := pm.Offset
+		end := pm.Offset + pm.Limit
+		if pm.Limit == 0 {
+			end = uint64(len(serialNumbers))
+		}
+		if start >= uint64(len(serialNumbers)) {
+			return certPg, nil
+		}
+		if end > uint64(len(serialNumbers)) {
+			end = uint64(len(serialNumbers))
+		}
+
+		for i := start; i < end; i++ {
+			cert, err := s.pki.View(serialNumbers[i])
+			if err != nil {
+				continue
+			}
+			cert.EntityID = pm.EntityID
+			certPg.Certificates = append(certPg.Certificates, cert)
+		}
+
+		certPg.Total = uint64(len(serialNumbers))
+		return certPg, nil
+	}
+
 	certPg, err := s.pki.ListCerts(pm)
 	if err != nil {
 		return CertificatePage{}, errors.Wrap(ErrViewEntity, err)
+	}
+
+	for i, cert := range certPg.Certificates {
+		if entityID, err := s.repo.GetEntityIDBySerial(ctx, cert.SerialNumber); err == nil {
+			certPg.Certificates[i].EntityID = entityID
+		}
 	}
 
 	return certPg, nil
@@ -119,21 +170,23 @@ func (s *service) RevokeBySerial(ctx context.Context, serialNumber string) error
 }
 
 // RevokeAll revokes all certificates for a given entity ID.
-// It first finds all certificates for the entity ID, then revokes each one.
+// It uses the repository to find all certificates for the entity ID, then revokes each one.
 func (s *service) RevokeAll(ctx context.Context, entityID string) error {
-	pm := PageMetadata{EntityID: entityID}
-	certPage, err := s.pki.ListCerts(pm)
+	serialNumbers, err := s.repo.ListCertsByEntityID(ctx, entityID)
 	if err != nil {
 		return errors.Wrap(ErrViewEntity, err)
 	}
 
-	if len(certPage.Certificates) == 0 {
+	if len(serialNumbers) == 0 {
 		return errors.Wrap(ErrNotFound, fmt.Errorf("no certificates found for entity ID: %s", entityID))
 	}
 
-	for _, cert := range certPage.Certificates {
-		if err := s.pki.Revoke(cert.SerialNumber); err != nil {
+	for _, serialNumber := range serialNumbers {
+		if err := s.pki.Revoke(serialNumber); err != nil {
 			return errors.Wrap(ErrUpdateEntity, err)
+		}
+		if err := s.repo.RemoveCertEntityMapping(ctx, serialNumber); err != nil {
+			return errors.Wrap(ErrDeleteEntity, err)
 		}
 	}
 
@@ -145,6 +198,11 @@ func (s *service) ViewCert(ctx context.Context, serialNumber string) (Certificat
 	if err != nil {
 		return Certificate{}, errors.Wrap(ErrViewEntity, err)
 	}
+
+	if entityID, err := s.repo.GetEntityIDBySerial(ctx, serialNumber); err == nil {
+		cert.EntityID = entityID
+	}
+
 	return cert, nil
 }
 
@@ -252,11 +310,11 @@ func (s *service) OCSP(ctx context.Context, serialNumber string, ocspRequestDER 
 }
 
 func (s *service) GetEntityID(ctx context.Context, serialNumber string) (string, error) {
-	cert, err := s.pki.View(serialNumber)
+	entityID, err := s.repo.GetEntityIDBySerial(ctx, serialNumber)
 	if err != nil {
 		return "", errors.Wrap(ErrViewEntity, err)
 	}
-	return cert.EntityID, nil
+	return entityID, nil
 }
 
 func (s *service) GenerateCRL(ctx context.Context, caType CertType) ([]byte, error) {
@@ -283,15 +341,21 @@ func (s *service) GetChainCA(ctx context.Context, token string) (Certificate, er
 }
 
 func (s *service) IssueFromCSR(ctx context.Context, entityID, ttl string, csr CSR) (Certificate, error) {
-	cert, err := s.pki.SignCSR(csr.CSR, entityID, ttl)
+	cert, err := s.pki.SignCSR(csr.CSR, ttl)
 	if err != nil {
 		return Certificate{}, errors.Wrap(ErrFailedCertCreation, err)
 	}
 
+	if err := s.repo.SaveCertEntityMapping(ctx, cert.SerialNumber, entityID); err != nil {
+		return Certificate{}, errors.Wrap(ErrFailedCertCreation, err)
+	}
+
+	cert.EntityID = entityID
+
 	return cert, nil
 }
 
-func (s *service) getConcatCAs(ctx context.Context) (Certificate, error) {
+func (s *service) getConcatCAs(_ context.Context) (Certificate, error) {
 	caChain, err := s.pki.GetCAChain()
 	if err != nil {
 		return Certificate{}, errors.Wrap(ErrViewEntity, err)

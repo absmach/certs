@@ -7,6 +7,7 @@ networks:
 
 volumes:
   openbao-data:
+  certs-db-volume:
 
 services:
   certs:
@@ -14,6 +15,7 @@ services:
     container_name: certs
     depends_on:
       - openbao
+      - certs-db
     restart: on-failure
     networks:
       - certs-base-net
@@ -31,9 +33,31 @@ services:
       AM_CERTS_OPENBAO_NAMESPACE: ${AM_CERTS_OPENBAO_NAMESPACE}
       AM_CERTS_OPENBAO_PKI_PATH: ${AM_CERTS_OPENBAO_PKI_PATH}
       AM_CERTS_OPENBAO_ROLE: ${AM_CERTS_OPENBAO_ROLE}
+      AM_CERTS_DB_HOST: ${AM_CERTS_DB_HOST}
+      AM_CERTS_DB_PORT: ${AM_CERTS_DB_PORT}
+      AM_CERTS_DB_USER: ${AM_CERTS_DB_USER}
+      AM_CERTS_DB_PASS: ${AM_CERTS_DB_PASS}
+      AM_CERTS_DB: ${AM_CERTS_DB}
+      AM_CERTS_DB_SSL_MODE: ${AM_CERTS_DB_SSL_MODE}
     ports:
       - ${AM_CERTS_HTTP_PORT}:${AM_CERTS_HTTP_PORT}
       - ${AM_CERTS_GRPC_PORT}:${AM_CERTS_GRPC_PORT}
+
+  certs-db:
+    image: postgres:16.2-alpine
+    container_name: certs-db
+    restart: on-failure
+    networks:
+      - certs-base-net
+    command: postgres -c "max_connections=${AM_CERTS_DB_MAX_CONNECTIONS}"
+    environment:
+      POSTGRES_USER: ${AM_CERTS_DB_USER}
+      POSTGRES_PASSWORD: ${AM_CERTS_DB_PASS}
+      POSTGRES_DB: ${AM_CERTS_DB}
+    ports:
+      - 5454:5432
+    volumes:
+      - certs-db-volume:/var/lib/postgresql/data
 
   openbao:
     image: openbao/openbao:2.4.0

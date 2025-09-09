@@ -22,10 +22,13 @@ import (
 	grpcserver "github.com/absmach/certs/internal/server/grpc"
 	"github.com/absmach/certs/internal/uuid"
 	"github.com/absmach/certs/pki"
+	"github.com/absmach/certs/postgres"
 	"github.com/absmach/certs/tracing"
+	pgclient "github.com/absmach/supermq/pkg/postgres"
 	smq "github.com/absmach/supermq/pkg/server"
 	httpserver "github.com/absmach/supermq/pkg/server/http"
 	"github.com/caarlos0/env/v10"
+	"github.com/jmoiron/sqlx"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
@@ -35,10 +38,12 @@ import (
 const (
 	svcName        = "certs"
 	envPrefixHTTP  = "AM_CERTS_HTTP_"
+	envPrefixDB    = "AM_CERTS_DB_"
 	envPrefixGRPC  = "AM_CERTS_GRPC_"
 	envPrefixAuth  = "AM_AUTH_GRPC_"
 	defSvcHTTPPort = "9010"
 	defSvcGRPCPort = "7012"
+	defDB          = "certs"
 )
 
 type config struct {
@@ -67,13 +72,13 @@ func main() {
 
 	logger, err := initLogger(cfg.LogLevel)
 	if err != nil {
-		log.Fatalf("failed to initialize logger: %s", err)
+		log.Fatalf("failed to initialize logger: %v", err)
 	}
 
 	if cfg.InstanceID == "" {
 		cfg.InstanceID, err = uuid.New().ID()
 		if err != nil {
-			log.Fatalf("failed to generate instance ID: %s", err)
+			log.Fatalf("failed to generate instance ID: %v", err)
 		}
 	}
 
@@ -93,6 +98,18 @@ func main() {
 		return
 	}
 
+	dbConfig := pgclient.Config{Name: defDB}
+	if err := env.ParseWithOptions(&dbConfig, env.Options{Prefix: envPrefixDB}); err != nil {
+		logger.Error(err.Error())
+	}
+	migrations := postgres.Migration()
+	db, err := pgclient.Setup(dbConfig, *migrations)
+	if err != nil {
+		logger.Error(err.Error())
+		return
+	}
+	defer db.Close()
+
 	tp, err := jaegerClient.NewProvider(ctx, svcName, cfg.JaegerURL, cfg.InstanceID, cfg.TraceRatio)
 	if err != nil {
 		logger.Error(fmt.Sprintf("Failed to init Jaeger: %s", err))
@@ -109,7 +126,7 @@ func main() {
 		logger.Error(fmt.Sprintf("failed to load %s gRPC server configuration : %s", svcName, err))
 	}
 
-	svc := newService(ctx, tracer, logger, pkiAgent)
+	svc := newService(ctx, db, dbConfig, tracer, logger, pkiAgent)
 
 	grpcServerConfig := smq.Config{Port: defSvcGRPCPort}
 	if err := env.ParseWithOptions(&grpcServerConfig, env.Options{Prefix: envPrefixGRPC}); err != nil {
@@ -142,8 +159,10 @@ func main() {
 	}
 }
 
-func newService(ctx context.Context, tracer trace.Tracer, logger *slog.Logger, pkiAgent certs.Agent) certs.Service {
-	svc, err := certs.NewService(ctx, pkiAgent)
+func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, tracer trace.Tracer, logger *slog.Logger, pkiAgent certs.Agent) certs.Service {
+	database := pgclient.NewDatabase(db, dbConfig, tracer)
+	repo := postgres.NewRepository(database)
+	svc, err := certs.NewService(ctx, pkiAgent, repo)
 	if err != nil {
 		logger.Error(fmt.Sprintf("failed to create service: %s", err))
 		return nil

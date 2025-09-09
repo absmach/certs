@@ -22,6 +22,11 @@ packages:
           dir: "./mocks"
           structname: "Agent"
           filename: "agent.go"
+      Repository:
+        config:
+          dir: "./mocks"
+          structname: "Repository"
+          filename: "repository.go"
       CertsServiceClient:
         config:
           dir: "./mocks"
