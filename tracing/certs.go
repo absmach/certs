@@ -70,10 +70,10 @@ func (tm *tracingMiddleware) ListCerts(ctx context.Context, pm certs.PageMetadat
 	return tm.svc.ListCerts(ctx, pm)
 }
 
-func (s *tracingMiddleware) ViewCert(ctx context.Context, serialNumber string) (certs.Certificate, error) {
-	ctx, span := s.tracer.Start(ctx, "view_cert")
+func (tm *tracingMiddleware) ViewCert(ctx context.Context, serialNumber string) (certs.Certificate, error) {
+	ctx, span := tm.tracer.Start(ctx, "view_cert")
 	defer span.End()
-	return s.svc.ViewCert(ctx, serialNumber)
+	return tm.svc.ViewCert(ctx, serialNumber)
 }
 
 func (tm *tracingMiddleware) OCSP(ctx context.Context, serialNumber string, ocspRequestDER []byte) ([]byte, error) {
@@ -104,4 +104,10 @@ func (tm *tracingMiddleware) IssueFromCSR(ctx context.Context, entityID, ttl str
 	ctx, span := tm.tracer.Start(ctx, "issue_from_csr")
 	defer span.End()
 	return tm.svc.IssueFromCSR(ctx, entityID, ttl, csr)
+}
+
+func (tm *tracingMiddleware) GetCA(ctx context.Context) (certs.Certificate, error) {
+	ctx, span := tm.tracer.Start(ctx, "get_ca")
+	defer span.End()
+	return tm.svc.GetCA(ctx)
 }

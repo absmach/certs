@@ -183,4 +183,7 @@ type Service interface {
 
 	// IssueFromCSR creates a certificate from a given CSR.
 	IssueFromCSR(ctx context.Context, entityID, ttl string, csr CSR) (Certificate, error)
+
+	// GetCA retieve CA certificates.
+	GetCA(ctx context.Context) (Certificate, error)
 }

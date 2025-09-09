@@ -69,6 +69,7 @@ func NewService(ctx context.Context, pki Agent) (Service, error) {
 // IssueCert generates and issues a certificate for a given entityID.
 // It uses the PKI agent to generate and issue a certificate.
 // The certificate is managed by OpenBao PKI internally.
+// EntityType is used to customize certificate properties based on the entity type.
 func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options SubjectOptions) (Certificate, error) {
 	cert, err := s.pki.Issue(entityID, ttl, ipAddrs, options)
 	if err != nil {
@@ -310,4 +311,13 @@ func (s *service) getConcatCAs(ctx context.Context) (Certificate, error) {
 		Certificate: caChain,
 		ExpiryTime:  cert.NotAfter,
 	}, nil
+}
+
+func (s *service) GetCA(ctx context.Context) (Certificate, error) {
+	cert, err := s.ViewCA(ctx)
+	if err != nil {
+		return Certificate{}, errors.Wrap(ErrViewEntity, err)
+	}
+
+	return cert, nil
 }

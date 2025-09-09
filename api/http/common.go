@@ -60,7 +60,8 @@ func EncodeError(_ context.Context, err error, w http.ResponseWriter) {
 	case errors.Contains(err, certs.ErrCreateEntity),
 		errors.Contains(err, certs.ErrUpdateEntity),
 		errors.Contains(err, certs.ErrViewEntity),
-		errors.Contains(err, certs.ErrGetToken):
+		errors.Contains(err, certs.ErrGetToken),
+		errors.Contains(err, certs.ErrFailedCertCreation):
 		err = unwrap(err)
 		w.WriteHeader(http.StatusUnprocessableEntity)
 

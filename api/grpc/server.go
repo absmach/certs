@@ -56,7 +56,7 @@ func encodeRevokeCertsRes(_ context.Context, res any) (any, error) {
 
 // GetEntityID returns the entity ID for the given entity request.
 func (g *grpcServer) GetEntityID(ctx context.Context, req *certs.EntityReq) (*certs.EntityRes, error) {
-	_, res, err := g.getEntity.ServeGRPC(context.Background(), req)
+	_, res, err := g.getEntity.ServeGRPC(ctx, req)
 	if err != nil {
 		return &certs.EntityRes{}, encodeError(err)
 	}

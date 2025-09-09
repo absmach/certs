@@ -271,6 +271,7 @@ func decodeIssueCert(_ context.Context, r *http.Request) (any, error) {
 	if err := json.Unmarshal(body, &req); err != nil {
 		return nil, errors.Wrap(ErrInvalidRequest, err)
 	}
+
 	return req, nil
 }
 

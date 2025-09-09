@@ -304,6 +304,69 @@ var cmdCerts = []cobra.Command{
 			logJSONCmd(*cmd, cert)
 		},
 	},
+	{
+		Use:   "crl [root | intermediate]",
+		Short: "Generate Certificate Revocation List",
+		Long:  `Generates a Certificate Revocation List (CRL) for the specified CA type.`,
+		Run: func(cmd *cobra.Command, args []string) {
+			if len(args) != 1 {
+				logUsageCmd(*cmd, cmd.Use)
+				return
+			}
+
+			var certType ctxsdk.CertType
+			switch args[0] {
+			case "root":
+				certType = ctxsdk.RootCA
+			case "intermediate":
+				certType = ctxsdk.IntermediateCA
+			default:
+				logUsageCmd(*cmd, cmd.Use)
+				return
+			}
+
+			crlBytes, err := sdk.GenerateCRL(certType)
+			if err != nil {
+				logErrorCmd(*cmd, err)
+				return
+			}
+			logSaveCRLFile(*cmd, crlBytes, args[0])
+		},
+	},
+	{
+		Use:   "entity-id <serial_number>",
+		Short: "Get entity ID by serial number",
+		Long:  `Gets the entity ID for a certificate by its serial number.`,
+		Run: func(cmd *cobra.Command, args []string) {
+			if len(args) != 1 {
+				logUsageCmd(*cmd, cmd.Use)
+				return
+			}
+			entityID, err := sdk.GetEntityID(args[0])
+			if err != nil {
+				logErrorCmd(*cmd, err)
+				return
+			}
+			logJSONCmd(*cmd, map[string]string{"entity_id": entityID})
+		},
+	},
+	{
+		Use:   "ca",
+		Short: "Get CA certificate",
+		Long:  `Gets the CA certificate without requiring a token.`,
+		Run: func(cmd *cobra.Command, args []string) {
+			if len(args) != 0 {
+				logUsageCmd(*cmd, cmd.Use)
+				return
+			}
+			cert, err := sdk.GetCA()
+			if err != nil {
+				logErrorCmd(*cmd, err)
+				return
+			}
+			logJSONCmd(*cmd, cert)
+		},
+	},
 }
 
 // NewCertsCmd returns certificate command.
@@ -346,9 +409,9 @@ func NewCertsCmd() *cobra.Command {
 	issueCmd.Flags().StringVar(&ttl, "ttl", "8760h", "certificate time to live in duration")
 
 	cmd := cobra.Command{
-		Use:   "certs [issue | get | revoke | renew | ocsp | token | download | download-ca | download-ca | csr | issue-csr]",
+		Use:   "certs [issue | get | revoke | renew | ocsp | token | download | download-ca | view-ca | token-ca | csr | issue-csr | crl | entity-id | ca]",
 		Short: "Certificates management",
-		Long:  `Certificates management: issue, get all, get by entity ID, revoke, renew, OCSP, token, download.`,
+		Long:  `Certificates management: issue, get all, get by entity ID, revoke, renew, OCSP, token, download, CRL generation, entity ID lookup, and CA operations.`,
 	}
 
 	cmd.AddCommand(&issueCmd)

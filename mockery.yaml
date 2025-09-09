@@ -25,7 +25,7 @@ packages:
       CertsServiceClient:
         config:
           dir: "./mocks"
-          structname: "CertsServiceClient"
+          structname: "MockCertsServiceClient"
           filename: "certs_client.go"
   github.com/absmach/certs/sdk:
     interfaces:
