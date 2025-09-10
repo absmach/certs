@@ -97,6 +97,7 @@ func (res requestCertDownloadTokenRes) Empty() bool {
 type issueCertRes struct {
 	SerialNumber string    `json:"serial_number"`
 	Certificate  string    `json:"certificate,omitempty"`
+	Key          string    `json:"key,omitempty"`
 	Revoked      bool      `json:"revoked"`
 	ExpiryTime   time.Time `json:"expiry_time"`
 	EntityID     string    `json:"entity_id"`

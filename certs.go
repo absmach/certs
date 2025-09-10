@@ -187,3 +187,17 @@ type Service interface {
 	// GetCA retieve CA certificates.
 	GetCA(ctx context.Context) (Certificate, error)
 }
+
+type Repository interface {
+	// SaveCertEntityMapping saves the mapping between certificate serial number and entity ID.
+	SaveCertEntityMapping(ctx context.Context, serialNumber, entityID string) error
+
+	// GetEntityIDBySerial retrieves the entity ID for a given certificate serial number.
+	GetEntityIDBySerial(ctx context.Context, serialNumber string) (string, error)
+
+	// ListCertsByEntityID lists all certificate serial numbers for a given entity ID.
+	ListCertsByEntityID(ctx context.Context, entityID string) ([]string, error)
+
+	// RemoveCertEntityMapping removes the mapping between certificate and entity ID.
+	RemoveCertEntityMapping(ctx context.Context, serialNumber string) error
+}

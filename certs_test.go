@@ -31,22 +31,28 @@ var (
 
 func TestIssueCert(t *testing.T) {
 	agent := new(mocks.Agent)
-	svc, err := certs.NewService(context.Background(), agent)
+	repo := new(mocks.Repository)
+	svc, err := certs.NewService(context.Background(), agent, repo)
 	require.NoError(t, err)
 
 	testCases := []struct {
-		desc     string
-		entityID string
-		ttl      string
-		cert     certs.Certificate
-		err      error
-		agentErr error
+		desc         string
+		entityID     string
+		ttl          string
+		cert         certs.Certificate
+		err          error
+		agentErr     error
+		repoErr      error
+		expectedCert certs.Certificate
 	}{
 		{
 			desc:     "issue cert successfully",
 			entityID: "entityID",
 			ttl:      "1h",
 			cert: certs.Certificate{
+				SerialNumber: serialNumber,
+			},
+			expectedCert: certs.Certificate{
 				SerialNumber: serialNumber,
 				EntityID:     "entityID",
 			},
@@ -60,6 +66,16 @@ func TestIssueCert(t *testing.T) {
 			agentErr: errors.New("agent error"),
 			err:      certs.ErrFailedCertCreation,
 		},
+		{
+			desc:     "failed repository save mapping",
+			entityID: "entityID",
+			ttl:      "1h",
+			cert: certs.Certificate{
+				SerialNumber: serialNumber,
+			},
+			repoErr: errors.New("repo error"),
+			err:     certs.ErrFailedCertCreation,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -67,24 +83,27 @@ func TestIssueCert(t *testing.T) {
 			expectedOptions := certs.SubjectOptions{
 				CommonName: tc.entityID,
 			}
-			agentCall := agent.On("Issue", tc.entityID, tc.ttl, []string{}, expectedOptions).Return(tc.cert, tc.agentErr)
+			agentCall := agent.On("Issue", tc.ttl, []string{}, expectedOptions).Return(tc.cert, tc.agentErr)
+			repoCall := repo.On("SaveCertEntityMapping", mock.Anything, tc.cert.SerialNumber, tc.entityID).Return(tc.repoErr)
 
 			cert, err := svc.IssueCert(context.Background(), tc.entityID, tc.ttl, []string{}, certs.SubjectOptions{})
 			if tc.err != nil {
 				require.True(t, errors.Contains(err, tc.err), "expected error %v, got %v", tc.err, err)
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.cert, cert)
+				require.Equal(t, tc.expectedCert, cert)
 			}
 
 			agentCall.Unset()
+			repoCall.Unset()
 		})
 	}
 }
 
 func TestRevokeBySerial(t *testing.T) {
 	agent := new(mocks.Agent)
-	svc, err := certs.NewService(context.Background(), agent)
+	repo := new(mocks.Repository)
+	svc, err := certs.NewService(context.Background(), agent, repo)
 	require.NoError(t, err)
 
 	testCases := []struct {
@@ -124,7 +143,8 @@ func TestRevokeBySerial(t *testing.T) {
 
 func TestGetCertDownloadToken(t *testing.T) {
 	agent := new(mocks.Agent)
-	svc, err := certs.NewService(context.Background(), agent)
+	repo := new(mocks.Repository)
+	svc, err := certs.NewService(context.Background(), agent, repo)
 	require.NoError(t, err)
 
 	testCases := []struct {
@@ -156,7 +176,8 @@ func TestGetCertDownloadToken(t *testing.T) {
 
 func TestGetCert(t *testing.T) {
 	agent := new(mocks.Agent)
-	svc, err := certs.NewService(context.Background(), agent)
+	repo := new(mocks.Repository)
+	svc, err := certs.NewService(context.Background(), agent, repo)
 	require.NoError(t, err)
 
 	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * 5).UTC()), Issuer: certs.Organization, Subject: "certs"})
@@ -235,7 +256,8 @@ func TestGetCert(t *testing.T) {
 
 func TestRenewCert(t *testing.T) {
 	agent := new(mocks.Agent)
-	svc, err := certs.NewService(context.Background(), agent)
+	repo := new(mocks.Repository)
+	svc, err := certs.NewService(context.Background(), agent, repo)
 	require.NoError(t, err)
 
 	newCert := certs.Certificate{
@@ -301,34 +323,34 @@ func TestRenewCert(t *testing.T) {
 
 func TestGetEntityID(t *testing.T) {
 	agent := new(mocks.Agent)
-	svc, err := certs.NewService(context.Background(), agent)
+	repo := new(mocks.Repository)
+	svc, err := certs.NewService(context.Background(), agent, repo)
 	require.NoError(t, err)
 
 	testCases := []struct {
 		desc     string
 		serial   string
-		cert     certs.Certificate
-		agentErr error
+		entityID string
+		repoErr  error
 		err      error
 	}{
 		{
-			desc:   "get entity ID successfully",
-			serial: serialNumber,
-			cert:   certs.Certificate{EntityID: "entity-123"},
-			err:    nil,
+			desc:     "get entity ID successfully",
+			serial:   serialNumber,
+			entityID: "entity-123",
+			err:      nil,
 		},
 		{
-			desc:     "error retrieving cert",
-			serial:   serialNumber,
-			cert:     certs.Certificate{},
-			agentErr: errors.New("not found"),
-			err:      certs.ErrViewEntity,
+			desc:    "error retrieving from repository",
+			serial:  serialNumber,
+			repoErr: errors.New("not found"),
+			err:     certs.ErrViewEntity,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			agentCall := agent.On("View", tc.serial).Return(tc.cert, tc.agentErr)
+			repoCall := repo.On("GetEntityIDBySerial", mock.Anything, tc.serial).Return(tc.entityID, tc.repoErr)
 
 			entityID, err := svc.GetEntityID(context.Background(), tc.serial)
 			if tc.err != nil {
@@ -336,71 +358,287 @@ func TestGetEntityID(t *testing.T) {
 				require.Empty(t, entityID)
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.cert.EntityID, entityID)
+				require.Equal(t, tc.entityID, entityID)
 			}
 
-			agentCall.Unset()
+			repoCall.Unset()
 		})
 	}
 }
 
 func TestListCerts(t *testing.T) {
 	agent := new(mocks.Agent)
-	svc, err := certs.NewService(context.Background(), agent)
+	repo := new(mocks.Repository)
+	svc, err := certs.NewService(context.Background(), agent, repo)
 	require.NoError(t, err)
 
-	pageMetadata := certs.PageMetadata{Limit: 10, Offset: 0, EntityID: "entity-123"}
+	pageMetadata := certs.PageMetadata{Limit: 10, Offset: 0}
+	pageMetadataWithEntity := certs.PageMetadata{Limit: 10, Offset: 0, EntityID: "entity-123"}
+
 	expectedCertPage := certs.CertificatePage{
 		Certificates: []certs.Certificate{
-			{SerialNumber: "123", EntityID: "entity-123"},
-			{SerialNumber: "456", EntityID: "entity-123"},
+			{SerialNumber: "123"},
+			{SerialNumber: "456"},
 		},
 		PageMetadata: pageMetadata,
 	}
 
 	testCases := []struct {
-		desc     string
-		pm       certs.PageMetadata
-		certPage certs.CertificatePage
-		agentErr error
-		err      error
+		desc           string
+		pm             certs.PageMetadata
+		certPage       certs.CertificatePage
+		serialNumbers  []string
+		agentErr       error
+		repoErr        error
+		expectedResult certs.CertificatePage
+		err            error
 	}{
 		{
-			desc:     "list certs successfully",
-			pm:       pageMetadata,
-			certPage: expectedCertPage,
-			err:      nil,
+			desc:           "list certs successfully without entity filter",
+			pm:             pageMetadata,
+			certPage:       expectedCertPage,
+			expectedResult: expectedCertPage,
+			err:            nil,
 		},
 		{
-			desc:     "error listing certs",
+			desc:          "list certs successfully with entity filter",
+			pm:            pageMetadataWithEntity,
+			serialNumbers: []string{"123", "456"},
+			expectedResult: certs.CertificatePage{
+				Certificates: []certs.Certificate{
+					{SerialNumber: "123", EntityID: "entity-123"},
+					{SerialNumber: "456", EntityID: "entity-123"},
+				},
+				PageMetadata: certs.PageMetadata{
+					Limit:    10,
+					Offset:   0,
+					EntityID: "entity-123",
+					Total:    2, // Set the total count
+				},
+			},
+			err: nil,
+		},
+		{
+			desc:     "error listing certs from agent",
 			pm:       pageMetadata,
 			certPage: certs.CertificatePage{},
 			agentErr: errors.New("agent error"),
 			err:      certs.ErrViewEntity,
 		},
+		{
+			desc:    "error listing certs by entity from repo",
+			pm:      pageMetadataWithEntity,
+			repoErr: errors.New("repo error"),
+			err:     certs.ErrViewEntity,
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			agentCall := agent.On("ListCerts", tc.pm).Return(tc.certPage, tc.agentErr)
+			var agentCall, repoCall *mock.Call
+			var agentViewCalls []*mock.Call
+
+			if tc.pm.EntityID != "" {
+				repoCall = repo.On("ListCertsByEntityID", mock.Anything, tc.pm.EntityID).Return(tc.serialNumbers, tc.repoErr)
+				if tc.repoErr == nil && len(tc.serialNumbers) > 0 {
+					for _, serial := range tc.serialNumbers {
+						viewCall := agent.On("View", serial).Return(certs.Certificate{SerialNumber: serial}, nil)
+						agentViewCalls = append(agentViewCalls, viewCall)
+					}
+				}
+			} else {
+				agentCall = agent.On("ListCerts", tc.pm).Return(tc.certPage, tc.agentErr)
+				if tc.agentErr == nil {
+					for _, cert := range tc.certPage.Certificates {
+						repo.On("GetEntityIDBySerial", mock.Anything, cert.SerialNumber).Return("", errors.New("not found"))
+					}
+				}
+			}
 
 			certPage, err := svc.ListCerts(context.Background(), tc.pm)
 			if tc.err != nil {
 				require.True(t, errors.Contains(err, tc.err), "expected error %v, got %v", tc.err, err)
-				require.Empty(t, certPage)
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.certPage, certPage)
+				require.Equal(t, tc.expectedResult.Total, certPage.Total)
+				require.Len(t, certPage.Certificates, len(tc.expectedResult.Certificates))
+			}
+
+			if agentCall != nil {
+				agentCall.Unset()
+			}
+			if repoCall != nil {
+				repoCall.Unset()
+			}
+			for _, viewCall := range agentViewCalls {
+				viewCall.Unset()
+			}
+		})
+	}
+}
+
+func TestRevokeAll(t *testing.T) {
+	agent := new(mocks.Agent)
+	repo := new(mocks.Repository)
+	svc, err := certs.NewService(context.Background(), agent, repo)
+	require.NoError(t, err)
+
+	testCases := []struct {
+		desc          string
+		entityID      string
+		serialNumbers []string
+		repoErr       error
+		agentErr      error
+		removeErr     error
+		err           error
+	}{
+		{
+			desc:          "revoke all certs successfully",
+			entityID:      "entity-123",
+			serialNumbers: []string{"123", "456"},
+			err:           nil,
+		},
+		{
+			desc:     "error listing certs by entity",
+			entityID: "entity-123",
+			repoErr:  errors.New("repo error"),
+			err:      certs.ErrViewEntity,
+		},
+		{
+			desc:          "error revoking cert",
+			entityID:      "entity-123",
+			serialNumbers: []string{"123"},
+			agentErr:      errors.New("agent error"),
+			err:           certs.ErrUpdateEntity,
+		},
+		{
+			desc:     "no certificates found for entity",
+			entityID: "entity-123",
+			err:      certs.ErrNotFound,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			repoCall := repo.On("ListCertsByEntityID", mock.Anything, tc.entityID).Return(tc.serialNumbers, tc.repoErr)
+
+			var agentCalls, removeCalls []*mock.Call
+			if tc.repoErr == nil && len(tc.serialNumbers) > 0 {
+				for _, serial := range tc.serialNumbers {
+					agentCall := agent.On("Revoke", serial).Return(tc.agentErr)
+					agentCalls = append(agentCalls, agentCall)
+
+					if tc.agentErr == nil {
+						removeCall := repo.On("RemoveCertEntityMapping", mock.Anything, serial).Return(tc.removeErr)
+						removeCalls = append(removeCalls, removeCall)
+					}
+				}
+			}
+
+			err := svc.RevokeAll(context.Background(), tc.entityID)
+			if tc.err != nil {
+				require.True(t, errors.Contains(err, tc.err), "expected error %v, got %v", tc.err, err)
+			} else {
+				require.NoError(t, err)
+			}
+
+			// Clean up mocks
+			repoCall.Unset()
+			for _, call := range agentCalls {
+				call.Unset()
+			}
+			for _, call := range removeCalls {
+				call.Unset()
+			}
+		})
+	}
+}
+
+func TestIssueFromCSR(t *testing.T) {
+	agent := new(mocks.Agent)
+	repo := new(mocks.Repository)
+	svc, err := certs.NewService(context.Background(), agent, repo)
+	require.NoError(t, err)
+
+	testCSR := certs.CSR{
+		CSR: []byte("test-csr-data"),
+	}
+
+	testCases := []struct {
+		desc         string
+		entityID     string
+		ttl          string
+		csr          certs.CSR
+		cert         certs.Certificate
+		expectedCert certs.Certificate
+		agentErr     error
+		repoErr      error
+		err          error
+	}{
+		{
+			desc:     "issue cert from CSR successfully",
+			entityID: "entity-123",
+			ttl:      "1h",
+			csr:      testCSR,
+			cert: certs.Certificate{
+				SerialNumber: serialNumber,
+			},
+			expectedCert: certs.Certificate{
+				SerialNumber: serialNumber,
+				EntityID:     "entity-123",
+			},
+			err: nil,
+		},
+		{
+			desc:     "failed agent sign CSR",
+			entityID: "entity-123",
+			ttl:      "1h",
+			csr:      testCSR,
+			cert:     certs.Certificate{},
+			agentErr: errors.New("agent error"),
+			err:      certs.ErrFailedCertCreation,
+		},
+		{
+			desc:     "failed repository save mapping",
+			entityID: "entity-123",
+			ttl:      "1h",
+			csr:      testCSR,
+			cert: certs.Certificate{
+				SerialNumber: serialNumber,
+			},
+			repoErr: errors.New("repo error"),
+			err:     certs.ErrFailedCertCreation,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			agentCall := agent.On("SignCSR", tc.csr.CSR, tc.ttl).Return(tc.cert, tc.agentErr)
+			var repoCall *mock.Call
+			if tc.agentErr == nil {
+				repoCall = repo.On("SaveCertEntityMapping", mock.Anything, tc.cert.SerialNumber, tc.entityID).Return(tc.repoErr)
+			}
+
+			cert, err := svc.IssueFromCSR(context.Background(), tc.entityID, tc.ttl, tc.csr)
+			if tc.err != nil {
+				require.True(t, errors.Contains(err, tc.err), "expected error %v, got %v", tc.err, err)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.expectedCert, cert)
 			}
 
 			agentCall.Unset()
+			if repoCall != nil {
+				repoCall.Unset()
+			}
 		})
 	}
 }
 
 func TestGenerateCRL(t *testing.T) {
 	agent := new(mocks.Agent)
-	svc, err := certs.NewService(context.Background(), agent)
+	repo := new(mocks.Repository)
+	svc, err := certs.NewService(context.Background(), agent, repo)
 	require.NoError(t, err)
 
 	testCases := []struct {
