@@ -108,6 +108,7 @@ func issueCertEndpoint(svc certs.Service) endpoint.Endpoint {
 		return issueCertRes{
 			SerialNumber: cert.SerialNumber,
 			Certificate:  string(cert.Certificate),
+			Key:          string(cert.Key),
 			ExpiryTime:   cert.ExpiryTime,
 			EntityID:     cert.EntityID,
 			Revoked:      cert.Revoked,
