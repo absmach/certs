@@ -198,6 +198,7 @@ func decodeJsonOCSPRequest(body []byte) (any, error) {
 
 	request := ocspReq{
 		SerialNumber: simple.SerialNumber,
+		Certificate:  simple.Certificate,
 	}
 	return request, nil
 }
