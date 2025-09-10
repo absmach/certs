@@ -112,7 +112,7 @@ type PageMetadata struct {
 }
 
 type Options struct {
-	CommonName         string
+	CommonName         string   `json:"common_name"`
 	Organization       []string `json:"organization"`
 	OrganizationalUnit []string `json:"organizational_unit"`
 	Country            []string `json:"country"`
@@ -316,12 +316,7 @@ func (sdk mgSDK) IssueCert(entityID, ttl string, ipAddrs []string, opts Options)
 	if err != nil {
 		return Certificate{}, errors.NewSDKError(err)
 	}
-	url := fmt.Sprintf("%s/%s", issueCertEndpoint, entityID)
-
-	url, err = sdk.withQueryParams(sdk.certsURL, url, PageMetadata{CommonName: opts.CommonName})
-	if err != nil {
-		return Certificate{}, errors.NewSDKError(err)
-	}
+	url := fmt.Sprintf("%s/%s/%s", sdk.certsURL, issueCertEndpoint, entityID)
 	_, body, sdkerr := sdk.processRequest(http.MethodPost, url, d, nil, http.StatusCreated)
 	if sdkerr != nil {
 		return Certificate{}, sdkerr

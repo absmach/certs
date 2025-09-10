@@ -111,7 +111,7 @@ type CSRPage struct {
 }
 
 type SubjectOptions struct {
-	CommonName         string
+	CommonName         string   `json:"common_name"`
 	Organization       []string `json:"organization"`
 	OrganizationalUnit []string `json:"organizational_unit"`
 	Country            []string `json:"country"`

@@ -28,7 +28,6 @@ const (
 	offsetKey       = "offset"
 	limitKey        = "limit"
 	entityKey       = "entity_id"
-	commonName      = "common_name"
 	approve         = "approve"
 	status          = "status"
 	token           = "token"
@@ -208,22 +207,14 @@ func decodeIssueCert(_ context.Context, r *http.Request) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	cn, err := readStringQuery(r, commonName, "")
-	if err != nil {
-		return nil, err
-	}
-	if cn == "" {
-		return nil, ErrMissingCN
-	}
 	req := issueCertReq{
 		entityID: chi.URLParam(r, entityIDParam),
-		Options: certs.SubjectOptions{
-			CommonName: cn,
-		},
 	}
 	if err := json.Unmarshal(body, &req); err != nil {
 		return nil, errors.Wrap(ErrInvalidRequest, err)
 	}
+
+	fmt.Printf("request is %+v\n", req)
 
 	return req, nil
 }

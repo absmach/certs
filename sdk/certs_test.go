@@ -128,16 +128,18 @@ func TestIssueCert(t *testing.T) {
 			ipAddrs:    ipAddr,
 			commonName: "",
 			svcresp:    certs.Certificate{},
-			svcerr:     httpapi.ErrMissingCN,
-			err:        errors.NewSDKErrorWithStatus(httpapi.ErrMissingCN, http.StatusBadRequest),
+			svcerr:     certs.ErrMalformedEntity,
+			err:        errors.NewSDKErrorWithStatus(certs.ErrMalformedEntity, http.StatusBadRequest),
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			svcCall := svc.On("IssueCert", mock.Anything, tc.entityID, tc.ttl, tc.ipAddrs, mock.Anything).Return(tc.svcresp, tc.svcerr)
+			svcCall := svc.On("IssueCert", mock.Anything, tc.entityID, tc.ttl, tc.ipAddrs, certs.SubjectOptions{CommonName: tc.commonName}).Return(tc.svcresp, tc.svcerr)
 
 			resp, err := ctsdk.IssueCert(tc.entityID, tc.ttl, tc.ipAddrs, sdk.Options{CommonName: tc.commonName})
+			fmt.Printf("response is %+v\n", resp)
+			fmt.Printf("error is %+v\n", err)
 			assert.Equal(t, tc.err, err)
 			if tc.err == nil {
 				assert.Equal(t, tc.sdkCert.SerialNumber, resp.SerialNumber)
