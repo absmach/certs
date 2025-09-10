@@ -9,8 +9,8 @@ import (
 
 	"github.com/absmach/certs"
 	"github.com/absmach/certs/errors"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/absmach/supermq/pkg/postgres"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 // Postgres error codes:

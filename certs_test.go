@@ -521,13 +521,13 @@ func TestRevokeAll(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
 			repoCall := repo.On("ListCertsByEntityID", mock.Anything, tc.entityID).Return(tc.serialNumbers, tc.repoErr)
-			
+
 			var agentCalls, removeCalls []*mock.Call
 			if tc.repoErr == nil && len(tc.serialNumbers) > 0 {
 				for _, serial := range tc.serialNumbers {
 					agentCall := agent.On("Revoke", serial).Return(tc.agentErr)
 					agentCalls = append(agentCalls, agentCall)
-					
+
 					if tc.agentErr == nil {
 						removeCall := repo.On("RemoveCertEntityMapping", mock.Anything, serial).Return(tc.removeErr)
 						removeCalls = append(removeCalls, removeCall)
