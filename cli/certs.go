@@ -13,7 +13,6 @@ import (
 	"crypto/x509/pkix"
 	"encoding/json"
 	"encoding/pem"
-	"fmt"
 	"net"
 	"os"
 
@@ -139,8 +138,6 @@ var cmdCerts = []cobra.Command{
 			} else {
 				serialNumber = args[0]
 			}
-
-			fmt.Printf("content is %+v\n", certContent)
 
 			response, err := sdk.OCSP(serialNumber, certContent)
 			if err != nil {
