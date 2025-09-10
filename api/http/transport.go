@@ -214,8 +214,6 @@ func decodeIssueCert(_ context.Context, r *http.Request) (any, error) {
 		return nil, errors.Wrap(ErrInvalidRequest, err)
 	}
 
-	fmt.Printf("request is %+v\n", req)
-
 	return req, nil
 }
 
