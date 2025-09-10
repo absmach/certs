@@ -148,40 +148,6 @@ var cmdCerts = []cobra.Command{
 		},
 	},
 	{
-		Use:   "token <serial_number> ",
-		Short: "Get download token",
-		Long:  `Gets a download token for a given serial number.`,
-		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 1 {
-				logUsageCmd(*cmd, cmd.Use)
-				return
-			}
-			token, err := sdk.RetrieveCertDownloadToken(args[0])
-			if err != nil {
-				logErrorCmd(*cmd, err)
-				return
-			}
-			logJSONCmd(*cmd, token)
-		},
-	},
-	{
-		Use:   "download <serial_number> <token>",
-		Short: "Download certificate",
-		Long:  `Downloads a certificate for a given serial number and token.`,
-		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 2 {
-				logUsageCmd(*cmd, cmd.Use)
-				return
-			}
-			certBundle, err := sdk.DownloadCert(args[1], args[0])
-			if err != nil {
-				logErrorCmd(*cmd, err)
-				return
-			}
-			logSaveCertFiles(*cmd, certBundle)
-		},
-	},
-	{
 		Use:   "view <serial_number>",
 		Short: "View certificate",
 		Long:  `Views a certificate for a given serial number.`,
@@ -409,9 +375,9 @@ func NewCertsCmd() *cobra.Command {
 	issueCmd.Flags().StringVar(&ttl, "ttl", "8760h", "certificate time to live in duration")
 
 	cmd := cobra.Command{
-		Use:   "certs [issue | get | revoke | renew | ocsp | token | download | download-ca | view-ca | token-ca | csr | issue-csr | crl | entity-id | ca]",
+		Use:   "certs [issue | get | revoke | renew | ocsp | view | download-ca | view-ca | token-ca | csr | issue-csr | crl | entity-id | ca]",
 		Short: "Certificates management",
-		Long:  `Certificates management: issue, get all, get by entity ID, revoke, renew, OCSP, token, download, CRL generation, entity ID lookup, and CA operations.`,
+		Long:  `Certificates management: issue, get all, get by entity ID, revoke, renew, OCSP, view, CRL generation, entity ID lookup, and CA operations.`,
 	}
 
 	cmd.AddCommand(&issueCmd)

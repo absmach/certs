@@ -40,18 +40,6 @@ func (tm *tracingMiddleware) RevokeAll(ctx context.Context, entityID string) err
 	return tm.svc.RevokeAll(ctx, entityID)
 }
 
-func (tm *tracingMiddleware) RetrieveCert(ctx context.Context, token, serialNumber string) (certs.Certificate, []byte, error) {
-	ctx, span := tm.tracer.Start(ctx, "get_cert")
-	defer span.End()
-	return tm.svc.RetrieveCert(ctx, token, serialNumber)
-}
-
-func (tm *tracingMiddleware) RetrieveCertDownloadToken(ctx context.Context, serialNumber string) (string, error) {
-	ctx, span := tm.tracer.Start(ctx, "get_cert_download_token")
-	defer span.End()
-	return tm.svc.RetrieveCertDownloadToken(ctx, serialNumber)
-}
-
 func (tm *tracingMiddleware) RetrieveCAToken(ctx context.Context) (string, error) {
 	ctx, span := tm.tracer.Start(ctx, "get_CA_download_token")
 	defer span.End()

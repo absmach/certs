@@ -11,7 +11,6 @@ import (
 	"github.com/absmach/certs"
 	"github.com/absmach/certs/errors"
 	"github.com/absmach/certs/mocks"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -25,7 +24,6 @@ const (
 )
 
 var (
-	invalidToken       = "123"
 	certValidityPeriod = time.Hour * 24 * 30
 )
 
@@ -80,13 +78,13 @@ func TestIssueCert(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			expectedOptions := certs.SubjectOptions{
+			options := certs.SubjectOptions{
 				CommonName: tc.entityID,
 			}
-			agentCall := agent.On("Issue", tc.ttl, []string{}, expectedOptions).Return(tc.cert, tc.agentErr)
+			agentCall := agent.On("Issue", tc.ttl, []string{}, options).Return(tc.cert, tc.agentErr)
 			repoCall := repo.On("SaveCertEntityMapping", mock.Anything, tc.cert.SerialNumber, tc.entityID).Return(tc.repoErr)
 
-			cert, err := svc.IssueCert(context.Background(), tc.entityID, tc.ttl, []string{}, certs.SubjectOptions{})
+			cert, err := svc.IssueCert(context.Background(), tc.entityID, tc.ttl, []string{}, options)
 			if tc.err != nil {
 				require.True(t, errors.Contains(err, tc.err), "expected error %v, got %v", tc.err, err)
 			} else {
@@ -137,119 +135,6 @@ func TestRevokeBySerial(t *testing.T) {
 			}
 
 			agentCall.Unset()
-		})
-	}
-}
-
-func TestGetCertDownloadToken(t *testing.T) {
-	agent := new(mocks.Agent)
-	repo := new(mocks.Repository)
-	svc, err := certs.NewService(context.Background(), agent, repo)
-	require.NoError(t, err)
-
-	testCases := []struct {
-		desc   string
-		serial string
-		token  string
-		err    error
-	}{
-		{
-			desc:   "get cert download token successfully",
-			serial: serialNumber,
-			token:  "valid_token",
-			err:    nil,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.desc, func(t *testing.T) {
-			token, err := svc.RetrieveCertDownloadToken(context.Background(), tc.serial)
-			if tc.err != nil {
-				require.True(t, errors.Contains(err, tc.err), "expected error %v, got %v", tc.err, err)
-			} else {
-				require.NoError(t, err)
-				require.NotEmpty(t, token)
-			}
-		})
-	}
-}
-
-func TestGetCert(t *testing.T) {
-	agent := new(mocks.Agent)
-	repo := new(mocks.Repository)
-	svc, err := certs.NewService(context.Background(), agent, repo)
-	require.NoError(t, err)
-
-	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * 5).UTC()), Issuer: certs.Organization, Subject: "certs"})
-	validToken, err := jwtToken.SignedString([]byte(serialNumber))
-	require.NoError(t, err)
-
-	testCert := certs.Certificate{
-		SerialNumber: serialNumber,
-		EntityID:     "test-entity",
-		Certificate:  []byte(testCertPEM),
-	}
-
-	caChain := []byte(testCAChainPEM)
-
-	testCases := []struct {
-		desc       string
-		token      string
-		serial     string
-		cert       certs.Certificate
-		caChain    []byte
-		viewErr    error
-		caChainErr error
-		err        error
-	}{
-		{
-			desc:    "retrieve cert successfully",
-			token:   validToken,
-			serial:  serialNumber,
-			cert:    testCert,
-			caChain: caChain,
-			err:     nil,
-		},
-		{
-			desc:   "failed token validation",
-			token:  invalidToken,
-			serial: serialNumber,
-			cert:   certs.Certificate{},
-			err:    certs.ErrMalformedEntity,
-		},
-		{
-			desc:    "failed agent view cert",
-			token:   validToken,
-			serial:  serialNumber,
-			cert:    certs.Certificate{},
-			viewErr: errors.New("agent error"),
-			err:     certs.ErrViewEntity,
-		},
-		{
-			desc:       "failed agent get ca chain",
-			token:      validToken,
-			serial:     serialNumber,
-			cert:       testCert,
-			caChain:    []byte{},
-			caChainErr: errors.New("ca chain error"),
-			err:        certs.ErrViewEntity,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.desc, func(t *testing.T) {
-			agentCall := agent.On("View", tc.serial).Return(tc.cert, tc.viewErr)
-			agentCall1 := agent.On("GetCAChain").Return(tc.caChain, tc.caChainErr)
-
-			_, _, err := svc.RetrieveCert(context.Background(), tc.token, tc.serial)
-			if tc.err != nil {
-				require.True(t, errors.Contains(err, tc.err), "expected error %v, got %v", tc.err, err)
-			} else {
-				require.NoError(t, err)
-			}
-
-			agentCall.Unset()
-			agentCall1.Unset()
 		})
 	}
 }

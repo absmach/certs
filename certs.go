@@ -148,18 +148,11 @@ type Service interface {
 	// RevokeAll revokes all certificates for a given entity ID.
 	RevokeAll(ctx context.Context, entityID string) error
 
-	// RetrieveCert retrieves a certificate record from the database.
-	RetrieveCert(ctx context.Context, token, serialNumber string) (Certificate, []byte, error)
-
 	// ViewCert retrieves a certificate record from the database.
 	ViewCert(ctx context.Context, serialNumber string) (Certificate, error)
 
 	// ListCerts retrieves the certificates from the database while applying filters.
 	ListCerts(ctx context.Context, pm PageMetadata) (CertificatePage, error)
-
-	// RetrieveCertDownloadToken generates a certificate download token.
-	// The token is needed to download the client certificate.
-	RetrieveCertDownloadToken(ctx context.Context, serialNumber string) (string, error)
 
 	// RetrieveCAToken generates a CA download and view token.
 	// The token is needed to view and download the CA certificate.

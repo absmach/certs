@@ -36,23 +36,6 @@ func (mm *metricsMiddleware) RenewCert(ctx context.Context, serialNumber string)
 	return mm.svc.RenewCert(ctx, serialNumber)
 }
 
-func (mm *metricsMiddleware) RetrieveCert(ctx context.Context, token, serialNumber string) (certs.Certificate, []byte, error) {
-	defer func(begin time.Time) {
-		mm.counter.With("method", "get_certificate").Add(1)
-		mm.latency.With("method", "get_certificate").Observe(time.Since(begin).Seconds())
-	}(time.Now())
-	return mm.svc.RetrieveCert(ctx, token, serialNumber)
-}
-
-func (mm *metricsMiddleware) RetrieveCertDownloadToken(ctx context.Context, serialNumber string) (string, error) {
-	defer func(begin time.Time) {
-		mm.counter.With("method", "get_certificate_download_token").Add(1)
-		mm.latency.With("method", "get_certificate_download_token").Observe(time.Since(begin).Seconds())
-	}(time.Now())
-
-	return mm.svc.RetrieveCertDownloadToken(ctx, serialNumber)
-}
-
 func (mm *metricsMiddleware) RetrieveCAToken(ctx context.Context) (string, error) {
 	defer func(begin time.Time) {
 		mm.counter.With("method", "get_CA_token").Add(1)

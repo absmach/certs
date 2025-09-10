@@ -206,13 +206,6 @@ type SDK interface {
 	//  fmt.Println(cert)
 	IssueCert(entityID, ttl string, ipAddrs []string, opts Options) (Certificate, errors.SDKError)
 
-	// DownloadCert returns a certificate given certificate ID
-	//
-	// example:
-	//  certBundle, _ := sdk.DownloadCert("serialNumber", "download-token")
-	//  fmt.Println(certBundle)
-	DownloadCert(token, serialNumber string) (CertificateBundle, errors.SDKError)
-
 	// RevokeCert revokes certificate for thing with thingID
 	//
 	// example:
@@ -247,13 +240,6 @@ type SDK interface {
 	//  cert, _ := sdk.ViewCert("serialNumber")
 	//  fmt.Println(cert)
 	ViewCert(serialNumber string) (Certificate, errors.SDKError)
-
-	// RetrieveCertDownloadToken retrieves a download token for a certificate
-	//
-	// example:
-	//  token, _ := sdk.RetrieveCertDownloadToken("serialNumber")
-	//  fmt.Println(token)
-	RetrieveCertDownloadToken(serialNumber string) (Token, errors.SDKError)
 
 	// OCSP checks the revocation status of a certificate using OpenBao's OCSP endpoint.
 	// Returns a binary OCSP response (RFC 6960) with detailed status information.
@@ -348,43 +334,6 @@ func (sdk mgSDK) IssueCert(entityID, ttl string, ipAddrs []string, opts Options)
 	return cert, nil
 }
 
-func (sdk mgSDK) DownloadCert(token, serialNumber string) (CertificateBundle, errors.SDKError) {
-	pm := PageMetadata{
-		Token: token,
-	}
-	url, err := sdk.withQueryParams(sdk.certsURL, fmt.Sprintf("%s/%s/download", certsEndpoint, serialNumber), pm)
-	if err != nil {
-		return CertificateBundle{}, errors.NewSDKError(err)
-	}
-	_, body, sdkerr := sdk.processRequest(http.MethodGet, url, nil, nil, http.StatusOK)
-	if sdkerr != nil {
-		return CertificateBundle{}, sdkerr
-	}
-
-	zipReader, err := zip.NewReader(bytes.NewReader(body), int64(len(body)))
-	if err != nil {
-		return CertificateBundle{}, errors.NewSDKError(err)
-	}
-
-	var bundle CertificateBundle
-	for _, file := range zipReader.File {
-		fileContent, err := readZipFile(file)
-		if err != nil {
-			return CertificateBundle{}, errors.NewSDKError(err)
-		}
-		switch file.Name {
-		case "ca.pem":
-			bundle.CA = fileContent
-		case "cert.pem":
-			bundle.Certificate = fileContent
-		case "key.pem":
-			bundle.PrivateKey = fileContent
-		}
-	}
-
-	return bundle, nil
-}
-
 func (sdk mgSDK) ViewCert(serialNumber string) (Certificate, errors.SDKError) {
 	url := fmt.Sprintf("%s/%s/%s", sdk.certsURL, certsEndpoint, serialNumber)
 	_, body, sdkerr := sdk.processRequest(http.MethodGet, url, nil, nil, http.StatusOK)
@@ -443,20 +392,6 @@ func (sdk mgSDK) DeleteCert(entityID string) errors.SDKError {
 	url := fmt.Sprintf("%s/%s/%s/delete", sdk.certsURL, certsEndpoint, entityID)
 	_, _, sdkerr := sdk.processRequest(http.MethodDelete, url, nil, nil, http.StatusNoContent)
 	return sdkerr
-}
-
-func (sdk mgSDK) RetrieveCertDownloadToken(serialNumber string) (Token, errors.SDKError) {
-	url := fmt.Sprintf("%s/%s/%s/download/token", sdk.certsURL, certsEndpoint, serialNumber)
-	_, body, sdkerr := sdk.processRequest(http.MethodGet, url, nil, nil, http.StatusOK)
-	if sdkerr != nil {
-		return Token{}, sdkerr
-	}
-
-	var tk Token
-	if err := json.Unmarshal(body, &tk); err != nil {
-		return Token{}, errors.NewSDKError(err)
-	}
-	return tk, nil
 }
 
 func (sdk mgSDK) OCSP(serialNumber, cert string) (OCSPResponse, errors.SDKError) {

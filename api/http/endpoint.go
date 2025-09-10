@@ -56,42 +56,9 @@ func deleteCertEndpoint(svc certs.Service) endpoint.Endpoint {
 	}
 }
 
-func requestCertDownloadTokenEndpoint(svc certs.Service) endpoint.Endpoint {
-	return func(ctx context.Context, request any) (response any, err error) {
-		req := request.(viewReq)
-		if err := req.validate(); err != nil {
-			return requestCertDownloadTokenRes{}, err
-		}
 
-		token, err := svc.RetrieveCertDownloadToken(ctx, req.id)
-		if err != nil {
-			return requestCertDownloadTokenRes{}, err
-		}
 
-		return requestCertDownloadTokenRes{Token: token}, nil
-	}
-}
 
-func downloadCertEndpoint(svc certs.Service) endpoint.Endpoint {
-	return func(ctx context.Context, request any) (response any, err error) {
-		req := request.(downloadReq)
-		if err := req.validate(); err != nil {
-			return fileDownloadRes{}, err
-		}
-		cert, ca, err := svc.RetrieveCert(ctx, req.token, req.id)
-		if err != nil {
-			return fileDownloadRes{}, err
-		}
-
-		return fileDownloadRes{
-			Certificate: cert.Certificate,
-			PrivateKey:  cert.Key,
-			CA:          ca,
-			Filename:    "certificates.zip",
-			ContentType: "application/zip",
-		}, nil
-	}
-}
 
 func issueCertEndpoint(svc certs.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request any) (response any, err error) {
@@ -178,18 +145,17 @@ func ocspEndpoint(svc certs.Service) endpoint.Endpoint {
 		}
 
 		var resBytes []byte
-
-		if req.req != nil {
+		if req.SerialNumber != "" {
+			resBytes, err = svc.OCSP(ctx, req.SerialNumber, nil)
+			if err != nil {
+				return nil, err
+			}
+		} else {
 			ocspRequestDER, err := req.req.Marshal()
 			if err != nil {
 				return nil, err
 			}
 			resBytes, err = svc.OCSP(ctx, "", ocspRequestDER)
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			resBytes, err = svc.OCSP(ctx, req.SerialNumber, nil)
 			if err != nil {
 				return nil, err
 			}

@@ -7,13 +7,10 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
-	"crypto"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
-	"math/big"
 	"net/http"
 	"strconv"
 	"strings"
@@ -76,12 +73,6 @@ func MakeHandler(svc certs.Service, logger *slog.Logger, instanceID string) http
 			EncodeResponse,
 			opts...,
 		), "delete_cert").ServeHTTP)
-		r.Get("/{id}/download/token", otelhttp.NewHandler(kithttp.NewServer(
-			requestCertDownloadTokenEndpoint(svc),
-			decodeView,
-			EncodeResponse,
-			opts...,
-		), "get_download_token").ServeHTTP)
 		r.Get("/", otelhttp.NewHandler(kithttp.NewServer(
 			listCertsEndpoint(svc),
 			decodeListCerts,
@@ -94,12 +85,6 @@ func MakeHandler(svc certs.Service, logger *slog.Logger, instanceID string) http
 			EncodeResponse,
 			opts...,
 		), "view_cert").ServeHTTP)
-		r.Get("/{id}/download", otelhttp.NewHandler(kithttp.NewServer(
-			downloadCertEndpoint(svc),
-			decodeDownloadCerts,
-			encodeFileDownloadResponse,
-			opts...,
-		), "download_cert").ServeHTTP)
 		r.Post("/ocsp", otelhttp.NewHandler(kithttp.NewServer(
 			ocspEndpoint(svc),
 			decodeOCSPRequest,
@@ -171,18 +156,7 @@ func decodeCRL(_ context.Context, r *http.Request) (any, error) {
 	return req, nil
 }
 
-func decodeDownloadCerts(_ context.Context, r *http.Request) (any, error) {
-	token, err := readStringQuery(r, token, "")
-	if err != nil {
-		return nil, err
-	}
-	req := downloadReq{
-		token: token,
-		id:    chi.URLParam(r, "id"),
-	}
 
-	return req, nil
-}
 
 func decodeDownloadCA(_ context.Context, r *http.Request) (any, error) {
 	token, err := readStringQuery(r, token, "")
@@ -225,27 +199,8 @@ func decodeJsonOCSPRequest(body []byte) (any, error) {
 		return nil, fmt.Errorf("invalid JSON OCSP request: %w", err)
 	}
 
-	if simple.SerialNumber == "" {
-		return nil, fmt.Errorf("serial_number is required")
-	}
-
-	serialHex := strings.ReplaceAll(simple.SerialNumber, ":", "")
-	serialBytes, err := hex.DecodeString(serialHex)
-	if err != nil {
-		return nil, fmt.Errorf("invalid serial number format: %w", err)
-	}
-	serial := new(big.Int).SetBytes(serialBytes)
-
-	req := &ocsp.Request{
-		HashAlgorithm:  crypto.SHA1,
-		IssuerNameHash: make([]byte, 20),
-		IssuerKeyHash:  make([]byte, 20),
-		SerialNumber:   serial,
-	}
-
 	request := ocspReq{
-		req:         req,
-		StatusParam: simple.StatusParam,
+		SerialNumber: simple.SerialNumber,
 	}
 	return request, nil
 }
@@ -350,49 +305,7 @@ func encodeOSCPResponse(_ context.Context, w http.ResponseWriter, response inter
 	return err
 }
 
-func encodeFileDownloadResponse(_ context.Context, w http.ResponseWriter, response any) error {
-	resp := response.(fileDownloadRes)
-	var buffer bytes.Buffer
-	zw := zip.NewWriter(&buffer)
 
-	f, err := zw.Create("ca.pem")
-	if err != nil {
-		return err
-	}
-
-	if _, err = f.Write(resp.CA); err != nil {
-		return err
-	}
-
-	f, err = zw.Create("cert.pem")
-	if err != nil {
-		return err
-	}
-
-	if _, err = f.Write(resp.Certificate); err != nil {
-		return err
-	}
-
-	f, err = zw.Create("key.pem")
-	if err != nil {
-		return err
-	}
-
-	if _, err = f.Write(resp.PrivateKey); err != nil {
-		return err
-	}
-
-	if err := zw.Close(); err != nil {
-		return err
-	}
-
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", resp.Filename))
-	w.Header().Set("Content-Type", resp.ContentType)
-
-	_, err = w.Write(buffer.Bytes())
-
-	return err
-}
 
 func encodeCADownloadResponse(_ context.Context, w http.ResponseWriter, response any) error {
 	resp := response.(fileDownloadRes)

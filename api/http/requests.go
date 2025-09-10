@@ -94,7 +94,7 @@ type ocspReq struct {
 }
 
 func (req *ocspReq) validate() error {
-	if req.req == nil {
+	if req.req == nil && req.SerialNumber == "" && req.Certificate == "" {
 		return certs.ErrMalformedEntity
 	}
 
