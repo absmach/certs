@@ -88,8 +88,6 @@ func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs [
 	return cert, nil
 }
 
-
-
 func (s *service) ListCerts(ctx context.Context, pm PageMetadata) (CertificatePage, error) {
 	if pm.EntityID != "" {
 		serialNumbers, err := s.repo.ListCertsByEntityID(ctx, pm.EntityID)
@@ -220,8 +218,6 @@ func (s *service) ViewCA(ctx context.Context) (Certificate, error) {
 		Type:         IntermediateCA,
 	}, nil
 }
-
-
 
 // RetrieveCAToken generates a download token for a certificate.
 // It verifies the token and serial number, and returns a signed JWT token string.
