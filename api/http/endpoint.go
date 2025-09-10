@@ -56,10 +56,6 @@ func deleteCertEndpoint(svc certs.Service) endpoint.Endpoint {
 	}
 }
 
-
-
-
-
 func issueCertEndpoint(svc certs.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request any) (response any, err error) {
 		req := request.(issueCertReq)

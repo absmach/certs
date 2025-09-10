@@ -156,8 +156,6 @@ func decodeCRL(_ context.Context, r *http.Request) (any, error) {
 	return req, nil
 }
 
-
-
 func decodeDownloadCA(_ context.Context, r *http.Request) (any, error) {
 	token, err := readStringQuery(r, token, "")
 	if err != nil {
@@ -304,8 +302,6 @@ func encodeOSCPResponse(_ context.Context, w http.ResponseWriter, response inter
 	_, err := w.Write(res.Data)
 	return err
 }
-
-
 
 func encodeCADownloadResponse(_ context.Context, w http.ResponseWriter, response any) error {
 	resp := response.(fileDownloadRes)

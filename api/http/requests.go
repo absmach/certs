@@ -15,7 +15,6 @@ import (
 )
 
 type downloadReq struct {
-	id    string
 	token string
 }
 

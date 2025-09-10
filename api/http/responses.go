@@ -78,8 +78,6 @@ func (res deleteCertRes) Empty() bool {
 	return true
 }
 
-
-
 type issueCertRes struct {
 	SerialNumber string    `json:"serial_number"`
 	Certificate  string    `json:"certificate,omitempty"`
@@ -177,8 +175,6 @@ func (res ocspRawRes) Headers() map[string]string {
 func (res ocspRawRes) Empty() bool {
 	return false
 }
-
-
 
 type requestCertDownloadTokenRes struct {
 	Token string `json:"token"`
