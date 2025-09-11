@@ -179,8 +179,8 @@ func (_c *SDK_DownloadCA_Call) RunAndReturn(run func(caToken string, domainID st
 }
 
 // GenerateCRL provides a mock function for the type SDK
-func (_mock *SDK) GenerateCRL(certType sdk.CertType) ([]byte, errors.SDKError) {
-	ret := _mock.Called(certType)
+func (_mock *SDK) GenerateCRL(certType sdk.CertType, domainID string, token string) ([]byte, errors.SDKError) {
+	ret := _mock.Called(certType, domainID, token)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GenerateCRL")
@@ -188,18 +188,18 @@ func (_mock *SDK) GenerateCRL(certType sdk.CertType) ([]byte, errors.SDKError) {
 
 	var r0 []byte
 	var r1 errors.SDKError
-	if returnFunc, ok := ret.Get(0).(func(sdk.CertType) ([]byte, errors.SDKError)); ok {
-		return returnFunc(certType)
+	if returnFunc, ok := ret.Get(0).(func(sdk.CertType, string, string) ([]byte, errors.SDKError)); ok {
+		return returnFunc(certType, domainID, token)
 	}
-	if returnFunc, ok := ret.Get(0).(func(sdk.CertType) []byte); ok {
-		r0 = returnFunc(certType)
+	if returnFunc, ok := ret.Get(0).(func(sdk.CertType, string, string) []byte); ok {
+		r0 = returnFunc(certType, domainID, token)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]byte)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(sdk.CertType) errors.SDKError); ok {
-		r1 = returnFunc(certType)
+	if returnFunc, ok := ret.Get(1).(func(sdk.CertType, string, string) errors.SDKError); ok {
+		r1 = returnFunc(certType, domainID, token)
 	} else {
 		if ret.Get(1) != nil {
 			r1 = ret.Get(1).(errors.SDKError)
@@ -215,18 +215,30 @@ type SDK_GenerateCRL_Call struct {
 
 // GenerateCRL is a helper method to define mock.On call
 //   - certType sdk.CertType
-func (_e *SDK_Expecter) GenerateCRL(certType interface{}) *SDK_GenerateCRL_Call {
-	return &SDK_GenerateCRL_Call{Call: _e.mock.On("GenerateCRL", certType)}
+//   - domainID string
+//   - token string
+func (_e *SDK_Expecter) GenerateCRL(certType interface{}, domainID interface{}, token interface{}) *SDK_GenerateCRL_Call {
+	return &SDK_GenerateCRL_Call{Call: _e.mock.On("GenerateCRL", certType, domainID, token)}
 }
 
-func (_c *SDK_GenerateCRL_Call) Run(run func(certType sdk.CertType)) *SDK_GenerateCRL_Call {
+func (_c *SDK_GenerateCRL_Call) Run(run func(certType sdk.CertType, domainID string, token string)) *SDK_GenerateCRL_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 sdk.CertType
 		if args[0] != nil {
 			arg0 = args[0].(sdk.CertType)
 		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
