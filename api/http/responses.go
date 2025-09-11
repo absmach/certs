@@ -78,6 +78,22 @@ func (res deleteCertRes) Empty() bool {
 	return true
 }
 
+type requestCertDownloadTokenRes struct {
+	Token string `json:"token"`
+}
+
+func (res requestCertDownloadTokenRes) Code() int {
+	return http.StatusOK
+}
+
+func (res requestCertDownloadTokenRes) Headers() map[string]string {
+	return map[string]string{}
+}
+
+func (res requestCertDownloadTokenRes) Empty() bool {
+	return false
+}
+
 type issueCertRes struct {
 	SerialNumber string    `json:"serial_number"`
 	Certificate  string    `json:"certificate,omitempty"`
@@ -173,22 +189,6 @@ func (res ocspRawRes) Headers() map[string]string {
 }
 
 func (res ocspRawRes) Empty() bool {
-	return false
-}
-
-type requestCertDownloadTokenRes struct {
-	Token string `json:"token"`
-}
-
-func (res requestCertDownloadTokenRes) Code() int {
-	return http.StatusOK
-}
-
-func (res requestCertDownloadTokenRes) Headers() map[string]string {
-	return map[string]string{}
-}
-
-func (res requestCertDownloadTokenRes) Empty() bool {
 	return false
 }
 
