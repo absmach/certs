@@ -64,10 +64,26 @@ func logOKCmd(cmd cobra.Command) {
 	fmt.Fprintf(cmd.OutOrStdout(), "\n%s\n\n", color.BlueString("ok"))
 }
 
+func logSaveCertFiles(cmd cobra.Command, cert ctxsdk.Certificate) {
+	files := map[string][]byte{
+		"cert.pem": []byte(cert.Certificate),
+		"key.pem":  []byte(cert.Key),
+	}
+
+	for filename, content := range files {
+		err := saveToFile(filename, content)
+		if err != nil {
+			logErrorCmd(cmd, err)
+			return
+		}
+		fmt.Fprintf(cmd.OutOrStdout(), "Saved %s\n", filename)
+	}
+	fmt.Fprintf(cmd.OutOrStdout(), "\nAll certificate files have been saved successfully.\n")
+}
+
 func logSaveCAFiles(cmd cobra.Command, certBundle ctxsdk.CertificateBundle) {
 	files := map[string][]byte{
 		"ca.crt": certBundle.Certificate,
-		"ca.key": certBundle.PrivateKey,
 	}
 
 	for filename, content := range files {

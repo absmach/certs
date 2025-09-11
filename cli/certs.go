@@ -369,6 +369,7 @@ func NewCertsCmd() *cobra.Command {
 				return
 			}
 			logJSONCmd(*cmd, cert)
+			logSaveCertFiles(*cmd, cert)
 		},
 	}
 
