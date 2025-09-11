@@ -34,14 +34,14 @@ func (am *authorizationMiddleware) RenewCert(ctx context.Context, session authn.
 }
 
 func (am *authorizationMiddleware) RevokeBySerial(ctx context.Context, session authn.Session, serialNumber string) error {
-	if err := am.checkUserDomainPermission(ctx, session, policies.MembershipPermission); err != nil {
+	if err := am.checkUserDomainPermission(ctx, session, policies.AdminPermission); err != nil {
 		return err
 	}
 	return am.svc.RevokeBySerial(ctx, session, serialNumber)
 }
 
 func (am *authorizationMiddleware) RevokeAll(ctx context.Context, session authn.Session, entityID string) error {
-	if err := am.checkUserDomainPermission(ctx, session, policies.MembershipPermission); err != nil {
+	if err := am.checkUserDomainPermission(ctx, session, policies.AdminPermission); err != nil {
 		return err
 	}
 	return am.svc.RevokeAll(ctx, session, entityID)
