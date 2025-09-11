@@ -272,11 +272,11 @@ var cmdCerts = []cobra.Command{
 		},
 	},
 	{
-		Use:   "crl [root | intermediate]",
+		Use:   "crl [root | intermediate] <domain_id> <token>",
 		Short: "Generate Certificate Revocation List",
 		Long:  `Generates a Certificate Revocation List (CRL) for the specified CA type.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 1 {
+			if len(args) != 3 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
@@ -292,7 +292,7 @@ var cmdCerts = []cobra.Command{
 				return
 			}
 
-			crlBytes, err := sdk.GenerateCRL(certType)
+			crlBytes, err := sdk.GenerateCRL(certType, args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -301,15 +301,15 @@ var cmdCerts = []cobra.Command{
 		},
 	},
 	{
-		Use:   "entity-id <serial_number>",
+		Use:   "entity-id <serial_number> <domain_id> <token>",
 		Short: "Get entity ID by serial number",
 		Long:  `Gets the entity ID for a certificate by its serial number.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 1 {
+			if len(args) != 3 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			entityID, err := sdk.GetEntityID(args[0])
+			entityID, err := sdk.GetEntityID(args[0], args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -318,15 +318,15 @@ var cmdCerts = []cobra.Command{
 		},
 	},
 	{
-		Use:   "ca",
+		Use:   "ca <domain_id> <token>",
 		Short: "Get CA certificate",
-		Long:  `Gets the CA certificate without requiring a token.`,
+		Long:  `Gets the CA certificate.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 0 {
+			if len(args) != 2 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			cert, err := sdk.GetCA()
+			cert, err := sdk.GetCA(args[0], args[1])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return

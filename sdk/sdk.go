@@ -283,30 +283,30 @@ type SDK interface {
 	// GenerateCRL generates a Certificate Revocation List
 	//
 	// example:
-	//	crlBytes, err := sdk.GenerateCRL(sdk.RootCA)
+	//	crlBytes, err := sdk.GenerateCRL(sdk.RootCA, "domainID", "token")
 	//	fmt.Println(err)
-	GenerateCRL(certType CertType) ([]byte, errors.SDKError)
+	GenerateCRL(certType CertType, domainID, token string) ([]byte, errors.SDKError)
 
 	// RevokeAll revokes all certificates for an entity ID
 	//
 	// example:
-	//	err := sdk.RevokeAll("entityID")
+	//	err := sdk.RevokeAll("entityID", "domainID", "token")
 	//	fmt.Println(err)
-	RevokeAll(entityID string) errors.SDKError
+	RevokeAll(entityID, domainID, token string) errors.SDKError
 
 	// GetEntityID gets the entity ID for a certificate by serial number
 	//
 	// example:
-	//	entityID, err := sdk.GetEntityID("serialNumber")
+	//	entityID, err := sdk.GetEntityID("serialNumber", "domainID", "token")
 	//	fmt.Println(entityID)
-	GetEntityID(serialNumber string) (string, errors.SDKError)
+	GetEntityID(serialNumber, domainID, token string) (string, errors.SDKError)
 
 	// GetCA gets the CA certificate
 	//
 	// example:
-	//	ca, err := sdk.GetCA()
+	//	ca, err := sdk.GetCA("domainID", "token")
 	//	fmt.Println(ca)
-	GetCA() (Certificate, errors.SDKError)
+	GetCA(domainID, token string) (Certificate, errors.SDKError)
 }
 
 func (sdk mgSDK) IssueCert(entityID, ttl string, ipAddrs []string, opts Options, domainID, token string) (Certificate, errors.SDKError) {
@@ -572,9 +572,9 @@ func (sdk mgSDK) IssueFromCSR(entityID, ttl, csr, domainID, token string) (Certi
 	return cert, nil
 }
 
-func (sdk mgSDK) GenerateCRL(certType CertType) ([]byte, errors.SDKError) {
-	url := fmt.Sprintf("%s/%s/%s", sdk.certsURL, certsEndpoint, crlEndpoint)
-	_, body, sdkerr := sdk.processRequest(http.MethodGet, url, nil, nil, http.StatusOK)
+func (sdk mgSDK) GenerateCRL(certType CertType, domainID, token string) ([]byte, errors.SDKError) {
+	url := fmt.Sprintf("%s/%s/%s/%s", sdk.certsURL, domainID, certsEndpoint, crlEndpoint)
+	_, body, sdkerr := sdk.processRequest(context.Background(), http.MethodGet, url, token, nil, nil, http.StatusOK)
 	if sdkerr != nil {
 		return nil, sdkerr
 	}
@@ -595,26 +595,26 @@ func (sdk mgSDK) GenerateCRL(certType CertType) ([]byte, errors.SDKError) {
 	return crlData, nil
 }
 
-func (sdk mgSDK) RevokeAll(entityID string) errors.SDKError {
-	url := fmt.Sprintf("%s/%s/%s/delete", sdk.certsURL, certsEndpoint, entityID)
-	_, _, sdkerr := sdk.processRequest(http.MethodDelete, url, nil, nil, http.StatusNoContent)
+func (sdk mgSDK) RevokeAll(entityID, domainID, token string) errors.SDKError {
+	url := fmt.Sprintf("%s/%s/%s/%s/delete", sdk.certsURL, domainID, certsEndpoint, entityID)
+	_, _, sdkerr := sdk.processRequest(context.Background(), http.MethodDelete, url, token, nil, nil, http.StatusNoContent)
 	return sdkerr
 }
 
-func (sdk mgSDK) GetEntityID(serialNumber string) (string, errors.SDKError) {
-	cert, err := sdk.ViewCert(serialNumber)
+func (sdk mgSDK) GetEntityID(serialNumber, domainID, token string) (string, errors.SDKError) {
+	cert, err := sdk.ViewCert(serialNumber, domainID, token)
 	if err != nil {
 		return "", err
 	}
 	return cert.EntityID, nil
 }
 
-func (sdk mgSDK) GetCA() (Certificate, errors.SDKError) {
-	token, err := sdk.GetCAToken()
+func (sdk mgSDK) GetCA(domainID, token string) (Certificate, errors.SDKError) {
+	caToken, err := sdk.GetCAToken(domainID, token)
 	if err != nil {
 		return Certificate{}, err
 	}
-	return sdk.ViewCA(token.Token)
+	return sdk.ViewCA(caToken.Token, domainID, token)
 }
 
 func NewSDK(conf Config) SDK {
