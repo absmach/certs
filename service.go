@@ -88,28 +88,6 @@ func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs [
 	return cert, nil
 }
 
-// RetrieveCert retrieves a certificate with the specified serial number.
-// It requires a valid authentication token to be provided.
-// If the token is invalid or expired, an error is returned.
-// The function returns the retrieved certificate and any error encountered.
-func (s *service) RetrieveCert(ctx context.Context, token, serialNumber string) (Certificate, []byte, error) {
-	if _, err := jwt.ParseWithClaims(token, &jwt.RegisteredClaims{Issuer: Organization, Subject: "certs"}, func(token *jwt.Token) (any, error) {
-		return []byte(serialNumber), nil
-	}); err != nil {
-		return Certificate{}, []byte{}, errors.Wrap(err, ErrMalformedEntity)
-	}
-	cert, err := s.pki.View(serialNumber)
-	if err != nil {
-		return Certificate{}, []byte{}, errors.Wrap(ErrViewEntity, err)
-	}
-	concat, err := s.getConcatCAs(ctx)
-	if err != nil {
-		return Certificate{}, []byte{}, errors.Wrap(ErrViewEntity, err)
-	}
-
-	return cert, concat.Certificate, nil
-}
-
 func (s *service) ListCerts(ctx context.Context, pm PageMetadata) (CertificatePage, error) {
 	if pm.EntityID != "" {
 		serialNumbers, err := s.repo.ListCertsByEntityID(ctx, pm.EntityID)
@@ -239,26 +217,6 @@ func (s *service) ViewCA(ctx context.Context) (Certificate, error) {
 		EntityID:     cert.Subject.CommonName,
 		Type:         IntermediateCA,
 	}, nil
-}
-
-// RetrieveCertDownloadToken generates a download token for a certificate.
-// It verifies the token and serial number, and returns a signed JWT token string.
-// The token is valid for 5 minutes.
-// Parameters:
-//   - ctx: the context.Context object for the request
-//   - serialNumber: the serial number of the certificate
-//
-// Returns:
-//   - string: the signed JWT token string
-//   - error: an error if the authentication fails or any other error occurs
-func (s *service) RetrieveCertDownloadToken(ctx context.Context, serialNumber string) (string, error) {
-	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{ExpiresAt: jwt.NewNumericDate(time.Now().UTC().Add(downloadTokenExpiry)), Issuer: Organization, Subject: "certs"})
-	token, err := jwtToken.SignedString([]byte(serialNumber))
-	if err != nil {
-		return "", errors.Wrap(ErrGetToken, err)
-	}
-
-	return token, nil
 }
 
 // RetrieveCAToken generates a download token for a certificate.

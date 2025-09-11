@@ -36,30 +36,6 @@ func (lm *loggingMiddleware) RenewCert(ctx context.Context, serialNumber string)
 	return lm.svc.RenewCert(ctx, serialNumber)
 }
 
-func (lm *loggingMiddleware) RetrieveCert(ctx context.Context, token, serialNumber string) (cert certs.Certificate, ca []byte, err error) {
-	defer func(begin time.Time) {
-		message := fmt.Sprintf("Method get_cert for cert %s took %s to complete", serialNumber, time.Since(begin))
-		if err != nil {
-			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
-			return
-		}
-		lm.logger.Info(message)
-	}(time.Now())
-	return lm.svc.RetrieveCert(ctx, token, serialNumber)
-}
-
-func (lm *loggingMiddleware) RetrieveCertDownloadToken(ctx context.Context, serialNumber string) (tokenString string, err error) {
-	defer func(begin time.Time) {
-		message := fmt.Sprintf("Method get_cert_download_token for cert took %s to complete", time.Since(begin))
-		if err != nil {
-			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
-			return
-		}
-		lm.logger.Info(message)
-	}(time.Now())
-	return lm.svc.RetrieveCertDownloadToken(ctx, serialNumber)
-}
-
 func (lm *loggingMiddleware) RetrieveCAToken(ctx context.Context) (tokenString string, err error) {
 	defer func(begin time.Time) {
 		message := fmt.Sprintf("Method get_ca_token took %s to complete", time.Since(begin))

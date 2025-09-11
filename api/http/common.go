@@ -52,8 +52,7 @@ func EncodeError(_ context.Context, err error, w http.ResponseWriter) {
 		errors.Contains(err, ErrEmptyToken),
 		errors.Contains(err, ErrInvalidQueryParams),
 		errors.Contains(err, ErrValidation),
-		errors.Contains(err, ErrInvalidRequest),
-		errors.Contains(err, ErrMissingCN):
+		errors.Contains(err, ErrInvalidRequest):
 		err = unwrap(err)
 		w.WriteHeader(http.StatusBadRequest)
 

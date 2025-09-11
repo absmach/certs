@@ -6,17 +6,12 @@ package pki
 
 import (
 	"crypto"
-	"crypto/sha1"
 	"crypto/x509"
-	"crypto/x509/pkix"
-	"encoding/asn1"
-	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"io"
 	"log/slog"
-	"math/big"
 	"net/http"
 	"strings"
 	"time"
@@ -631,38 +626,33 @@ func (va *openbaoPKIAgent) OCSP(serialNumber string, ocspRequestDER []byte) ([]b
 			return nil, fmt.Errorf("failed to get issuer certificate for OCSP: %w", err)
 		}
 
-		serialBytes, err := parseSerialNumber(serialNumber)
+		cert, err := va.View(serialNumber)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse serial number: %w", err)
+			return nil, fmt.Errorf("failed to get certificate for OCSP: %w", err)
 		}
 
-		issuerNameDER, err := va.encodeRDNSequence(issuerCert.Subject)
+		block, _ := pem.Decode(cert.Certificate)
+		if block == nil {
+			return nil, fmt.Errorf("failed to decode certificate PEM")
+		}
+
+		subject, err := x509.ParseCertificate(block.Bytes)
 		if err != nil {
-			return nil, fmt.Errorf("failed to encode issuer name: %w", err)
+			return nil, fmt.Errorf("failed to parse certificate: %w", err)
 		}
 
-		var issuerKeyHash []byte
-		if len(issuerCert.SubjectKeyId) > 0 {
-			issuerKeyHash = sha1Hash(issuerCert.SubjectKeyId)
-		}
-
-		ocspReq := &ocsp.Request{
-			HashAlgorithm:  crypto.SHA1,
-			IssuerNameHash: sha1Hash(issuerNameDER),
-			IssuerKeyHash:  issuerKeyHash,
-			SerialNumber:   new(big.Int).SetBytes(serialBytes),
-		}
-
-		requestDER, err = ocspReq.Marshal()
+		requestDER, err = ocsp.CreateRequest(subject, issuerCert, &ocsp.RequestOptions{
+			Hash: crypto.SHA1,
+		})
 		if err != nil {
-			return nil, fmt.Errorf("failed to marshal OCSP request: %w", err)
+			return nil, fmt.Errorf("failed to create OCSP request: %w", err)
 		}
 	}
 
 	url := fmt.Sprintf("%s/v1/%s/ocsp", va.host, va.path)
 	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(string(requestDER)))
 	if err != nil {
-		return nil, fmt.Errorf("failed to create OCSP request: %w", err)
+		return nil, fmt.Errorf("failed to create OCSP POST request: %w", err)
 	}
 
 	req.Header.Set("Content-Type", "application/ocsp-request")
@@ -715,24 +705,4 @@ func (va *openbaoPKIAgent) getIssuerCertificate() (*x509.Certificate, error) {
 	}
 
 	return cert, nil
-}
-
-func parseSerialNumber(serialStr string) ([]byte, error) {
-	cleaned := strings.ReplaceAll(strings.ReplaceAll(serialStr, ":", ""), "-", "")
-
-	serialBytes, err := hex.DecodeString(cleaned)
-	if err != nil {
-		return nil, fmt.Errorf("invalid serial number format: %w", err)
-	}
-
-	return serialBytes, nil
-}
-
-func sha1Hash(data []byte) []byte {
-	h := sha1.Sum(data)
-	return h[:]
-}
-
-func (va *openbaoPKIAgent) encodeRDNSequence(name pkix.Name) ([]byte, error) {
-	return asn1.Marshal(name.ToRDNSequence())
 }
