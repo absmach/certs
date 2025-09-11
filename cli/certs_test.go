@@ -528,7 +528,7 @@ func TestDownloadCACmd(t *testing.T) {
 			defer func() {
 				cleanupFiles(t, []string{"ca.key", "ca.crt"})
 			}()
-			sdkCall := sdkMock.On("DownloadCA", mock.Anything, mock.Anything).Return(tc.certBundle, tc.sdkErr)
+			sdkCall := sdkMock.On("DownloadCA", mock.Anything, mock.Anything, mock.Anything).Return(tc.certBundle, tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{downloadCACmd}, tc.args...)...)
 			switch tc.logType {
 			case entityLog:
@@ -629,24 +629,24 @@ func TestGenerateCRLCmd(t *testing.T) {
 	}{
 		{
 			desc:     "generate CRL successfully for root",
-			args:     []string{"root"},
+			args:     []string{"root", domainID, token},
 			logType:  entityLog,
 			crlBytes: []byte("mock-crl-data"),
 		},
 		{
 			desc:     "generate CRL successfully for intermediate",
-			args:     []string{"intermediate"},
+			args:     []string{"intermediate", domainID, token},
 			logType:  entityLog,
 			crlBytes: []byte("mock-crl-data"),
 		},
 		{
 			desc:    "generate CRL with invalid args",
-			args:    []string{"invalid"},
+			args:    []string{"invalid", domainID},
 			logType: usageLog,
 		},
 		{
 			desc:          "generate CRL failed",
-			args:          []string{"root"},
+			args:          []string{"root", domainID, token},
 			sdkErr:        errors.NewSDKErrorWithStatus(certs.ErrFailedCertCreation, http.StatusUnprocessableEntity),
 			errLogMessage: fmt.Sprintf("\nerror: %s\n\n", errors.NewSDKErrorWithStatus(certs.ErrFailedCertCreation, http.StatusUnprocessableEntity)),
 			logType:       errLog,
@@ -658,7 +658,7 @@ func TestGenerateCRLCmd(t *testing.T) {
 			defer func() {
 				cleanupFiles(t, []string{"root_ca.crl", "intermediate_ca.crl"})
 			}()
-			sdkCall := sdkMock.On("GenerateCRL", mock.Anything).Return(tc.crlBytes, tc.sdkErr)
+			sdkCall := sdkMock.On("GenerateCRL", mock.Anything, mock.Anything, mock.Anything).Return(tc.crlBytes, tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{"crl"}, tc.args...)...)
 
 			switch tc.logType {
@@ -692,7 +692,7 @@ func TestGetEntityIDCmd(t *testing.T) {
 	}{
 		{
 			desc:     "get entity ID successfully",
-			args:     []string{serialNumber},
+			args:     []string{serialNumber, domainID, token},
 			logType:  entityLog,
 			entityID: entityID,
 		},
@@ -703,7 +703,7 @@ func TestGetEntityIDCmd(t *testing.T) {
 		},
 		{
 			desc:          "get entity ID failed",
-			args:          []string{serialNumber},
+			args:          []string{serialNumber, domainID, token},
 			sdkErr:        errors.NewSDKErrorWithStatus(certs.ErrViewEntity, http.StatusUnprocessableEntity),
 			errLogMessage: fmt.Sprintf("\nerror: %s\n\n", errors.NewSDKErrorWithStatus(certs.ErrViewEntity, http.StatusUnprocessableEntity)),
 			logType:       errLog,
@@ -712,7 +712,7 @@ func TestGetEntityIDCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("GetEntityID", mock.Anything).Return(tc.entityID, tc.sdkErr)
+			sdkCall := sdkMock.On("GetEntityID", mock.Anything, mock.Anything, mock.Anything).Return(tc.entityID, tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{"entity-id"}, tc.args...)...)
 
 			switch tc.logType {
@@ -743,7 +743,7 @@ func TestGetCACmd(t *testing.T) {
 	}{
 		{
 			desc:    "get CA successfully",
-			args:    []string{},
+			args:    []string{domainID, token},
 			logType: entityLog,
 			cert: sdk.Certificate{
 				SerialNumber: serialNumber,
@@ -757,7 +757,7 @@ func TestGetCACmd(t *testing.T) {
 		},
 		{
 			desc:    "get CA failed",
-			args:    []string{},
+			args:    []string{domainID, token},
 			sdkErr:  errors.NewSDKErrorWithStatus(certs.ErrViewEntity, http.StatusUnprocessableEntity),
 			logType: usageLog,
 		},
@@ -767,7 +767,7 @@ func TestGetCACmd(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			sdkMock := new(sdkmocks.SDK)
 			cli.SetSDK(sdkMock)
-			sdkCall := sdkMock.On("GetCA").Return(tc.cert, tc.sdkErr)
+			sdkCall := sdkMock.On("GetCA", mock.Anything, mock.Anything).Return(tc.cert, tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{"ca"}, tc.args...)...)
 
 			switch tc.logType {
