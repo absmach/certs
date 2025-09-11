@@ -25,7 +25,6 @@ const (
 )
 
 var (
-	invalidToken       = "invalid_token"
 	certValidityPeriod = time.Hour * 24 * 30
 	testSession        = smqauthn.Session{
 		DomainUserID: entityID,
