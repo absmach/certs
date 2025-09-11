@@ -33,10 +33,6 @@ func (am *authorizationMiddleware) RenewCert(ctx context.Context, session authn.
 	return am.svc.RenewCert(ctx, session, serialNumber)
 }
 
-func (am *authorizationMiddleware) RetrieveCert(ctx context.Context, session authn.Session, token, serialNumber string) (crt.Certificate, []byte, error) {
-	return am.svc.RetrieveCert(ctx, session, token, serialNumber)
-}
-
 func (am *authorizationMiddleware) RevokeBySerial(ctx context.Context, session authn.Session, serialNumber string) error {
 	if err := am.checkUserDomainPermission(ctx, session, policies.MembershipPermission); err != nil {
 		return err
@@ -49,13 +45,6 @@ func (am *authorizationMiddleware) RevokeAll(ctx context.Context, session authn.
 		return err
 	}
 	return am.svc.RevokeAll(ctx, session, entityID)
-}
-
-func (am *authorizationMiddleware) RetrieveCertDownloadToken(ctx context.Context, session authn.Session, serialNumber string) (string, error) {
-	if err := am.checkUserDomainPermission(ctx, session, policies.MembershipPermission); err != nil {
-		return "", err
-	}
-	return am.svc.RetrieveCertDownloadToken(ctx, session, serialNumber)
 }
 
 func (am *authorizationMiddleware) IssueCert(ctx context.Context, session authn.Session, entityID, ttl string, ipAddrs []string, options crt.SubjectOptions) (crt.Certificate, error) {
@@ -81,6 +70,10 @@ func (am *authorizationMiddleware) ViewCert(ctx context.Context, session authn.S
 
 func (am *authorizationMiddleware) GetEntityID(ctx context.Context, serialNumber string) (string, error) {
 	return am.svc.GetEntityID(ctx, serialNumber)
+}
+
+func (am *authorizationMiddleware) GetCA(ctx context.Context) (crt.Certificate, error) {
+	return am.svc.GetCA(ctx)
 }
 
 func (am *authorizationMiddleware) RetrieveCAToken(ctx context.Context, session authn.Session) (string, error) {

@@ -427,7 +427,7 @@ func TestRevokeAll(t *testing.T) {
 				}
 			}
 
-			err := svc.RevokeAll(context.Background(), tc.entityID)
+			err := svc.RevokeAll(context.Background(), testSession, tc.entityID)
 			if tc.err != nil {
 				require.True(t, errors.Contains(err, tc.err), "expected error %v, got %v", tc.err, err)
 			} else {
@@ -511,7 +511,7 @@ func TestIssueFromCSR(t *testing.T) {
 				repoCall = repo.On("SaveCertEntityMapping", mock.Anything, tc.cert.SerialNumber, tc.entityID).Return(tc.repoErr)
 			}
 
-			cert, err := svc.IssueFromCSR(context.Background(), tc.entityID, tc.ttl, tc.csr)
+			cert, err := svc.IssueFromCSR(context.Background(), testSession, tc.entityID, tc.ttl, tc.csr)
 			if tc.err != nil {
 				require.True(t, errors.Contains(err, tc.err), "expected error %v, got %v", tc.err, err)
 			} else {
