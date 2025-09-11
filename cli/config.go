@@ -8,8 +8,8 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/absmach/certs/errors"
 	ctxsdk "github.com/absmach/certs/sdk"
+	"github.com/absmach/supermq/pkg/errors"
 	"github.com/pelletier/go-toml"
 )
 

@@ -4,7 +4,7 @@
 package uuid
 
 import (
-	"github.com/absmach/certs/errors"
+	"github.com/absmach/supermq/pkg/errors"
 	"github.com/gofrs/uuid"
 )
 
