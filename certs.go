@@ -167,7 +167,7 @@ type Service interface {
 	OCSP(ctx context.Context, session authn.Session, serialNumber string, ocspRequestDER []byte) ([]byte, error)
 
 	// GetEntityID retrieves the entity ID for a certificate.
-	GetEntityID(ctx context.Context, session authn.Session, serialNumber string) (string, error)
+	GetEntityID(ctx context.Context, serialNumber string) (string, error)
 
 	// GenerateCRL creates cert revocation list.
 	GenerateCRL(ctx context.Context, session authn.Session, caType CertType) ([]byte, error)

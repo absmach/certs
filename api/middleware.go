@@ -78,11 +78,8 @@ func (am *authorizationMiddleware) ViewCert(ctx context.Context, session authn.S
 	return am.svc.ViewCert(ctx, session, serialNumber)
 }
 
-func (am *authorizationMiddleware) GetEntityID(ctx context.Context, session authn.Session, serialNumber string) (string, error) {
-	if err := am.checkUserDomainPermission(ctx, session, policies.MembershipPermission); err != nil {
-		return "", err
-	}
-	return am.svc.GetEntityID(ctx, session, serialNumber)
+func (am *authorizationMiddleware) GetEntityID(ctx context.Context, serialNumber string) (string, error) {
+	return am.svc.GetEntityID(ctx, serialNumber)
 }
 
 func (am *authorizationMiddleware) RetrieveCAToken(ctx context.Context, session authn.Session) (string, error) {

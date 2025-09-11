@@ -268,7 +268,7 @@ func (s *service) OCSP(ctx context.Context, session authn.Session, serialNumber 
 	return s.pki.OCSP(serialNumber, ocspRequestDER)
 }
 
-func (s *service) GetEntityID(ctx context.Context, session authn.Session, serialNumber string) (string, error) {
+func (s *service) GetEntityID(ctx context.Context, serialNumber string) (string, error) {
 	entityID, err := s.repo.GetEntityIDBySerial(ctx, serialNumber)
 	if err != nil {
 		return "", errors.Wrap(ErrViewEntity, err)
