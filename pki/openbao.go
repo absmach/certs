@@ -42,24 +42,27 @@ var (
 )
 
 type openbaoPKIAgent struct {
-	appRole    string
-	appSecret  string
-	namespace  string
-	path       string
-	role       string
-	host       string
-	issueURL   string
-	signURL    string
-	readURL    string
-	revokeURL  string
-	caURL      string
-	caChainURL string
-	crlURL     string
-	ocspURL    string
-	certsURL   string
-	client     *api.Client
-	secret     *api.Secret
-	logger     *slog.Logger
+	appRole          string
+	appSecret        string
+	namespace        string
+	path             string
+	intermediatePath string
+	role             string
+	host             string
+	issueURL         string
+	signURL          string
+	readURL          string
+	revokeURL        string
+	caURL            string
+	caChainURL       string
+	rootCAURL        string
+	rootCAChainURL   string
+	crlURL           string
+	ocspURL          string
+	certsURL         string
+	client           *api.Client
+	secret           *api.Secret
+	logger           *slog.Logger
 }
 
 // NewAgent instantiates an OpenBao PKI client that implements certs.Agent.
@@ -75,24 +78,29 @@ func NewAgent(appRole, appSecret, host, namespace, path, role string, logger *sl
 		client.SetNamespace(namespace)
 	}
 
+	intermediatePath := path + "_int"
+
 	p := openbaoPKIAgent{
-		appRole:    appRole,
-		appSecret:  appSecret,
-		host:       host,
-		namespace:  namespace,
-		role:       role,
-		path:       path,
-		client:     client,
-		logger:     logger,
-		issueURL:   "/" + path + "/" + issue + "/" + role,
-		signURL:    "/" + path + "/" + sign + "/" + role,
-		readURL:    "/" + path + "/" + cert + "/",
-		revokeURL:  "/" + path + "/" + revoke,
-		caURL:      "/" + path + "/" + ca,
-		caChainURL: "/" + path + "/" + caChain,
-		crlURL:     "/" + path + "/" + crl,
-		ocspURL:    "/" + path + "/" + ocspPath,
-		certsURL:   "/" + path + "/" + certsList,
+		appRole:          appRole,
+		appSecret:        appSecret,
+		host:             host,
+		namespace:        namespace,
+		role:             role,
+		path:             path,
+		intermediatePath: intermediatePath,
+		client:           client,
+		logger:           logger,
+		issueURL:         "/" + intermediatePath + "/" + issue + "/" + role,
+		signURL:          "/" + intermediatePath + "/" + sign + "/" + role,
+		readURL:          "/" + intermediatePath + "/" + cert + "/",
+		revokeURL:        "/" + intermediatePath + "/" + revoke,
+		caURL:            "/" + intermediatePath + "/" + ca,
+		caChainURL:       "/" + intermediatePath + "/" + caChain,
+		rootCAURL:        "/" + path + "/" + ca,
+		rootCAChainURL:   "/" + path + "/" + caChain,
+		crlURL:           "/" + intermediatePath + "/" + crl,
+		ocspURL:          "/" + intermediatePath + "/" + ocspPath,
+		certsURL:         "/" + intermediatePath + "/" + certsList,
 	}
 	return &p, nil
 }
@@ -434,7 +442,7 @@ func (va *openbaoPKIAgent) GetCA() ([]byte, error) {
 		return nil, err
 	}
 
-	url := va.host + "/v1/" + va.path + "/ca"
+	url := va.host + "/v1/" + va.intermediatePath + "/ca"
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -484,14 +492,78 @@ func (va *openbaoPKIAgent) GetCA() ([]byte, error) {
 	return pemData, nil
 }
 
+func (va *openbaoPKIAgent) GetRootCA() ([]byte, error) {
+	err := va.LoginAndRenew()
+	if err != nil {
+		return nil, err
+	}
+
+	url := va.host + "/v1/" + va.path + "/ca"
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
+	}
+
+	if va.secret != nil && va.secret.Auth != nil && va.secret.Auth.ClientToken != "" {
+		req.Header.Set("X-Vault-Token", va.secret.Auth.ClientToken)
+	}
+
+	if va.namespace != "" {
+		req.Header.Set("X-Vault-Namespace", va.namespace)
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to make HTTP request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("failed to get root CA certificate: HTTP %d - %s", resp.StatusCode, string(body))
+	}
+
+	certData, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read root CA response: %w", err)
+	}
+
+	if len(certData) == 0 {
+		return nil, fmt.Errorf("root CA certificate response is empty")
+	}
+
+	_, err = x509.ParseCertificate(certData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse DER certificate: %w", err)
+	}
+
+	pemBlock := &pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: certData,
+	}
+
+	pemData := pem.EncodeToMemory(pemBlock)
+	return pemData, nil
+}
+
 func (va *openbaoPKIAgent) GetCAChain() ([]byte, error) {
 	err := va.LoginAndRenew()
 	if err != nil {
 		return nil, err
 	}
 
-	url := va.host + "/v1/" + va.path + "/ca_chain"
+	intermediateChainURL := va.host + "/v1/" + va.intermediatePath + "/ca_chain"
+	intermediateChain, err := va.fetchCAChain(intermediateChainURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get intermediate CA chain: %w", err)
+	}
 
+	return intermediateChain, nil
+}
+
+func (va *openbaoPKIAgent) fetchCAChain(url string) ([]byte, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
@@ -530,7 +602,7 @@ func (va *openbaoPKIAgent) GetCRL() ([]byte, error) {
 		return nil, err
 	}
 
-	url := va.host + "/v1/" + va.path + "/crl"
+	url := va.host + "/v1/" + va.intermediatePath + "/crl"
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -649,7 +721,7 @@ func (va *openbaoPKIAgent) OCSP(serialNumber string, ocspRequestDER []byte) ([]b
 		}
 	}
 
-	url := fmt.Sprintf("%s/v1/%s/ocsp", va.host, va.path)
+	url := fmt.Sprintf("%s/v1/%s/ocsp", va.host, va.intermediatePath)
 	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(string(requestDER)))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create OCSP POST request: %w", err)
