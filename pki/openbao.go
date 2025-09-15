@@ -170,7 +170,7 @@ func (va *openbaoPKIAgent) Issue(ttl string, ipAddrs []string, options certs.Sub
 
 	allDNSNames := make([]string, 0)
 	allDNSNames = append(allDNSNames, options.DnsNames...)
-	
+
 	defaultDNSNames, defaultIPSANs, err := va.getIntermediateCADefaultSANs()
 	if err != nil {
 		va.logger.Warn("failed to get default SANs from intermediate CA", "error", err)
@@ -188,7 +188,7 @@ func (va *openbaoPKIAgent) Issue(ttl string, ipAddrs []string, options certs.Sub
 			}
 		}
 	}
-	
+
 	if len(allDNSNames) > 0 {
 		altNamesValue := strings.Join(allDNSNames, ",")
 		secretValues["alt_names"] = altNamesValue
@@ -199,7 +199,7 @@ func (va *openbaoPKIAgent) Issue(ttl string, ipAddrs []string, options certs.Sub
 	for _, ip := range options.IpAddresses {
 		allIPs = append(allIPs, ip.String())
 	}
-	
+
 	for _, defaultIP := range defaultIPSANs {
 		found := false
 		for _, existing := range allIPs {
@@ -212,7 +212,7 @@ func (va *openbaoPKIAgent) Issue(ttl string, ipAddrs []string, options certs.Sub
 			allIPs = append(allIPs, defaultIP)
 		}
 	}
-	
+
 	if len(allIPs) > 0 {
 		ipSansValue := strings.Join(allIPs, ",")
 		secretValues["ip_sans"] = ipSansValue
