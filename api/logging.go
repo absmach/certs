@@ -149,7 +149,7 @@ func (lm *loggingMiddleware) GenerateCRL(ctx context.Context, session authn.Sess
 	return lm.svc.GenerateCRL(ctx, session, caType)
 }
 
-func (lm *loggingMiddleware) GetChainCA(ctx context.Context, session authn.Session, token string) (cert certs.Certificate, err error) {
+func (lm *loggingMiddleware) GetChainCA(ctx context.Context, session authn.Session) (cert certs.Certificate, err error) {
 	defer func(begin time.Time) {
 		message := fmt.Sprintf("Method get_chain_ca took %s to complete", time.Since(begin))
 		if err != nil {
@@ -158,7 +158,7 @@ func (lm *loggingMiddleware) GetChainCA(ctx context.Context, session authn.Sessi
 		}
 		lm.logger.Info(message)
 	}(time.Now())
-	return lm.svc.GetChainCA(ctx, session, token)
+	return lm.svc.GetChainCA(ctx, session)
 }
 
 func (lm *loggingMiddleware) IssueFromCSR(ctx context.Context, session authn.Session, entityID, ttl string, csr certs.CSR) (c certs.Certificate, err error) {

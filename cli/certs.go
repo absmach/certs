@@ -118,11 +118,11 @@ var cmdCerts = []cobra.Command{
 		},
 	},
 	{
-		Use:   "ocsp <serial_number_or_certificate_path> <domain_id> <token>",
+		Use:   "ocsp <serial_number_or_certificate_path>",
 		Short: "OCSP",
 		Long:  `OCSP for a given serial number or certificate.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 3 {
+			if len(args) != 1 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
@@ -140,7 +140,7 @@ var cmdCerts = []cobra.Command{
 				serialNumber = args[0]
 			}
 
-			response, err := sdk.OCSP(serialNumber, certContent, args[1], args[2])
+			response, err := sdk.OCSP(serialNumber, certContent)
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -166,15 +166,15 @@ var cmdCerts = []cobra.Command{
 		},
 	},
 	{
-		Use:   "view-ca <ca_token> <domain_id> <token>",
+		Use:   "view-ca <domain_id> <token>",
 		Short: "View-ca certificate",
 		Long:  `Views ca certificate key with a given token.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 3 {
+			if len(args) != 2 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			cert, err := sdk.ViewCA(args[0], args[1], args[2])
+			cert, err := sdk.ViewCA(args[0], args[1])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -183,37 +183,20 @@ var cmdCerts = []cobra.Command{
 		},
 	},
 	{
-		Use:   "download-ca <ca_token> <domain_id> <token>",
+		Use:   "download-ca <domain_id> <token>",
 		Short: "Download signing CA",
 		Long:  `Download intermediate cert and ca with a given token.`,
-		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 3 {
-				logUsageCmd(*cmd, cmd.Use)
-				return
-			}
-			bundle, err := sdk.DownloadCA(args[0], args[1], args[2])
-			if err != nil {
-				logErrorCmd(*cmd, err)
-				return
-			}
-			logSaveCAFiles(*cmd, bundle)
-		},
-	},
-	{
-		Use:   "token-ca <domain_id> <token>",
-		Short: "Get CA token",
-		Long:  `Gets a download token for CA.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 2 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			token, err := sdk.GetCAToken(args[0], args[1])
+			bundle, err := sdk.DownloadCA(args[0], args[1])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
-			logJSONCmd(*cmd, token)
+			logSaveCAFiles(*cmd, bundle)
 		},
 	},
 	{
@@ -272,11 +255,35 @@ var cmdCerts = []cobra.Command{
 		},
 	},
 	{
-		Use:   "crl [root | intermediate] <domain_id> <token>",
+		Use:   "issue-csr-internal <entity_id> <ttl> <path_to_csr>",
+		Short: "Issue from CSR Internal (Agent)",
+		Long:  `Issues a certificate for a given CSR using agent authentication.`,
+		Run: func(cmd *cobra.Command, args []string) {
+			if len(args) != 3 {
+				logUsageCmd(*cmd, cmd.Use)
+				return
+			}
+
+			csrData, err := os.ReadFile(args[2])
+			if err != nil {
+				logErrorCmd(*cmd, err)
+				return
+			}
+
+			cert, err := sdk.IssueFromCSRInternal(args[0], args[1], string(csrData))
+			if err != nil {
+				logErrorCmd(*cmd, err)
+				return
+			}
+			logJSONCmd(*cmd, cert)
+		},
+	},
+	{
+		Use:   "crl [root | intermediate]",
 		Short: "Generate Certificate Revocation List",
 		Long:  `Generates a Certificate Revocation List (CRL) for the specified CA type.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 3 {
+			if len(args) != 1 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
@@ -292,7 +299,7 @@ var cmdCerts = []cobra.Command{
 				return
 			}
 
-			crlBytes, err := sdk.GenerateCRL(certType, args[1], args[2])
+			crlBytes, err := sdk.GenerateCRL(certType)
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -377,9 +384,9 @@ func NewCertsCmd() *cobra.Command {
 	issueCmd.Flags().StringVar(&ttl, "ttl", "8760h", "certificate time to live in duration")
 
 	cmd := cobra.Command{
-		Use:   "certs [issue | get | revoke | renew | ocsp | view | download-ca | view-ca | token-ca | csr | issue-csr | crl | entity-id | ca]",
+		Use:   "certs [issue | get | revoke | renew | ocsp | view | download-ca | view-ca | csr | issue-csr | issue-csr-internal | crl | entity-id | ca]",
 		Short: "Certificates management",
-		Long:  `Certificates management: issue, get all, get by entity ID, revoke, renew, OCSP, view, CRL generation, entity ID lookup, and CA operations.`,
+		Long:  `Certificates management: issue, get all, get by entity ID, revoke, renew, OCSP, view, CRL generation, entity ID lookup, agent CSR issuing, and CA operations.`,
 	}
 
 	cmd.AddCommand(&issueCmd)

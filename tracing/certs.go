@@ -83,10 +83,10 @@ func (tm *tracingMiddleware) GenerateCRL(ctx context.Context, session authn.Sess
 	return tm.svc.GenerateCRL(ctx, session, caType)
 }
 
-func (tm *tracingMiddleware) GetChainCA(ctx context.Context, session authn.Session, token string) (certs.Certificate, error) {
+func (tm *tracingMiddleware) GetChainCA(ctx context.Context, session authn.Session) (certs.Certificate, error) {
 	ctx, span := tm.tracer.Start(ctx, "get_chain_ca")
 	defer span.End()
-	return tm.svc.GetChainCA(ctx, session, token)
+	return tm.svc.GetChainCA(ctx, session)
 }
 
 func (tm *tracingMiddleware) IssueFromCSR(ctx context.Context, session authn.Session, entityID, ttl string, csr certs.CSR) (certs.Certificate, error) {

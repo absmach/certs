@@ -248,30 +248,23 @@ type SDK interface {
 	// Returns a binary OCSP response (RFC 6960) with detailed status information.
 	//
 	// example:
-	//  response, _ := sdk.OCSP("serialNumber", "", "domainID", "token")
+	//  response, _ := sdk.OCSP("serialNumber", "")
 	//  fmt.Println(response)
-	OCSP(serialNumber, cert, domainID, token string) (OCSPResponse, errors.SDKError)
+	OCSP(serialNumber, cert string) (OCSPResponse, errors.SDKError)
 
 	// ViewCA views the signing certificate
 	//
 	// example:
-	//  response, _ := sdk.ViewCA("caToken", "domainID", "token")
+	//  response, _ := sdk.ViewCA("domainID", "token")
 	//  fmt.Println(response)
-	ViewCA(caToken, domainID, token string) (Certificate, errors.SDKError)
+	ViewCA(domainID, token string) (Certificate, errors.SDKError)
 
 	// DownloadCA downloads the signing certificate
 	//
 	// example:
-	//  response, _ := sdk.DownloadCA("caToken", "domainID", "token")
+	//  response, _ := sdk.DownloadCA("domainID", "token")
 	//  fmt.Println(response)
-	DownloadCA(caToken, domainID, token string) (CertificateBundle, errors.SDKError)
-
-	// GetCAToken get token for viewing and downloading CA
-	//
-	// example:
-	//  response, _ := sdk.GetCAToken("domainID", "token")
-	//  fmt.Println(response)
-	GetCAToken(domainID, token string) (Token, errors.SDKError)
+	DownloadCA(domainID, token string) (CertificateBundle, errors.SDKError)
 
 	// IssueFromCSR issues certificate from provided CSR
 	//
@@ -280,12 +273,19 @@ type SDK interface {
 	//	fmt.Println(err)
 	IssueFromCSR(entityID, ttl, csr, domainID, token string) (Certificate, errors.SDKError)
 
+	// IssueFromCSRInternal issues certificate from provided CSR using agent authentication
+	//
+	// example:
+	//	certs, err := sdk.IssueFromCSRInternal("entityID", "ttl", "csrFile")
+	//	fmt.Println(err)
+	IssueFromCSRInternal(entityID, ttl, csr string) (Certificate, errors.SDKError)
+
 	// GenerateCRL generates a Certificate Revocation List
 	//
 	// example:
-	//	crlBytes, err := sdk.GenerateCRL(sdk.RootCA, "domainID", "token")
+	//	crlBytes, err := sdk.GenerateCRL(sdk.RootCA)
 	//	fmt.Println(err)
-	GenerateCRL(certType CertType, domainID, token string) ([]byte, errors.SDKError)
+	GenerateCRL(certType CertType) ([]byte, errors.SDKError)
 
 	// RevokeAll revokes all certificates for an entity ID
 	//
@@ -397,7 +397,7 @@ func (sdk mgSDK) DeleteCert(entityID, domainID, token string) errors.SDKError {
 	return sdkerr
 }
 
-func (sdk mgSDK) OCSP(serialNumber, cert, domainID, token string) (OCSPResponse, errors.SDKError) {
+func (sdk mgSDK) OCSP(serialNumber, cert string) (OCSPResponse, errors.SDKError) {
 	if serialNumber == "" && cert == "" {
 		return OCSPResponse{}, errors.NewSDKError(errors.New("either serial number or certificate must be provided"))
 	}
@@ -420,9 +420,9 @@ func (sdk mgSDK) OCSP(serialNumber, cert, domainID, token string) (OCSPResponse,
 		return OCSPResponse{}, errors.NewSDKError(err)
 	}
 
-	url := fmt.Sprintf("%s/%s/%s/ocsp", sdk.certsURL, domainID, certsEndpoint)
+	url := fmt.Sprintf("%s/certs/ocsp", sdk.certsURL)
 
-	_, body, sdkerr := sdk.processRequest(context.Background(), http.MethodPost, url, token, requestBody, nil, http.StatusOK)
+	_, body, sdkerr := sdk.processRequest(context.Background(), http.MethodPost, url, "", requestBody, nil, http.StatusOK)
 	if sdkerr != nil {
 		return OCSPResponse{}, sdkerr
 	}
@@ -471,14 +471,8 @@ func (sdk mgSDK) OCSP(serialNumber, cert, domainID, token string) (OCSPResponse,
 	return resp, nil
 }
 
-func (sdk mgSDK) ViewCA(caToken, domainID, token string) (Certificate, errors.SDKError) {
-	pm := PageMetadata{
-		Token: caToken,
-	}
-	url, err := sdk.withQueryParams(fmt.Sprintf("%s/%s/%s/view-ca", sdk.certsURL, domainID, certsEndpoint), "", pm)
-	if err != nil {
-		return Certificate{}, errors.NewSDKError(err)
-	}
+func (sdk mgSDK) ViewCA(domainID, token string) (Certificate, errors.SDKError) {
+	url := fmt.Sprintf("%s/%s/%s/view-ca", sdk.certsURL, domainID, certsEndpoint)
 
 	_, body, sdkerr := sdk.processRequest(context.Background(), http.MethodGet, url, token, nil, nil, http.StatusOK)
 	if sdkerr != nil {
@@ -492,14 +486,8 @@ func (sdk mgSDK) ViewCA(caToken, domainID, token string) (Certificate, errors.SD
 	return cert, nil
 }
 
-func (sdk mgSDK) DownloadCA(caToken, domainID, token string) (CertificateBundle, errors.SDKError) {
-	pm := PageMetadata{
-		Token: caToken,
-	}
-	url, err := sdk.withQueryParams(fmt.Sprintf("%s/%s/%s/download-ca", sdk.certsURL, domainID, certsEndpoint), "", pm)
-	if err != nil {
-		return CertificateBundle{}, errors.NewSDKError(err)
-	}
+func (sdk mgSDK) DownloadCA(domainID, token string) (CertificateBundle, errors.SDKError) {
+	url := fmt.Sprintf("%s/%s/%s/download-ca", sdk.certsURL, domainID, certsEndpoint)
 
 	_, body, sdkerr := sdk.processRequest(context.Background(), http.MethodGet, url, token, nil, nil, http.StatusOK)
 	if sdkerr != nil {
@@ -524,21 +512,6 @@ func (sdk mgSDK) DownloadCA(caToken, domainID, token string) (CertificateBundle,
 	}
 
 	return bundle, nil
-}
-
-func (sdk mgSDK) GetCAToken(domainID, token string) (Token, errors.SDKError) {
-	url := fmt.Sprintf("%s/%s/%s/get-ca/token", sdk.certsURL, domainID, certsEndpoint)
-
-	_, body, sdkerr := sdk.processRequest(context.Background(), http.MethodGet, url, token, nil, nil, http.StatusOK)
-	if sdkerr != nil {
-		return Token{}, sdkerr
-	}
-
-	var tk Token
-	if err := json.Unmarshal(body, &tk); err != nil {
-		return Token{}, errors.NewSDKError(err)
-	}
-	return tk, nil
 }
 
 func (sdk mgSDK) IssueFromCSR(entityID, ttl, csr, domainID, token string) (Certificate, errors.SDKError) {
@@ -572,9 +545,40 @@ func (sdk mgSDK) IssueFromCSR(entityID, ttl, csr, domainID, token string) (Certi
 	return cert, nil
 }
 
-func (sdk mgSDK) GenerateCRL(certType CertType, domainID, token string) ([]byte, errors.SDKError) {
-	url := fmt.Sprintf("%s/%s/%s/%s", sdk.certsURL, domainID, certsEndpoint, crlEndpoint)
-	_, body, sdkerr := sdk.processRequest(context.Background(), http.MethodGet, url, token, nil, nil, http.StatusOK)
+func (sdk mgSDK) IssueFromCSRInternal(entityID, ttl, csr string) (Certificate, errors.SDKError) {
+	r := csrReq{
+		CSR: csr,
+	}
+
+	d, err := json.Marshal(r)
+	if err != nil {
+		return Certificate{}, errors.NewSDKError(err)
+	}
+
+	pm := PageMetadata{
+		TTL: ttl,
+	}
+
+	url, err := sdk.withQueryParams(fmt.Sprintf("%s/agent/certs/csrs/%s", sdk.certsURL, entityID), "", pm)
+	if err != nil {
+		return Certificate{}, errors.NewSDKError(err)
+	}
+
+	_, body, sdkerr := sdk.processRequest(context.Background(), http.MethodPost, url, "", d, nil, http.StatusOK)
+	if sdkerr != nil {
+		return Certificate{}, sdkerr
+	}
+
+	var cert Certificate
+	if err := json.Unmarshal(body, &cert); err != nil {
+		return Certificate{}, errors.NewSDKError(err)
+	}
+	return cert, nil
+}
+
+func (sdk mgSDK) GenerateCRL(certType CertType) ([]byte, errors.SDKError) {
+	url := fmt.Sprintf("%s/certs/%s", sdk.certsURL, crlEndpoint)
+	_, body, sdkerr := sdk.processRequest(context.Background(), http.MethodGet, url, "", nil, nil, http.StatusOK)
 	if sdkerr != nil {
 		return nil, sdkerr
 	}
@@ -610,11 +614,7 @@ func (sdk mgSDK) GetEntityID(serialNumber, domainID, token string) (string, erro
 }
 
 func (sdk mgSDK) GetCA(domainID, token string) (Certificate, errors.SDKError) {
-	caToken, err := sdk.GetCAToken(domainID, token)
-	if err != nil {
-		return Certificate{}, err
-	}
-	return sdk.ViewCA(caToken.Token, domainID, token)
+	return sdk.ViewCA(domainID, token)
 }
 
 func NewSDK(conf Config) SDK {

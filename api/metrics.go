@@ -111,12 +111,12 @@ func (mm *metricsMiddleware) GenerateCRL(ctx context.Context, session authn.Sess
 	return mm.svc.GenerateCRL(ctx, session, caType)
 }
 
-func (mm *metricsMiddleware) GetChainCA(ctx context.Context, session authn.Session, token string) (certs.Certificate, error) {
+func (mm *metricsMiddleware) GetChainCA(ctx context.Context, session authn.Session) (certs.Certificate, error) {
 	defer func(begin time.Time) {
 		mm.counter.With("method", "get_chain_ca").Add(1)
 		mm.latency.With("method", "get_chain_ca").Observe(time.Since(begin).Seconds())
 	}(time.Now())
-	return mm.svc.GetChainCA(ctx, session, token)
+	return mm.svc.GetChainCA(ctx, session)
 }
 
 func (mm *metricsMiddleware) IssueFromCSR(ctx context.Context, session authn.Session, entityID, ttl string, csr certs.CSR) (certs.Certificate, error) {

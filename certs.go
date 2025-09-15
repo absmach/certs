@@ -173,7 +173,7 @@ type Service interface {
 	GenerateCRL(ctx context.Context, session authn.Session, caType CertType) ([]byte, error)
 
 	// GetChainCA retrieves the chain of CA i.e. root and intermediate cert concat together.
-	GetChainCA(ctx context.Context, session authn.Session, token string) (Certificate, error)
+	GetChainCA(ctx context.Context, session authn.Session) (Certificate, error)
 
 	// IssueFromCSR creates a certificate from a given CSR.
 	IssueFromCSR(ctx context.Context, session authn.Session, entityID, ttl string, csr CSR) (Certificate, error)

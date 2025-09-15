@@ -30,8 +30,6 @@ const (
 	offsetKey       = "offset"
 	limitKey        = "limit"
 	entityKey       = "entity_id"
-	approve         = "approve"
-	status          = "status"
 	token           = "token"
 	ocspStatusParam = "force_status"
 	entityIDParam   = "entityID"
@@ -62,10 +60,10 @@ func MakeHandler(svc certs.Service, authn authn.Authentication, mux *chi.Mux, lo
 		kithttp.ServerErrorEncoder(loggingErrorEncoder(logger, EncodeError)),
 	}
 
-	mux.Group(func(r chi.Router) {
-		r.Use(api.AuthenticateMiddleware(authn, true))
-		r.Route("/{domainID}", func(r chi.Router) {
-			r.Route("/certs", func(r chi.Router) {
+	mux.Route("/{domainID}", func(r chi.Router) {
+		r.Route("/certs", func(r chi.Router) {
+			r.Group(func(r chi.Router) {
+				r.Use(api.AuthenticateMiddleware(authn, true))
 				r.Post("/issue/{entityID}", otelhttp.NewHandler(kithttp.NewServer(
 					issueCertEndpoint(svc),
 					decodeIssueCert,
@@ -102,24 +100,6 @@ func MakeHandler(svc certs.Service, authn authn.Authentication, mux *chi.Mux, lo
 					EncodeResponse,
 					opts...,
 				), "view_cert").ServeHTTP)
-				r.Post("/ocsp", otelhttp.NewHandler(kithttp.NewServer(
-					ocspEndpoint(svc),
-					decodeOCSPRequest,
-					encodeOSCPResponse,
-					opts...,
-				), "ocsp").ServeHTTP)
-				r.Get("/crl", otelhttp.NewHandler(kithttp.NewServer(
-					generateCRLEndpoint(svc),
-					decodeCRL,
-					EncodeResponse,
-					opts...,
-				), "generate_crl").ServeHTTP)
-				r.Get("/get-ca/token", otelhttp.NewHandler(kithttp.NewServer(
-					getDownloadCATokenEndpoint(svc),
-					decodeView,
-					EncodeResponse,
-					opts...,
-				), "get_ca_token").ServeHTTP)
 				r.Get("/view-ca", otelhttp.NewHandler(kithttp.NewServer(
 					viewCAEndpoint(svc),
 					decodeDownloadCA,
@@ -141,6 +121,19 @@ func MakeHandler(svc certs.Service, authn authn.Authentication, mux *chi.Mux, lo
 					), "issue_from_csr").ServeHTTP)
 				})
 			})
+
+			r.Post("/ocsp", otelhttp.NewHandler(kithttp.NewServer(
+				ocspEndpoint(svc),
+				decodeOCSPRequest,
+				encodeOSCPResponse,
+				opts...,
+			), "ocsp").ServeHTTP)
+			r.Get("/crl", otelhttp.NewHandler(kithttp.NewServer(
+				generateCRLEndpoint(svc),
+				decodeCRL,
+				EncodeResponse,
+				opts...,
+			), "generate_crl").ServeHTTP)
 		})
 	})
 
@@ -186,14 +179,7 @@ func decodeCRL(_ context.Context, r *http.Request) (any, error) {
 }
 
 func decodeDownloadCA(_ context.Context, r *http.Request) (any, error) {
-	token, err := readStringQuery(r, token, "")
-	if err != nil {
-		return nil, err
-	}
-	req := downloadReq{
-		token: token,
-	}
-
+	req := downloadReq{}
 	return req, nil
 }
 

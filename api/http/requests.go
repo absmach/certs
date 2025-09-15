@@ -15,13 +15,9 @@ import (
 )
 
 type downloadReq struct {
-	token string
 }
 
 func (req downloadReq) validate() error {
-	if req.token == "" {
-		return errors.Wrap(certs.ErrMalformedEntity, ErrEmptyToken)
-	}
 	return nil
 }
 

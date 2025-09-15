@@ -97,11 +97,11 @@ func (am *authorizationMiddleware) GenerateCRL(ctx context.Context, session auth
 	return am.svc.GenerateCRL(ctx, session, caType)
 }
 
-func (am *authorizationMiddleware) GetChainCA(ctx context.Context, session authn.Session, token string) (crt.Certificate, error) {
+func (am *authorizationMiddleware) GetChainCA(ctx context.Context, session authn.Session) (crt.Certificate, error) {
 	if err := am.checkUserDomainPermission(ctx, session, policies.MembershipPermission); err != nil {
 		return crt.Certificate{}, err
 	}
-	return am.svc.GetChainCA(ctx, session, token)
+	return am.svc.GetChainCA(ctx, session)
 }
 
 func (am *authorizationMiddleware) IssueFromCSR(ctx context.Context, session authn.Session, entityID, ttl string, csr crt.CSR) (crt.Certificate, error) {

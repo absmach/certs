@@ -39,7 +39,7 @@ func setupCerts() (*httptest.Server, *mocks.Service, *authnmocks.Authentication)
 	mux := chi.NewRouter()
 	logger := logger.NewMock()
 	authn := new(authnmocks.Authentication)
-	handler := httpapi.MakeHandler(svc, authn, mux, logger, instanceID)
+	handler := httpapi.MakeHandler(svc, authn, mux, logger, instanceID, "")
 
 	return httptest.NewServer(handler), svc, authn
 }
@@ -657,7 +657,6 @@ func TestDownloadCACert(t *testing.T) {
 	cases := []struct {
 		desc            string
 		token           string
-		caToken         string
 		svcresp         certs.Certificate
 		svcerr          error
 		authenticateErr error
@@ -668,9 +667,8 @@ func TestDownloadCACert(t *testing.T) {
 		session         smqauthn.Session
 	}{
 		{
-			desc:    "Download CA successfully",
-			token:   token,
-			caToken: token,
+			desc:  "Download CA successfully",
+			token: token,
 			svcresp: certs.Certificate{
 				SerialNumber: serialNum,
 				Certificate:  []byte("cert"),
@@ -691,7 +689,6 @@ func TestDownloadCACert(t *testing.T) {
 		{
 			desc:            "Download CA failure",
 			token:           token,
-			caToken:         token,
 			svcresp:         certs.Certificate{},
 			svcerr:          certs.ErrViewEntity,
 			authenticateErr: nil,
@@ -707,7 +704,6 @@ func TestDownloadCACert(t *testing.T) {
 		{
 			desc:            "Download CA with empty token",
 			token:           "",
-			caToken:         "",
 			svcresp:         certs.Certificate{},
 			svcerr:          certs.ErrMalformedEntity,
 			authenticateErr: certs.ErrMalformedEntity,
@@ -721,12 +717,12 @@ func TestDownloadCACert(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
 			authCall := auth.On("Authenticate", mock.Anything, tc.authToken).Return(tc.session, tc.authenticateErr)
-			svcCall := svc.On("GetChainCA", mock.Anything, tc.session, tc.caToken).Return(tc.svcresp, tc.svcerr)
+			svcCall := svc.On("GetChainCA", mock.Anything, tc.session).Return(tc.svcresp, tc.svcerr)
 
-			_, err := ctsdk.DownloadCA(tc.caToken, tc.domain, tc.authToken)
+			_, err := ctsdk.DownloadCA(tc.domain, tc.authToken)
 			assert.Equal(t, tc.err, err)
 			if tc.err == nil {
-				ok := svcCall.Parent.AssertCalled(t, "GetChainCA", mock.Anything, tc.session, tc.caToken)
+				ok := svcCall.Parent.AssertCalled(t, "GetChainCA", mock.Anything, tc.session)
 				assert.True(t, ok)
 			}
 			svcCall.Unset()
@@ -803,12 +799,12 @@ func TestViewCA(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
 			authCall := auth.On("Authenticate", mock.Anything, tc.authToken).Return(tc.session, tc.authenticateErr)
-			svcCall := svc.On("GetChainCA", mock.Anything, tc.session, tc.token).Return(tc.svcresp, tc.svcerr)
+			svcCall := svc.On("GetChainCA", mock.Anything, tc.session).Return(tc.svcresp, tc.svcerr)
 
-			c, err := ctsdk.ViewCA(tc.token, tc.domain, tc.authToken)
+			c, err := ctsdk.ViewCA(tc.domain, tc.authToken)
 			assert.Equal(t, tc.err, err)
 			if tc.err == nil {
-				ok := svcCall.Parent.AssertCalled(t, "GetChainCA", mock.Anything, tc.session, tc.token)
+				ok := svcCall.Parent.AssertCalled(t, "GetChainCA", mock.Anything, tc.session)
 				assert.True(t, ok)
 			}
 			assert.Equal(t, tc.sdkCert.Certificate, c.Certificate, fmt.Sprintf("expected: %v, got: %v", tc.sdkCert.Certificate, c.Certificate))
@@ -818,94 +814,8 @@ func TestViewCA(t *testing.T) {
 	}
 }
 
-func TestGetCAToken(t *testing.T) {
-	ts, svc, auth := setupCerts()
-	defer ts.Close()
-
-	sdkConfig := sdk.Config{
-		CertsURL:        ts.URL,
-		MsgContentType:  contentType,
-		TLSVerification: false,
-	}
-
-	ctsdk := sdk.NewSDK(sdkConfig)
-
-	token := "valid token"
-
-	cases := []struct {
-		desc            string
-		svcresp         string
-		svcerr          error
-		authenticateErr error
-		err             errors.SDKError
-		domain          string
-		authToken       string
-		session         smqauthn.Session
-	}{
-		{
-			desc:            "GetCAToken success",
-			svcresp:         token,
-			svcerr:          nil,
-			authenticateErr: nil,
-			err:             nil,
-			domain:          domainID,
-			authToken:       token,
-			session: smqauthn.Session{
-				DomainUserID: domainID + "_" + validID,
-				UserID:       validID,
-				DomainID:     domainID,
-			},
-		},
-		{
-			desc:            "GetCAToken failure",
-			svcresp:         "",
-			svcerr:          certs.ErrGetToken,
-			authenticateErr: nil,
-			err:             errors.NewSDKErrorWithStatus(certs.ErrGetToken, http.StatusUnprocessableEntity),
-			domain:          domainID,
-			authToken:       token,
-			session: smqauthn.Session{
-				DomainUserID: domainID + "_" + validID,
-				UserID:       validID,
-				DomainID:     domainID,
-			},
-		},
-		{
-			desc:            "GetCAToken with error",
-			svcresp:         "",
-			svcerr:          certs.ErrMalformedEntity,
-			authenticateErr: nil,
-			err:             errors.NewSDKErrorWithStatus(certs.ErrMalformedEntity, http.StatusBadRequest),
-			domain:          domainID,
-			authToken:       token,
-			session: smqauthn.Session{
-				DomainUserID: domainID + "_" + validID,
-				UserID:       validID,
-				DomainID:     domainID,
-			},
-		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.desc, func(t *testing.T) {
-			authCall := auth.On("Authenticate", mock.Anything, tc.authToken).Return(tc.session, tc.authenticateErr)
-			svcCall := svc.On("RetrieveCAToken", mock.Anything, tc.session).Return(tc.svcresp, tc.svcerr)
-
-			resp, err := ctsdk.GetCAToken(tc.domain, tc.authToken)
-			assert.Equal(t, tc.err, err)
-			if tc.err == nil {
-				assert.Equal(t, tc.svcresp, resp.Token)
-				ok := svcCall.Parent.AssertCalled(t, "RetrieveCAToken", mock.Anything, tc.session)
-				assert.True(t, ok)
-			}
-			svcCall.Unset()
-			authCall.Unset()
-		})
-	}
-}
-
 func TestGenerateCRL(t *testing.T) {
-	ts, svc, auth := setupCerts()
+	ts, svc, _ := setupCerts()
 	defer ts.Close()
 
 	sdkConfig := sdk.Config{
@@ -919,15 +829,11 @@ func TestGenerateCRL(t *testing.T) {
 	crlData := []byte("mock-crl-data")
 
 	cases := []struct {
-		desc            string
-		certType        sdk.CertType
-		svcresp         []byte
-		svcerr          error
-		authenticateErr error
-		err             errors.SDKError
-		domain          string
-		token           string
-		session         smqauthn.Session
+		desc     string
+		certType sdk.CertType
+		svcresp  []byte
+		svcerr   error
+		err      errors.SDKError
 	}{
 		{
 			desc:     "GenerateCRL success for RootCA",
@@ -935,8 +841,6 @@ func TestGenerateCRL(t *testing.T) {
 			svcresp:  crlData,
 			svcerr:   nil,
 			err:      nil,
-			domain:   domainID,
-			token:    token,
 		},
 		{
 			desc:     "GenerateCRL success for IntermediateCA",
@@ -944,8 +848,6 @@ func TestGenerateCRL(t *testing.T) {
 			svcresp:  crlData,
 			svcerr:   nil,
 			err:      nil,
-			domain:   domainID,
-			token:    token,
 		},
 		{
 			desc:     "GenerateCRL failure",
@@ -953,29 +855,21 @@ func TestGenerateCRL(t *testing.T) {
 			svcresp:  nil,
 			svcerr:   certs.ErrFailedCertCreation,
 			err:      errors.NewSDKErrorWithStatus(certs.ErrFailedCertCreation, http.StatusUnprocessableEntity),
-			domain:   domainID,
-			token:    token,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			if tc.token == token {
-				tc.session = smqauthn.Session{DomainUserID: id, UserID: id, DomainID: domainID}
-			}
+			svcCall := svc.On("GenerateCRL", mock.Anything, mock.Anything, mock.Anything).Return(tc.svcresp, tc.svcerr)
 
-			authCall := auth.On("Authenticate", mock.Anything, tc.token).Return(tc.session, tc.authenticateErr)
-			svcCall := svc.On("GenerateCRL", mock.Anything, tc.session, mock.Anything).Return(tc.svcresp, tc.svcerr)
-
-			resp, err := ctsdk.GenerateCRL(tc.certType, tc.domain, tc.token)
+			resp, err := ctsdk.GenerateCRL(tc.certType)
 			assert.Equal(t, tc.err, err)
 			if tc.err == nil {
 				assert.Equal(t, tc.svcresp, resp)
-				ok := svcCall.Parent.AssertCalled(t, "GenerateCRL", mock.Anything, tc.session, mock.Anything)
+				ok := svcCall.Parent.AssertCalled(t, "GenerateCRL", mock.Anything, mock.Anything, mock.Anything)
 				assert.True(t, ok)
 			}
 			svcCall.Unset()
-			authCall.Unset()
 		})
 	}
 }
@@ -1233,6 +1127,73 @@ func TestGetCA(t *testing.T) {
 			tokenCall.Unset()
 			caCall.Unset()
 			authCall.Unset()
+		})
+	}
+}
+
+func TestIssueFromCSRInternal(t *testing.T) {
+	ts, svc, _ := setupCerts()
+	defer ts.Close()
+
+	sdkConfig := sdk.Config{
+		CertsURL:        ts.URL,
+		MsgContentType:  contentType,
+		TLSVerification: false,
+	}
+
+	ctsdk := sdk.NewSDK(sdkConfig)
+
+	cert := sdk.Certificate{
+		SerialNumber: serialNum,
+	}
+
+	cases := []struct {
+		desc     string
+		entityID string
+		ttl      string
+		csr      string
+		svcresp  certs.Certificate
+		svcerr   error
+		err      errors.SDKError
+		sdkCert  sdk.Certificate
+	}{
+		{
+			desc:     "IssueFromCSRInternal success",
+			entityID: validID,
+			ttl:      ttl,
+			csr:      "valid-csr-content",
+			svcresp: certs.Certificate{
+				SerialNumber: serialNum,
+				Certificate:  []byte("cert"),
+				Key:          []byte("key"),
+			},
+			sdkCert: cert,
+			svcerr:  nil,
+			err:     nil,
+		},
+		{
+			desc:     "IssueFromCSRInternal failure",
+			entityID: validID,
+			ttl:      ttl,
+			csr:      "invalid-csr-content",
+			svcresp:  certs.Certificate{},
+			svcerr:   certs.ErrFailedCertCreation,
+			err:      errors.NewSDKErrorWithStatus(certs.ErrFailedCertCreation, http.StatusUnprocessableEntity),
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			svcCall := svc.On("IssueFromCSRInternal", mock.Anything, tc.entityID, tc.ttl, mock.Anything).Return(tc.svcresp, tc.svcerr)
+
+			c, err := ctsdk.IssueFromCSRInternal(tc.entityID, tc.ttl, tc.csr)
+			assert.Equal(t, tc.err, err)
+			if tc.err == nil {
+				assert.Equal(t, tc.sdkCert.SerialNumber, c.SerialNumber)
+				ok := svcCall.Parent.AssertCalled(t, "IssueFromCSRInternal", mock.Anything, tc.entityID, tc.ttl, mock.Anything)
+				assert.True(t, ok)
+			}
+			svcCall.Unset()
 		})
 	}
 }

@@ -225,22 +225,6 @@ func generateCRLEndpoint(svc certs.Service) endpoint.Endpoint {
 	}
 }
 
-func getDownloadCATokenEndpoint(svc certs.Service) endpoint.Endpoint {
-	return func(ctx context.Context, request any) (response any, err error) {
-		session, ok := ctx.Value(api.SessionKey).(authn.Session)
-		if !ok {
-			return requestCertDownloadTokenRes{}, svcerr.ErrAuthentication
-		}
-
-		token, err := svc.RetrieveCAToken(ctx, session)
-		if err != nil {
-			return requestCertDownloadTokenRes{}, err
-		}
-
-		return requestCertDownloadTokenRes{Token: token}, nil
-	}
-}
-
 func downloadCAEndpoint(svc certs.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request any) (response any, err error) {
 		req := request.(downloadReq)
@@ -253,7 +237,7 @@ func downloadCAEndpoint(svc certs.Service) endpoint.Endpoint {
 			return fileDownloadRes{}, svcerr.ErrAuthentication
 		}
 
-		cert, err := svc.GetChainCA(ctx, session, req.token)
+		cert, err := svc.GetChainCA(ctx, session)
 		if err != nil {
 			return fileDownloadRes{}, err
 		}
@@ -278,7 +262,7 @@ func viewCAEndpoint(svc certs.Service) endpoint.Endpoint {
 			return viewCertRes{}, svcerr.ErrAuthentication
 		}
 
-		cert, err := svc.GetChainCA(ctx, session, req.token)
+		cert, err := svc.GetChainCA(ctx, session)
 		if err != nil {
 			return viewCertRes{}, err
 		}

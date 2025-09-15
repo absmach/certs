@@ -284,18 +284,7 @@ func (s *service) GenerateCRL(ctx context.Context, session authn.Session, caType
 	return crl, nil
 }
 
-func (s *service) GetChainCA(ctx context.Context, session authn.Session, token string) (Certificate, error) {
-	caCert, err := s.ViewCA(ctx)
-	if err != nil {
-		return Certificate{}, errors.Wrap(ErrViewEntity, err)
-	}
-
-	if _, err := jwt.ParseWithClaims(token, &jwt.RegisteredClaims{Issuer: Organization, Subject: "certs"}, func(token *jwt.Token) (any, error) {
-		return []byte(caCert.SerialNumber), nil
-	}); err != nil {
-		return Certificate{}, errors.Wrap(err, ErrMalformedEntity)
-	}
-
+func (s *service) GetChainCA(ctx context.Context, session authn.Session) (Certificate, error) {
 	return s.getConcatCAs(ctx)
 }
 
