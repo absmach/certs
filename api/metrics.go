@@ -127,6 +127,14 @@ func (mm *metricsMiddleware) IssueFromCSR(ctx context.Context, session authn.Ses
 	return mm.svc.IssueFromCSR(ctx, session, entityID, ttl, csr)
 }
 
+func (mm *metricsMiddleware) IssueFromCSRInternal(ctx context.Context, entityID, ttl string, csr certs.CSR) (certs.Certificate, error) {
+	defer func(begin time.Time) {
+		mm.counter.With("method", "issue_from_csr_internal").Add(1)
+		mm.latency.With("method", "issue_from_csr_internal").Observe(time.Since(begin).Seconds())
+	}(time.Now())
+	return mm.svc.IssueFromCSRInternal(ctx, entityID, ttl, csr)
+}
+
 func (mm *metricsMiddleware) GetCA(ctx context.Context) (certs.Certificate, error) {
 	defer func(begin time.Time) {
 		mm.counter.With("method", "get_ca").Add(1)

@@ -314,6 +314,21 @@ func (s *service) IssueFromCSR(ctx context.Context, session authn.Session, entit
 	return cert, nil
 }
 
+func (s *service) IssueFromCSRInternal(ctx context.Context, entityID, ttl string, csr CSR) (Certificate, error) {
+	cert, err := s.pki.SignCSR(csr.CSR, ttl)
+	if err != nil {
+		return Certificate{}, errors.Wrap(ErrFailedCertCreation, err)
+	}
+
+	if err := s.repo.SaveCertEntityMapping(ctx, cert.SerialNumber, entityID); err != nil {
+		return Certificate{}, errors.Wrap(ErrFailedCertCreation, err)
+	}
+
+	cert.EntityID = entityID
+
+	return cert, nil
+}
+
 func (s *service) getConcatCAs(_ context.Context) (Certificate, error) {
 	caChain, err := s.pki.GetCAChain()
 	if err != nil {

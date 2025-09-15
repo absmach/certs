@@ -95,6 +95,12 @@ func (tm *tracingMiddleware) IssueFromCSR(ctx context.Context, session authn.Ses
 	return tm.svc.IssueFromCSR(ctx, session, entityID, ttl, csr)
 }
 
+func (tm *tracingMiddleware) IssueFromCSRInternal(ctx context.Context, entityID, ttl string, csr certs.CSR) (certs.Certificate, error) {
+	ctx, span := tm.tracer.Start(ctx, "issue_from_csr_internal")
+	defer span.End()
+	return tm.svc.IssueFromCSRInternal(ctx, entityID, ttl, csr)
+}
+
 func (tm *tracingMiddleware) GetCA(ctx context.Context) (certs.Certificate, error) {
 	ctx, span := tm.tracer.Start(ctx, "get_ca")
 	defer span.End()

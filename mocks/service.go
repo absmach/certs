@@ -487,6 +487,84 @@ func (_c *Service_IssueFromCSR_Call) RunAndReturn(run func(ctx context.Context, 
 	return _c
 }
 
+// IssueFromCSRInternal provides a mock function for the type Service
+func (_mock *Service) IssueFromCSRInternal(ctx context.Context, entityID string, ttl string, csr certs.CSR) (certs.Certificate, error) {
+	ret := _mock.Called(ctx, entityID, ttl, csr)
+
+	if len(ret) == 0 {
+		panic("no return value specified for IssueFromCSRInternal")
+	}
+
+	var r0 certs.Certificate
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, certs.CSR) (certs.Certificate, error)); ok {
+		return returnFunc(ctx, entityID, ttl, csr)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, certs.CSR) certs.Certificate); ok {
+		r0 = returnFunc(ctx, entityID, ttl, csr)
+	} else {
+		r0 = ret.Get(0).(certs.Certificate)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, certs.CSR) error); ok {
+		r1 = returnFunc(ctx, entityID, ttl, csr)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// Service_IssueFromCSRInternal_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IssueFromCSRInternal'
+type Service_IssueFromCSRInternal_Call struct {
+	*mock.Call
+}
+
+// IssueFromCSRInternal is a helper method to define mock.On call
+//   - ctx context.Context
+//   - entityID string
+//   - ttl string
+//   - csr certs.CSR
+func (_e *Service_Expecter) IssueFromCSRInternal(ctx interface{}, entityID interface{}, ttl interface{}, csr interface{}) *Service_IssueFromCSRInternal_Call {
+	return &Service_IssueFromCSRInternal_Call{Call: _e.mock.On("IssueFromCSRInternal", ctx, entityID, ttl, csr)}
+}
+
+func (_c *Service_IssueFromCSRInternal_Call) Run(run func(ctx context.Context, entityID string, ttl string, csr certs.CSR)) *Service_IssueFromCSRInternal_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 certs.CSR
+		if args[3] != nil {
+			arg3 = args[3].(certs.CSR)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *Service_IssueFromCSRInternal_Call) Return(certificate certs.Certificate, err error) *Service_IssueFromCSRInternal_Call {
+	_c.Call.Return(certificate, err)
+	return _c
+}
+
+func (_c *Service_IssueFromCSRInternal_Call) RunAndReturn(run func(ctx context.Context, entityID string, ttl string, csr certs.CSR) (certs.Certificate, error)) *Service_IssueFromCSRInternal_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListCerts provides a mock function for the type Service
 func (_mock *Service) ListCerts(ctx context.Context, session authn.Session, pm certs.PageMetadata) (certs.CertificatePage, error) {
 	ret := _mock.Called(ctx, session, pm)

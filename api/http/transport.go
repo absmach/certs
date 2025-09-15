@@ -41,8 +41,23 @@ const (
 	defType         = 1
 )
 
+func AgentAuthenticateMiddleware(authn authn.Authentication, expectedToken string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			resp, err := authn.Authenticate(r.Context(), token)
+			if err != nil {
+				EncodeError(r.Context(), err, w)
+				return
+			}
+			ctx := context.WithValue(r.Context(), api.SessionKey, resp)
+
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}
+
 // MakeHandler returns a HTTP handler for API endpoints.
-func MakeHandler(svc certs.Service, authn authn.Authentication, mux *chi.Mux, logger *slog.Logger, instanceID string) http.Handler {
+func MakeHandler(svc certs.Service, authn authn.Authentication, mux *chi.Mux, logger *slog.Logger, instanceID string, agentToken string) http.Handler {
 	opts := []kithttp.ServerOption{
 		kithttp.ServerErrorEncoder(loggingErrorEncoder(logger, EncodeError)),
 	}
@@ -127,6 +142,16 @@ func MakeHandler(svc certs.Service, authn authn.Authentication, mux *chi.Mux, lo
 				})
 			})
 		})
+	})
+
+	mux.Group(func(r chi.Router) {
+		r.Use(AgentAuthenticateMiddleware(authn, agentToken))
+		r.Post("/agent/certs/csrs/{entityID}", otelhttp.NewHandler(kithttp.NewServer(
+			issueFromCSRInternalEndpoint(svc),
+			decodeIssueFromCSRInternal,
+			EncodeResponse,
+			opts...,
+		), "issue_from_csr_internal").ServeHTTP)
 	})
 
 	mux.Get("/health", certs.Health("certs", instanceID))
@@ -256,6 +281,30 @@ func decodeIssueFromCSR(_ context.Context, r *http.Request) (any, error) {
 	}
 
 	req := IssueFromCSRReq{
+		entityID: chi.URLParam(r, "entityID"),
+		ttl:      t,
+	}
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		return nil, errors.Wrap(ErrInvalidRequest, errors.New("failed to read request body"))
+	}
+	defer r.Body.Close()
+
+	if err := json.Unmarshal(body, &req); err != nil {
+		return nil, errors.Wrap(ErrInvalidRequest, errors.New("failed to decode JSON"))
+	}
+
+	return req, nil
+}
+
+func decodeIssueFromCSRInternal(_ context.Context, r *http.Request) (any, error) {
+	t, err := readStringQuery(r, ttl, "")
+	if err != nil {
+		return nil, err
+	}
+
+	req := IssueFromCSRInternalReq{
 		entityID: chi.URLParam(r, "entityID"),
 		ttl:      t,
 	}

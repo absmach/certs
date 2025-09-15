@@ -163,3 +163,20 @@ func (req IssueFromCSRReq) validate() error {
 
 	return nil
 }
+
+type IssueFromCSRInternalReq struct {
+	entityID string
+	ttl      string
+	CSR      string `json:"csr"`
+}
+
+func (req IssueFromCSRInternalReq) validate() error {
+	if req.entityID == "" {
+		return errors.Wrap(certs.ErrMalformedEntity, ErrMissingEntityID)
+	}
+	if len(req.CSR) == 0 {
+		return errors.Wrap(certs.ErrMalformedEntity, ErrMissingCSR)
+	}
+
+	return nil
+}

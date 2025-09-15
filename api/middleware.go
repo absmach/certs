@@ -111,6 +111,10 @@ func (am *authorizationMiddleware) IssueFromCSR(ctx context.Context, session aut
 	return am.svc.IssueFromCSR(ctx, session, entityID, ttl, csr)
 }
 
+func (am *authorizationMiddleware) IssueFromCSRInternal(ctx context.Context, entityID, ttl string, csr crt.CSR) (crt.Certificate, error) {
+	return am.svc.IssueFromCSRInternal(ctx, entityID, ttl, csr)
+}
+
 func (am *authorizationMiddleware) checkSuperAdmin(ctx context.Context, adminID string) error {
 	if err := am.authz.Authorize(ctx, authz.PolicyReq{
 		SubjectType: policies.UserType,

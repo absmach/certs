@@ -319,3 +319,25 @@ func issueFromCSREndpoint(svc certs.Service) endpoint.Endpoint {
 		}, nil
 	}
 }
+
+func issueFromCSRInternalEndpoint(svc certs.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request any) (response any, err error) {
+		req := request.(IssueFromCSRInternalReq)
+		if err := req.validate(); err != nil {
+			return issueFromCSRRes{}, err
+		}
+
+		cert, err := svc.IssueFromCSRInternal(ctx, req.entityID, req.ttl, certs.CSR{CSR: []byte(req.CSR)})
+		if err != nil {
+			return issueFromCSRRes{}, err
+		}
+
+		return issueFromCSRRes{
+			SerialNumber: cert.SerialNumber,
+			Certificate:  string(cert.Certificate),
+			Revoked:      cert.Revoked,
+			ExpiryTime:   cert.ExpiryTime,
+			EntityID:     cert.EntityID,
+		}, nil
+	}
+}
