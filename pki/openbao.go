@@ -105,6 +105,35 @@ func NewAgent(appRole, appSecret, host, namespace, path, role string, logger *sl
 	return &p, nil
 }
 
+func (va *openbaoPKIAgent) getIntermediateCADefaultSANs() ([]string, []string, error) {
+	err := va.LoginAndRenew()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	certData, err := va.GetCA()
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get intermediate CA certificate: %w", err)
+	}
+
+	block, _ := pem.Decode(certData)
+	if block == nil {
+		return nil, nil, fmt.Errorf("failed to decode intermediate CA certificate PEM")
+	}
+
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to parse intermediate CA certificate: %w", err)
+	}
+
+	var ipSANs []string
+	for _, ip := range cert.IPAddresses {
+		ipSANs = append(ipSANs, ip.String())
+	}
+
+	return cert.DNSNames, ipSANs, nil
+}
+
 func (va *openbaoPKIAgent) Issue(ttl string, ipAddrs []string, options certs.SubjectOptions) (certs.Certificate, error) {
 	err := va.LoginAndRenew()
 	if err != nil {
@@ -141,8 +170,28 @@ func (va *openbaoPKIAgent) Issue(ttl string, ipAddrs []string, options certs.Sub
 
 	allDNSNames := make([]string, 0)
 	allDNSNames = append(allDNSNames, options.DnsNames...)
+	
+	defaultDNSNames, defaultIPSANs, err := va.getIntermediateCADefaultSANs()
+	if err != nil {
+		va.logger.Warn("failed to get default SANs from intermediate CA", "error", err)
+	} else {
+		for _, defaultDNS := range defaultDNSNames {
+			found := false
+			for _, existing := range allDNSNames {
+				if existing == defaultDNS {
+					found = true
+					break
+				}
+			}
+			if !found {
+				allDNSNames = append(allDNSNames, defaultDNS)
+			}
+		}
+	}
+	
 	if len(allDNSNames) > 0 {
-		secretValues["alt_names"] = allDNSNames
+		altNamesValue := strings.Join(allDNSNames, ",")
+		secretValues["alt_names"] = altNamesValue
 	}
 
 	allIPs := make([]string, 0)
@@ -150,8 +199,23 @@ func (va *openbaoPKIAgent) Issue(ttl string, ipAddrs []string, options certs.Sub
 	for _, ip := range options.IpAddresses {
 		allIPs = append(allIPs, ip.String())
 	}
+	
+	for _, defaultIP := range defaultIPSANs {
+		found := false
+		for _, existing := range allIPs {
+			if existing == defaultIP {
+				found = true
+				break
+			}
+		}
+		if !found {
+			allIPs = append(allIPs, defaultIP)
+		}
+	}
+	
 	if len(allIPs) > 0 {
-		secretValues["ip_sans"] = allIPs
+		ipSansValue := strings.Join(allIPs, ",")
+		secretValues["ip_sans"] = ipSansValue
 	}
 
 	secret, err := va.client.Logical().Write(va.issueURL, secretValues)

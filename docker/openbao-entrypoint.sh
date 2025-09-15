@@ -189,12 +189,25 @@ if [ ! -f /opt/openbao/data/configured ]; then
   bao secrets tune -max-lease-ttl=8760h pki_int > /dev/null
 
   INTERMEDIATE_CN="${AM_OPENBAO_PKI_CA_CN} Intermediate"
-  INTERMEDIATE_CSR=$(bao write -field=csr pki_int/intermediate/generate/internal \
-    common_name="$INTERMEDIATE_CN" \
-    organization="$AM_OPENBAO_PKI_CA_O" \
-    country="$AM_OPENBAO_PKI_CA_C" \
+  INTERMEDIATE_CSR_CMD="bao write -field=csr pki_int/intermediate/generate/internal \
+    common_name=\"$INTERMEDIATE_CN\" \
+    organization=\"$AM_OPENBAO_PKI_CA_O\" \
+    country=\"$AM_OPENBAO_PKI_CA_C\" \
     ttl=8760h \
-    key_bits=2048)
+    key_bits=2048"
+
+  [ -n "$AM_OPENBAO_PKI_CA_OU" ] && INTERMEDIATE_CSR_CMD="$INTERMEDIATE_CSR_CMD ou=\"$AM_OPENBAO_PKI_CA_OU\""
+  [ -n "$AM_OPENBAO_PKI_CA_L" ] && INTERMEDIATE_CSR_CMD="$INTERMEDIATE_CSR_CMD locality=\"$AM_OPENBAO_PKI_CA_L\""
+  [ -n "$AM_OPENBAO_PKI_CA_ST" ] && INTERMEDIATE_CSR_CMD="$INTERMEDIATE_CSR_CMD province=\"$AM_OPENBAO_PKI_CA_ST\""
+  [ -n "$AM_OPENBAO_PKI_CA_ADDR" ] && INTERMEDIATE_CSR_CMD="$INTERMEDIATE_CSR_CMD street_address=\"$AM_OPENBAO_PKI_CA_ADDR\""
+  [ -n "$AM_OPENBAO_PKI_CA_PO" ] && INTERMEDIATE_CSR_CMD="$INTERMEDIATE_CSR_CMD postal_code=\"$AM_OPENBAO_PKI_CA_PO\""
+  
+  [ -n "$AM_OPENBAO_PKI_CA_DNS_NAMES" ] && INTERMEDIATE_CSR_CMD="$INTERMEDIATE_CSR_CMD alt_names=\"$AM_OPENBAO_PKI_CA_DNS_NAMES\""
+  [ -n "$AM_OPENBAO_PKI_CA_IP_ADDRESSES" ] && INTERMEDIATE_CSR_CMD="$INTERMEDIATE_CSR_CMD ip_sans=\"$AM_OPENBAO_PKI_CA_IP_ADDRESSES\""
+  [ -n "$AM_OPENBAO_PKI_CA_URI_SANS" ] && INTERMEDIATE_CSR_CMD="$INTERMEDIATE_CSR_CMD uri_sans=\"$AM_OPENBAO_PKI_CA_URI_SANS\""
+  [ -n "$AM_OPENBAO_PKI_CA_EMAIL_ADDRESSES" ] && INTERMEDIATE_CSR_CMD="$INTERMEDIATE_CSR_CMD other_sans=\"email:$AM_OPENBAO_PKI_CA_EMAIL_ADDRESSES\""
+
+  INTERMEDIATE_CSR=$(eval $INTERMEDIATE_CSR_CMD)
 
   if [ $? -ne 0 ] || [ -z "$INTERMEDIATE_CSR" ]; then
     echo "ERROR: Failed to generate intermediate CA CSR" >&2
@@ -206,7 +219,8 @@ if [ ! -f /opt/openbao/data/configured ]; then
   INTERMEDIATE_CERT=$(bao write -field=certificate pki/root/sign-intermediate \
     csr="$INTERMEDIATE_CSR" \
     format=pem_bundle \
-    ttl=8760h)
+    ttl=8760h \
+    use_csr_values=true)
 
   if [ $? -ne 0 ] || [ -z "$INTERMEDIATE_CERT" ]; then
     echo "ERROR: Failed to sign intermediate CA certificate" >&2
@@ -236,7 +250,7 @@ if [ ! -f /opt/openbao/data/configured ]; then
     crl_distribution_points='http://127.0.0.1:8200/v1/pki_int/crl' \
     ocsp_servers='http://127.0.0.1:8200/v1/pki_int/ocsp' > /dev/null
 
-  bao write pki_int/roles/"${AM_OPENBAO_PKI_ROLE}" \
+  ROLE_CMD="bao write pki_int/roles/${AM_OPENBAO_PKI_ROLE} \
     allow_any_name=true \
     enforce_hostnames=false \
     allow_ip_sans=true \
@@ -244,21 +258,23 @@ if [ ! -f /opt/openbao/data/configured ]; then
     allow_bare_domains=true \
     allow_subdomains=true \
     allow_glob_domains=true \
-    allowed_domains="*" \
-    allowed_uri_sans="*" \
-    allowed_other_sans="*" \
+    allowed_domains=\"*\" \
+    allowed_uri_sans=\"*\" \
+    allowed_other_sans=\"*\" \
     server_flag=true \
     client_flag=true \
     code_signing_flag=false \
     email_protection_flag=false \
     key_type=rsa \
     key_bits=2048 \
-    key_usage="DigitalSignature,KeyEncipherment,KeyAgreement" \
-    ext_key_usage="ServerAuth,ClientAuth,OCSPSigning" \
+    key_usage=\"DigitalSignature,KeyEncipherment,KeyAgreement\" \
+    ext_key_usage=\"ServerAuth,ClientAuth,OCSPSigning\" \
     use_csr_common_name=true \
     use_csr_sans=true \
     max_ttl=720h \
-    ttl=720h > /dev/null
+    ttl=720h"
+
+  eval "$ROLE_CMD" > /dev/null
 
   # Create PKI policy
   cat > /opt/openbao/config/pki-policy.hcl << EOF
