@@ -14,8 +14,7 @@ import (
 	"golang.org/x/crypto/ocsp"
 )
 
-type downloadReq struct {
-}
+type downloadReq struct{}
 
 func (req downloadReq) validate() error {
 	return nil
