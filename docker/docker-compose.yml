@@ -3,14 +3,6 @@
 
 name: "certs"
 
-include:
-  - path:
-      - ./supermq-docker/docker-compose.yaml
-      - ./supermq-docker-compose.override.yaml
-    project_directory: ./supermq-docker
-    env_file:
-      - ./supermq-docker/.env
-
 networks:
   certs-base-net:
     driver: bridge
