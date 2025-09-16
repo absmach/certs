@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/absmach/certs"
-	"github.com/absmach/certs/api"
 	certsgrpc "github.com/absmach/certs/api/grpc"
 	httpapi "github.com/absmach/certs/api/http"
 	jaegerClient "github.com/absmach/certs/internal/jaeger"
@@ -21,6 +20,7 @@ import (
 	"github.com/absmach/certs/internal/server"
 	grpcserver "github.com/absmach/certs/internal/server/grpc"
 	"github.com/absmach/certs/internal/uuid"
+	"github.com/absmach/certs/middleware"
 	"github.com/absmach/certs/pki"
 	"github.com/absmach/certs/postgres"
 	"github.com/absmach/certs/tracing"
@@ -58,9 +58,7 @@ type config struct {
 	JaegerURL  url.URL `env:"AM_JAEGER_URL"                 envDefault:"http://jaeger:4318"`
 	InstanceID string  `env:"AM_COMPUTATIONS_INSTANCE_ID"   envDefault:""`
 	TraceRatio float64 `env:"AM_JAEGER_TRACE_RATIO"         envDefault:"1.0"`
-
-	// Agent token for internal CSR operations
-	AgentToken string `env:"AM_CERTS_AGENT_TOKEN" envDefault:""`
+	Token      string  `env:"AM_CERTS_TOKEN"                envDefault:""`
 
 	// OpenBao PKI settings
 	OpenBaoHost      string `env:"AM_CERTS_OPENBAO_HOST"         envDefault:"http://localhost:8200"`
@@ -184,7 +182,7 @@ func main() {
 	gs := grpcserver.NewServer(ctx, cancel, svcName, grpcServerConfig, registerCertsServiceServer, logger, nil, nil)
 
 	mux := chi.NewRouter()
-	hs := httpserver.NewServer(ctx, cancel, svcName, httpServerConfig, httpapi.MakeHandler(svc, authn, mux, logger, cfg.InstanceID, cfg.AgentToken), logger)
+	hs := httpserver.NewServer(ctx, cancel, svcName, httpServerConfig, httpapi.MakeHandler(svc, authn, mux, logger, cfg.InstanceID, cfg.Token), logger)
 
 	g.Go(func() error {
 		return hs.Start()
@@ -211,10 +209,10 @@ func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, trac
 		logger.Error(fmt.Sprintf("failed to create service: %s", err))
 		return nil
 	}
-	svc = api.AuthorizationMiddleware(authz, svc)
-	svc = api.LoggingMiddleware(svc, logger)
+	svc = middleware.AuthorizationMiddleware(authz, svc)
+	svc = middleware.LoggingMiddleware(svc, logger)
 	counter, latency := prometheus.MakeMetrics(svcName, "api")
-	svc = api.MetricsMiddleware(svc, counter, latency)
+	svc = middleware.MetricsMiddleware(svc, counter, latency)
 	svc = tracing.New(svc, tracer)
 
 	return svc

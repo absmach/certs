@@ -53,7 +53,7 @@ func AgentAuthenticateMiddleware(authn authn.Authentication, expectedToken strin
 }
 
 // MakeHandler returns a HTTP handler for API endpoints.
-func MakeHandler(svc certs.Service, authn authn.Authentication, mux *chi.Mux, logger *slog.Logger, instanceID string, agentToken string) http.Handler {
+func MakeHandler(svc certs.Service, authn authn.Authentication, mux *chi.Mux, logger *slog.Logger, instanceID string, token string) http.Handler {
 	opts := []kithttp.ServerOption{
 		kithttp.ServerErrorEncoder(loggingErrorEncoder(logger, EncodeError)),
 	}
@@ -65,43 +65,43 @@ func MakeHandler(svc certs.Service, authn authn.Authentication, mux *chi.Mux, lo
 				r.Post("/issue/{entityID}", otelhttp.NewHandler(kithttp.NewServer(
 					issueCertEndpoint(svc),
 					decodeIssueCert,
-					EncodeResponse,
+					api.EncodeResponse,
 					opts...,
 				), "issue_cert").ServeHTTP)
 				r.Patch("/{id}/renew", otelhttp.NewHandler(kithttp.NewServer(
 					renewCertEndpoint(svc),
 					decodeView,
-					EncodeResponse,
+					api.EncodeResponse,
 					opts...,
 				), "renew_cert").ServeHTTP)
 				r.Patch("/{id}/revoke", otelhttp.NewHandler(kithttp.NewServer(
 					revokeCertEndpoint(svc),
 					decodeView,
-					EncodeResponse,
+					api.EncodeResponse,
 					opts...,
 				), "revoke_cert").ServeHTTP)
 				r.Delete("/{entityID}/delete", otelhttp.NewHandler(kithttp.NewServer(
 					deleteCertEndpoint(svc),
 					decodeDelete,
-					EncodeResponse,
+					api.EncodeResponse,
 					opts...,
 				), "delete_cert").ServeHTTP)
 				r.Get("/", otelhttp.NewHandler(kithttp.NewServer(
 					listCertsEndpoint(svc),
 					decodeListCerts,
-					EncodeResponse,
+					api.EncodeResponse,
 					opts...,
 				), "list_certs").ServeHTTP)
 				r.Get("/{id}", otelhttp.NewHandler(kithttp.NewServer(
 					viewCertEndpoint(svc),
 					decodeView,
-					EncodeResponse,
+					api.EncodeResponse,
 					opts...,
 				), "view_cert").ServeHTTP)
 				r.Get("/view-ca", otelhttp.NewHandler(kithttp.NewServer(
 					viewCAEndpoint(svc),
 					decodeDownloadCA,
-					EncodeResponse,
+					api.EncodeResponse,
 					opts...,
 				), "view_ca").ServeHTTP)
 				r.Get("/download-ca", otelhttp.NewHandler(kithttp.NewServer(
@@ -114,7 +114,7 @@ func MakeHandler(svc certs.Service, authn authn.Authentication, mux *chi.Mux, lo
 					r.Post("/{entityID}", otelhttp.NewHandler(kithttp.NewServer(
 						issueFromCSREndpoint(svc),
 						decodeIssueFromCSR,
-						EncodeResponse,
+						api.EncodeResponse,
 						opts...,
 					), "issue_from_csr").ServeHTTP)
 				})
@@ -132,17 +132,17 @@ func MakeHandler(svc certs.Service, authn authn.Authentication, mux *chi.Mux, lo
 		r.Get("/crl", otelhttp.NewHandler(kithttp.NewServer(
 			generateCRLEndpoint(svc),
 			decodeCRL,
-			EncodeResponse,
+			api.EncodeResponse,
 			opts...,
 		), "generate_crl").ServeHTTP)
 	})
 
 	mux.Group(func(r chi.Router) {
-		r.Use(AgentAuthenticateMiddleware(authn, agentToken))
+		r.Use(AgentAuthenticateMiddleware(authn, token))
 		r.Post("/agent/certs/csrs/{entityID}", otelhttp.NewHandler(kithttp.NewServer(
 			issueFromCSRInternalEndpoint(svc),
 			decodeIssueFromCSRInternal,
-			EncodeResponse,
+			api.EncodeResponse,
 			opts...,
 		), "issue_from_csr_internal").ServeHTTP)
 	})
@@ -178,16 +178,13 @@ func decodeDownloadCA(_ context.Context, r *http.Request) (any, error) {
 }
 
 func decodeOCSPRequest(_ context.Context, r *http.Request) (any, error) {
-	fmt.Println("am here 1")
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		return nil, errors.Wrap(certs.ErrMalformedEntity, err)
 	}
 	defer r.Body.Close()
 
-	fmt.Println("am here 2")
 	req, err := ocsp.ParseRequest(body)
-	fmt.Printf("Error is %v\n", err)
 	if err != nil {
 		contentType := r.Header.Get("Content-Type")
 		if strings.Contains(contentType, "application/json") {
@@ -195,33 +192,25 @@ func decodeOCSPRequest(_ context.Context, r *http.Request) (any, error) {
 		}
 		return nil, fmt.Errorf("invalid OCSP request: %w", err)
 	}
-	fmt.Println("am here 3")
 
 	request := ocspReq{
 		req:         req,
 		StatusParam: strings.TrimSpace(r.URL.Query().Get(ocspStatusParam)),
 	}
-	fmt.Println("am here 4")
 
 	return request, nil
 }
 
 func decodeJsonOCSPRequest(body []byte) (any, error) {
-	fmt.Println("am here 2.1")
-
 	var simple ocspReq
 	if err := json.Unmarshal(body, &simple); err != nil {
 		return nil, fmt.Errorf("invalid JSON OCSP request: %w", err)
 	}
-	fmt.Println("am here 2.2")
 
 	request := ocspReq{
 		SerialNumber: simple.SerialNumber,
 		Certificate:  simple.Certificate,
 	}
-	fmt.Println("am here 2.3")
-
-	fmt.Printf("request is %+v\n", request)
 
 	return request, nil
 }
@@ -313,23 +302,6 @@ func decodeIssueFromCSRInternal(_ context.Context, r *http.Request) (any, error)
 	}
 
 	return req, nil
-}
-
-// EncodeResponse encodes successful response.
-func EncodeResponse(_ context.Context, w http.ResponseWriter, response any) error {
-	if ar, ok := response.(Response); ok {
-		for k, v := range ar.Headers() {
-			w.Header().Set(k, v)
-		}
-		w.Header().Set("Content-Type", ContentType)
-		w.WriteHeader(ar.Code())
-
-		if ar.Empty() {
-			return nil
-		}
-	}
-
-	return json.NewEncoder(w).Encode(response)
 }
 
 func encodeOSCPResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {

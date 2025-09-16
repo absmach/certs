@@ -13,7 +13,6 @@ import (
 	"crypto/x509/pkix"
 	"encoding/json"
 	"encoding/pem"
-	"fmt"
 	"net"
 	"os"
 
@@ -285,7 +284,6 @@ var cmdCerts = []cobra.Command{
 		Long:  `Generates a Certificate Revocation List (CRL).`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 0 {
-				fmt.Println("am here 1")
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
