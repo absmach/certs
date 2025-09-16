@@ -174,14 +174,9 @@ func ocspEndpoint(svc certs.Service) endpoint.Endpoint {
 			return nil, err
 		}
 
-		session, ok := ctx.Value(api.SessionKey).(authn.Session)
-		if !ok {
-			return nil, svcerr.ErrAuthentication
-		}
-
 		var resBytes []byte
 		if req.SerialNumber != "" {
-			resBytes, err = svc.OCSP(ctx, session, req.SerialNumber, nil)
+			resBytes, err = svc.OCSP(ctx, req.SerialNumber, nil)
 			if err != nil {
 				return nil, err
 			}
@@ -190,7 +185,7 @@ func ocspEndpoint(svc certs.Service) endpoint.Endpoint {
 			if err != nil {
 				return nil, err
 			}
-			resBytes, err = svc.OCSP(ctx, session, "", ocspRequestDER)
+			resBytes, err = svc.OCSP(ctx, "", ocspRequestDER)
 			if err != nil {
 				return nil, err
 			}
@@ -209,12 +204,7 @@ func generateCRLEndpoint(svc certs.Service) endpoint.Endpoint {
 			return crlRes{}, err
 		}
 
-		session, ok := ctx.Value(api.SessionKey).(authn.Session)
-		if !ok {
-			return crlRes{}, svcerr.ErrAuthentication
-		}
-
-		crlBytes, err := svc.GenerateCRL(ctx, session, req.certtype)
+		crlBytes, err := svc.GenerateCRL(ctx)
 		if err != nil {
 			return crlRes{}, err
 		}

@@ -108,13 +108,40 @@ func TestIssueCertCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
+			defer func() {
+				cleanupFiles(t, []string{"cert.pem", "key.pem"})
+			}()
 			sdkCall := sdkMock.On("IssueCert", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(tc.cert, tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{issueCmd}, tc.args...)...)
 			switch tc.logType {
 			case entityLog:
-				err := json.Unmarshal([]byte(out), &cert)
+				lines := strings.Split(out, "\n")
+				var jsonLines []string
+				var inJSON bool
+
+				for _, line := range lines {
+					line = strings.TrimSpace(line)
+					if strings.HasPrefix(line, "{") {
+						inJSON = true
+						jsonLines = append(jsonLines, line)
+					} else if inJSON && strings.HasSuffix(line, "}") {
+						jsonLines = append(jsonLines, line)
+						break
+					} else if inJSON {
+						jsonLines = append(jsonLines, line)
+					}
+				}
+
+				if len(jsonLines) == 0 {
+					t.Fatalf("No JSON found in output: %s", out)
+				}
+
+				jsonPart := strings.Join(jsonLines, "")
+
+				err := json.Unmarshal([]byte(jsonPart), &cert)
 				assert.Nil(t, err)
 				assert.Equal(t, tc.cert, cert, fmt.Sprintf("%s unexpected response: expected: %v, got: %v", tc.desc, tc.cert, cert))
+				assert.True(t, strings.Contains(out, "All certificate files have been saved successfully"), fmt.Sprintf("%s should save files", tc.desc))
 			case errLog:
 				assert.Equal(t, tc.errLogMessage, out, fmt.Sprintf("%s unexpected error response: expected %s got errLogMessage:%s", tc.desc, tc.errLogMessage, out))
 			case usageLog:
@@ -427,21 +454,18 @@ func TestDownloadCACmd(t *testing.T) {
 		{
 			desc: "download CA successfully",
 			args: []string{
-				"ca_token",
 				domainID,
 				token,
 			},
 			logType: entityLog,
 			certBundle: sdk.CertificateBundle{
 				Certificate: []byte("certificate"),
-				PrivateKey:  []byte("privatekey"),
 			},
-			logMessage: "Saved ca.pem\nSaved cert.pem\nSaved key.pem\n\nAll certificate files have been saved successfully.\n",
+			logMessage: "Saved ca.crt\n\nAll certificate files have been saved successfully.\n",
 		},
 		{
 			desc: "download CA with invalid args",
 			args: []string{
-				"ca_token",
 				extraArg,
 			},
 			logType: usageLog,
@@ -449,7 +473,6 @@ func TestDownloadCACmd(t *testing.T) {
 		{
 			desc: "download cert failed",
 			args: []string{
-				"ca_token",
 				domainID,
 				token,
 			},
@@ -463,14 +486,13 @@ func TestDownloadCACmd(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
 			defer func() {
-				cleanupFiles(t, []string{"ca.key", "ca.crt"})
+				cleanupFiles(t, []string{"ca.crt"})
 			}()
-			sdkCall := sdkMock.On("DownloadCA", mock.Anything, mock.Anything, mock.Anything).Return(tc.certBundle, tc.sdkErr)
+			sdkCall := sdkMock.On("DownloadCA", mock.Anything, mock.Anything).Return(tc.certBundle, tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{downloadCACmd}, tc.args...)...)
 			switch tc.logType {
 			case entityLog:
 				assert.True(t, strings.Contains(out, "Saved ca.crt"), fmt.Sprintf("%s invalid output: %s", tc.desc, out))
-				assert.True(t, strings.Contains(out, "Saved ca.key"), fmt.Sprintf("%s invalid output: %s", tc.desc, out))
 			case usageLog:
 				assert.False(t, strings.Contains(out, rootCmd.Use), fmt.Sprintf("%s invalid usage: %s", tc.desc, out))
 			case errLog:
@@ -499,7 +521,6 @@ func TestViewCACmd(t *testing.T) {
 		{
 			desc: "view cert successfully",
 			args: []string{
-				"ca_token",
 				domainID,
 				token,
 			},
@@ -512,7 +533,6 @@ func TestViewCACmd(t *testing.T) {
 		{
 			desc: "view cert with invalid args",
 			args: []string{
-				"ca_token",
 				extraArg,
 			},
 			logType: usageLog,
@@ -520,7 +540,6 @@ func TestViewCACmd(t *testing.T) {
 		{
 			desc: "view cert failed",
 			args: []string{
-				"ca_token",
 				domainID,
 				token,
 			},
@@ -533,7 +552,7 @@ func TestViewCACmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("ViewCA", mock.Anything, mock.Anything, mock.Anything).Return(tc.cert, tc.sdkErr)
+			sdkCall := sdkMock.On("ViewCA", mock.Anything, mock.Anything).Return(tc.cert, tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{viewCACmd}, tc.args...)...)
 			switch tc.logType {
 			case entityLog:
@@ -565,37 +584,34 @@ func TestGenerateCRLCmd(t *testing.T) {
 		crlBytes      []byte
 	}{
 		{
-			desc:     "generate CRL successfully for root",
-			args:     []string{"root", domainID, token},
+			desc:     "generate CRL successfully",
+			args:     []string{},
 			logType:  entityLog,
-			crlBytes: []byte("mock-crl-data"),
-		},
-		{
-			desc:     "generate CRL successfully for intermediate",
-			args:     []string{"intermediate", domainID, token},
-			logType:  entityLog,
-			crlBytes: []byte("mock-crl-data"),
-		},
-		{
-			desc:    "generate CRL with invalid args",
-			args:    []string{"invalid", domainID},
-			logType: usageLog,
+			crlBytes: []byte("crl-data"),
 		},
 		{
 			desc:          "generate CRL failed",
-			args:          []string{"root", domainID, token},
+			args:          []string{},
 			sdkErr:        errors.NewSDKErrorWithStatus(certs.ErrFailedCertCreation, http.StatusUnprocessableEntity),
 			errLogMessage: fmt.Sprintf("\nerror: %s\n\n", errors.NewSDKErrorWithStatus(certs.ErrFailedCertCreation, http.StatusUnprocessableEntity)),
 			logType:       errLog,
+		},
+		{
+			desc:    "generate CRL with invalid args",
+			args:    []string{"invalid"},
+			logType: usageLog,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
 			defer func() {
-				cleanupFiles(t, []string{"root_ca.crl", "intermediate_ca.crl"})
+				cleanupFiles(t, []string{"ca.crl"})
 			}()
-			sdkCall := sdkMock.On("GenerateCRL", mock.Anything, mock.Anything, mock.Anything).Return(tc.crlBytes, tc.sdkErr)
+
+			sdkCall := sdkMock.On("GenerateCRL").Return(tc.crlBytes, tc.sdkErr)
+			defer sdkCall.Unset()
+
 			out := executeCommand(t, rootCmd, append([]string{"crl"}, tc.args...)...)
 
 			switch tc.logType {
@@ -606,7 +622,6 @@ func TestGenerateCRLCmd(t *testing.T) {
 			case errLog:
 				assert.Equal(t, tc.errLogMessage, out, fmt.Sprintf("%s unexpected error response: expected %s got errLogMessage:%s", tc.desc, tc.errLogMessage, out))
 			}
-			sdkCall.Unset()
 		})
 	}
 }

@@ -160,13 +160,13 @@ type Service interface {
 
 	// OCSP forwards OCSP requests to OpenBao's OCSP endpoint.
 	// If ocspRequestDER is provided, it will be used directly; otherwise, a request will be built from the serialNumber.
-	OCSP(ctx context.Context, session authn.Session, serialNumber string, ocspRequestDER []byte) ([]byte, error)
+	OCSP(ctx context.Context, serialNumber string, ocspRequestDER []byte) ([]byte, error)
 
 	// GetEntityID retrieves the entity ID for a certificate.
 	GetEntityID(ctx context.Context, serialNumber string) (string, error)
 
 	// GenerateCRL creates cert revocation list.
-	GenerateCRL(ctx context.Context, session authn.Session, caType CertType) ([]byte, error)
+	GenerateCRL(ctx context.Context) ([]byte, error)
 
 	// GetChainCA retrieves the chain of CA i.e. root and intermediate cert concat together.
 	GetChainCA(ctx context.Context, session authn.Session) (Certificate, error)

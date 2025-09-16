@@ -78,12 +78,12 @@ func (mm *metricsMiddleware) ViewCert(ctx context.Context, session authn.Session
 	return mm.svc.ViewCert(ctx, session, serialNumber)
 }
 
-func (mm *metricsMiddleware) OCSP(ctx context.Context, session authn.Session, serialNumber string, ocspRequestDER []byte) ([]byte, error) {
+func (mm *metricsMiddleware) OCSP(ctx context.Context, serialNumber string, ocspRequestDER []byte) ([]byte, error) {
 	defer func(begin time.Time) {
 		mm.counter.With("method", "ocsp").Add(1)
 		mm.latency.With("method", "ocsp").Observe(time.Since(begin).Seconds())
 	}(time.Now())
-	return mm.svc.OCSP(ctx, session, serialNumber, ocspRequestDER)
+	return mm.svc.OCSP(ctx, serialNumber, ocspRequestDER)
 }
 
 func (mm *metricsMiddleware) GetEntityID(ctx context.Context, serialNumber string) (string, error) {
@@ -94,12 +94,12 @@ func (mm *metricsMiddleware) GetEntityID(ctx context.Context, serialNumber strin
 	return mm.svc.GetEntityID(ctx, serialNumber)
 }
 
-func (mm *metricsMiddleware) GenerateCRL(ctx context.Context, session authn.Session, caType certs.CertType) ([]byte, error) {
+func (mm *metricsMiddleware) GenerateCRL(ctx context.Context) ([]byte, error) {
 	defer func(begin time.Time) {
 		mm.counter.With("method", "generate_crl").Add(1)
 		mm.latency.With("method", "generate_crl").Observe(time.Since(begin).Seconds())
 	}(time.Now())
-	return mm.svc.GenerateCRL(ctx, session, caType)
+	return mm.svc.GenerateCRL(ctx)
 }
 
 func (mm *metricsMiddleware) GetChainCA(ctx context.Context, session authn.Session) (certs.Certificate, error) {

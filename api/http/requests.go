@@ -42,14 +42,9 @@ func (req deleteReq) validate() error {
 	return nil
 }
 
-type crlReq struct {
-	certtype certs.CertType
-}
+type crlReq struct {}
 
 func (req crlReq) validate() error {
-	if req.certtype != certs.IntermediateCA {
-		return errors.Wrap(certs.ErrMalformedEntity, errors.New("invalid CA type"))
-	}
 	return nil
 }
 

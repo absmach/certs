@@ -283,9 +283,9 @@ type SDK interface {
 	// GenerateCRL generates a Certificate Revocation List
 	//
 	// example:
-	//	crlBytes, err := sdk.GenerateCRL(sdk.RootCA)
+	//	crlBytes, err := sdk.GenerateCRL()
 	//	fmt.Println(err)
-	GenerateCRL(certType CertType) ([]byte, errors.SDKError)
+	GenerateCRL() ([]byte, errors.SDKError)
 
 	// RevokeAll revokes all certificates for an entity ID
 	//
@@ -319,7 +319,7 @@ func (sdk mgSDK) IssueCert(entityID, ttl string, ipAddrs []string, opts Options,
 	if err != nil {
 		return Certificate{}, errors.NewSDKError(err)
 	}
-	url := fmt.Sprintf("%s/%s/%s/%s", sdk.certsURL, issueCertEndpoint, domainID, entityID)
+	url := fmt.Sprintf("%s/%s/%s/issue/%s", sdk.certsURL, domainID, certsEndpoint, entityID)
 	_, body, sdkerr := sdk.processRequest(context.Background(), http.MethodPost, url, token, d, nil, http.StatusCreated)
 	if sdkerr != nil {
 		return Certificate{}, sdkerr
@@ -576,7 +576,7 @@ func (sdk mgSDK) IssueFromCSRInternal(entityID, ttl, csr string) (Certificate, e
 	return cert, nil
 }
 
-func (sdk mgSDK) GenerateCRL(certType CertType) ([]byte, errors.SDKError) {
+func (sdk mgSDK) GenerateCRL() ([]byte, errors.SDKError) {
 	url := fmt.Sprintf("%s/certs/%s", sdk.certsURL, crlEndpoint)
 	_, body, sdkerr := sdk.processRequest(context.Background(), http.MethodGet, url, "", nil, nil, http.StatusOK)
 	if sdkerr != nil {

@@ -30,19 +30,17 @@ const (
 	offsetKey       = "offset"
 	limitKey        = "limit"
 	entityKey       = "entity_id"
-	token           = "token"
 	ocspStatusParam = "force_status"
 	entityIDParam   = "entityID"
 	ttl             = "ttl"
 	defOffset       = 0
 	defLimit        = 10
-	defType         = 1
 )
 
 func AgentAuthenticateMiddleware(authn authn.Authentication, expectedToken string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			resp, err := authn.Authenticate(r.Context(), token)
+			resp, err := authn.Authenticate(r.Context(), expectedToken)
 			if err != nil {
 				EncodeError(r.Context(), err, w)
 				return
@@ -122,19 +120,22 @@ func MakeHandler(svc certs.Service, authn authn.Authentication, mux *chi.Mux, lo
 				})
 			})
 
-			r.Post("/ocsp", otelhttp.NewHandler(kithttp.NewServer(
-				ocspEndpoint(svc),
-				decodeOCSPRequest,
-				encodeOSCPResponse,
-				opts...,
-			), "ocsp").ServeHTTP)
-			r.Get("/crl", otelhttp.NewHandler(kithttp.NewServer(
-				generateCRLEndpoint(svc),
-				decodeCRL,
-				EncodeResponse,
-				opts...,
-			), "generate_crl").ServeHTTP)
 		})
+	})
+
+	mux.Route("/certs", func(r chi.Router) {
+		r.Post("/ocsp", otelhttp.NewHandler(kithttp.NewServer(
+			ocspEndpoint(svc),
+			decodeOCSPRequest,
+			encodeOSCPResponse,
+			opts...,
+		), "ocsp").ServeHTTP)
+		r.Get("/crl", otelhttp.NewHandler(kithttp.NewServer(
+			generateCRLEndpoint(svc),
+			decodeCRL,
+			EncodeResponse,
+			opts...,
+		), "generate_crl").ServeHTTP)
 	})
 
 	mux.Group(func(r chi.Router) {
@@ -168,13 +169,7 @@ func decodeDelete(_ context.Context, r *http.Request) (any, error) {
 }
 
 func decodeCRL(_ context.Context, r *http.Request) (any, error) {
-	certType, err := readNumQuery(r, "", defType)
-	if err != nil {
-		return nil, err
-	}
-	req := crlReq{
-		certtype: certs.CertType(certType),
-	}
+	req := crlReq{}
 	return req, nil
 }
 
@@ -184,13 +179,16 @@ func decodeDownloadCA(_ context.Context, r *http.Request) (any, error) {
 }
 
 func decodeOCSPRequest(_ context.Context, r *http.Request) (any, error) {
+	fmt.Println("am here 1")
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		return nil, errors.Wrap(certs.ErrMalformedEntity, err)
 	}
 	defer r.Body.Close()
 
+	fmt.Println("am here 2")
 	req, err := ocsp.ParseRequest(body)
+	fmt.Printf("Error is %v\n", err)
 	if err != nil {
 		contentType := r.Header.Get("Content-Type")
 		if strings.Contains(contentType, "application/json") {
@@ -198,24 +196,34 @@ func decodeOCSPRequest(_ context.Context, r *http.Request) (any, error) {
 		}
 		return nil, fmt.Errorf("invalid OCSP request: %w", err)
 	}
+	fmt.Println("am here 3")
 
 	request := ocspReq{
 		req:         req,
 		StatusParam: strings.TrimSpace(r.URL.Query().Get(ocspStatusParam)),
 	}
+	fmt.Println("am here 4")
+
 	return request, nil
 }
 
 func decodeJsonOCSPRequest(body []byte) (any, error) {
+	fmt.Println("am here 2.1")
+
 	var simple ocspReq
 	if err := json.Unmarshal(body, &simple); err != nil {
 		return nil, fmt.Errorf("invalid JSON OCSP request: %w", err)
 	}
+	fmt.Println("am here 2.2")
 
 	request := ocspReq{
 		SerialNumber: simple.SerialNumber,
 		Certificate:  simple.Certificate,
 	}
+	fmt.Println("am here 2.3")
+
+	fmt.Printf("request is %+v\n", request)
+
 	return request, nil
 }
 

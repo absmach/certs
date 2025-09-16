@@ -13,6 +13,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/json"
 	"encoding/pem"
+	"fmt"
 	"net"
 	"os"
 
@@ -279,32 +280,22 @@ var cmdCerts = []cobra.Command{
 		},
 	},
 	{
-		Use:   "crl [root | intermediate]",
-		Short: "Generate Certificate Revocation List",
-		Long:  `Generates a Certificate Revocation List (CRL) for the specified CA type.`,
+		Use:   "crl",
+		Short: "Generate CRL",
+		Long:  `Generates a Certificate Revocation List (CRL).`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 1 {
+			if len(args) != 0 {
+				fmt.Println("am here 1")
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
 
-			var certType ctxsdk.CertType
-			switch args[0] {
-			case "root":
-				certType = ctxsdk.RootCA
-			case "intermediate":
-				certType = ctxsdk.IntermediateCA
-			default:
-				logUsageCmd(*cmd, cmd.Use)
-				return
-			}
-
-			crlBytes, err := sdk.GenerateCRL(certType)
+			crlBytes, err := sdk.GenerateCRL()
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
-			logSaveCRLFile(*cmd, crlBytes, args[0])
+			logSaveCRLFile(*cmd, crlBytes)
 		},
 	},
 	{

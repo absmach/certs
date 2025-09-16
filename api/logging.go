@@ -97,7 +97,7 @@ func (lm *loggingMiddleware) ViewCert(ctx context.Context, session authn.Session
 	return lm.svc.ViewCert(ctx, session, serialNumber)
 }
 
-func (lm *loggingMiddleware) OCSP(ctx context.Context, session authn.Session, serialNumber string, ocspRequestDER []byte) (ocspBytes []byte, err error) {
+func (lm *loggingMiddleware) OCSP(ctx context.Context, serialNumber string, ocspRequestDER []byte) (ocspBytes []byte, err error) {
 	defer func(begin time.Time) {
 		requestType := "serial_number"
 		if len(ocspRequestDER) > 0 {
@@ -110,7 +110,7 @@ func (lm *loggingMiddleware) OCSP(ctx context.Context, session authn.Session, se
 		}
 		lm.logger.Info(message)
 	}(time.Now())
-	return lm.svc.OCSP(ctx, session, serialNumber, ocspRequestDER)
+	return lm.svc.OCSP(ctx, serialNumber, ocspRequestDER)
 }
 
 func (lm *loggingMiddleware) GetEntityID(ctx context.Context, serialNumber string) (entityID string, err error) {
@@ -125,7 +125,7 @@ func (lm *loggingMiddleware) GetEntityID(ctx context.Context, serialNumber strin
 	return lm.svc.GetEntityID(ctx, serialNumber)
 }
 
-func (lm *loggingMiddleware) GenerateCRL(ctx context.Context, session authn.Session, caType certs.CertType) (crl []byte, err error) {
+func (lm *loggingMiddleware) GenerateCRL(ctx context.Context) (crl []byte, err error) {
 	defer func(begin time.Time) {
 		message := fmt.Sprintf("Method generate_crl took %s to complete", time.Since(begin))
 		if err != nil {
@@ -134,7 +134,7 @@ func (lm *loggingMiddleware) GenerateCRL(ctx context.Context, session authn.Sess
 		}
 		lm.logger.Info(message)
 	}(time.Now())
-	return lm.svc.GenerateCRL(ctx, session, caType)
+	return lm.svc.GenerateCRL(ctx)
 }
 
 func (lm *loggingMiddleware) GetChainCA(ctx context.Context, session authn.Session) (cert certs.Certificate, err error) {

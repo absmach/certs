@@ -31,6 +31,7 @@ const (
 	ttl         = "10h"
 	commonName  = "test"
 	token       = "token"
+	agentToken  = "agent-token"
 	domainID    = "domain-id"
 )
 
@@ -39,7 +40,7 @@ func setupCerts() (*httptest.Server, *mocks.Service, *authnmocks.Authentication)
 	mux := chi.NewRouter()
 	logger := logger.NewMock()
 	authn := new(authnmocks.Authentication)
-	handler := httpapi.MakeHandler(svc, authn, mux, logger, instanceID, "")
+	handler := httpapi.MakeHandler(svc, authn, mux, logger, instanceID, agentToken)
 
 	return httptest.NewServer(handler), svc, authn
 }
@@ -829,44 +830,34 @@ func TestGenerateCRL(t *testing.T) {
 	crlData := []byte("mock-crl-data")
 
 	cases := []struct {
-		desc     string
-		certType sdk.CertType
-		svcresp  []byte
-		svcerr   error
-		err      errors.SDKError
+		desc    string
+		svcresp []byte
+		svcerr  error
+		err     errors.SDKError
 	}{
 		{
-			desc:     "GenerateCRL success for RootCA",
-			certType: sdk.RootCA,
-			svcresp:  crlData,
-			svcerr:   nil,
-			err:      nil,
+			desc:    "GenerateCRL success",
+			svcresp: crlData,
+			svcerr:  nil,
+			err:     nil,
 		},
 		{
-			desc:     "GenerateCRL success for IntermediateCA",
-			certType: sdk.IntermediateCA,
-			svcresp:  crlData,
-			svcerr:   nil,
-			err:      nil,
-		},
-		{
-			desc:     "GenerateCRL failure",
-			certType: sdk.RootCA,
-			svcresp:  nil,
-			svcerr:   certs.ErrFailedCertCreation,
-			err:      errors.NewSDKErrorWithStatus(certs.ErrFailedCertCreation, http.StatusUnprocessableEntity),
+			desc:    "GenerateCRL failure",
+			svcresp: nil,
+			svcerr:  certs.ErrFailedCertCreation,
+			err:     errors.NewSDKErrorWithStatus(certs.ErrFailedCertCreation, http.StatusUnprocessableEntity),
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			svcCall := svc.On("GenerateCRL", mock.Anything, mock.Anything, mock.Anything).Return(tc.svcresp, tc.svcerr)
+			svcCall := svc.On("GenerateCRL", mock.Anything).Return(tc.svcresp, tc.svcerr)
 
-			resp, err := ctsdk.GenerateCRL(tc.certType)
+			resp, err := ctsdk.GenerateCRL()
 			assert.Equal(t, tc.err, err)
 			if tc.err == nil {
 				assert.Equal(t, tc.svcresp, resp)
-				ok := svcCall.Parent.AssertCalled(t, "GenerateCRL", mock.Anything, mock.Anything, mock.Anything)
+				ok := svcCall.Parent.AssertCalled(t, "GenerateCRL", mock.Anything)
 				assert.True(t, ok)
 			}
 			svcCall.Unset()
@@ -1106,7 +1097,7 @@ func TestGetCA(t *testing.T) {
 }
 
 func TestIssueFromCSRInternal(t *testing.T) {
-	ts, svc, _ := setupCerts()
+	ts, svc, auth := setupCerts()
 	defer ts.Close()
 
 	sdkConfig := sdk.Config{
@@ -1158,6 +1149,10 @@ func TestIssueFromCSRInternal(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
+			// Set up agent authentication mock
+			agentSession := smqauthn.Session{DomainUserID: "agent", UserID: "agent", DomainID: "agent"}
+			authCall := auth.On("Authenticate", mock.Anything, agentToken).Return(agentSession, nil)
+			
 			svcCall := svc.On("IssueFromCSRInternal", mock.Anything, tc.entityID, tc.ttl, mock.Anything).Return(tc.svcresp, tc.svcerr)
 
 			c, err := ctsdk.IssueFromCSRInternal(tc.entityID, tc.ttl, tc.csr)
@@ -1168,6 +1163,7 @@ func TestIssueFromCSRInternal(t *testing.T) {
 				assert.True(t, ok)
 			}
 			svcCall.Unset()
+			authCall.Unset()
 		})
 	}
 }

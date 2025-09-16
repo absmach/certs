@@ -42,8 +42,8 @@ func (_m *Service) EXPECT() *Service_Expecter {
 }
 
 // GenerateCRL provides a mock function for the type Service
-func (_mock *Service) GenerateCRL(ctx context.Context, session authn.Session, caType certs.CertType) ([]byte, error) {
-	ret := _mock.Called(ctx, session, caType)
+func (_mock *Service) GenerateCRL(ctx context.Context) ([]byte, error) {
+	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GenerateCRL")
@@ -51,18 +51,18 @@ func (_mock *Service) GenerateCRL(ctx context.Context, session authn.Session, ca
 
 	var r0 []byte
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, authn.Session, certs.CertType) ([]byte, error)); ok {
-		return returnFunc(ctx, session, caType)
+	if returnFunc, ok := ret.Get(0).(func(context.Context) ([]byte, error)); ok {
+		return returnFunc(ctx)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, authn.Session, certs.CertType) []byte); ok {
-		r0 = returnFunc(ctx, session, caType)
+	if returnFunc, ok := ret.Get(0).(func(context.Context) []byte); ok {
+		r0 = returnFunc(ctx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]byte)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, authn.Session, certs.CertType) error); ok {
-		r1 = returnFunc(ctx, session, caType)
+	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = returnFunc(ctx)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -76,30 +76,18 @@ type Service_GenerateCRL_Call struct {
 
 // GenerateCRL is a helper method to define mock.On call
 //   - ctx context.Context
-//   - session authn.Session
-//   - caType certs.CertType
-func (_e *Service_Expecter) GenerateCRL(ctx interface{}, session interface{}, caType interface{}) *Service_GenerateCRL_Call {
-	return &Service_GenerateCRL_Call{Call: _e.mock.On("GenerateCRL", ctx, session, caType)}
+func (_e *Service_Expecter) GenerateCRL(ctx interface{}) *Service_GenerateCRL_Call {
+	return &Service_GenerateCRL_Call{Call: _e.mock.On("GenerateCRL", ctx)}
 }
 
-func (_c *Service_GenerateCRL_Call) Run(run func(ctx context.Context, session authn.Session, caType certs.CertType)) *Service_GenerateCRL_Call {
+func (_c *Service_GenerateCRL_Call) Run(run func(ctx context.Context)) *Service_GenerateCRL_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 authn.Session
-		if args[1] != nil {
-			arg1 = args[1].(authn.Session)
-		}
-		var arg2 certs.CertType
-		if args[2] != nil {
-			arg2 = args[2].(certs.CertType)
-		}
 		run(
 			arg0,
-			arg1,
-			arg2,
 		)
 	})
 	return _c
@@ -110,7 +98,7 @@ func (_c *Service_GenerateCRL_Call) Return(bytes []byte, err error) *Service_Gen
 	return _c
 }
 
-func (_c *Service_GenerateCRL_Call) RunAndReturn(run func(ctx context.Context, session authn.Session, caType certs.CertType) ([]byte, error)) *Service_GenerateCRL_Call {
+func (_c *Service_GenerateCRL_Call) RunAndReturn(run func(ctx context.Context) ([]byte, error)) *Service_GenerateCRL_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -632,8 +620,8 @@ func (_c *Service_ListCerts_Call) RunAndReturn(run func(ctx context.Context, ses
 }
 
 // OCSP provides a mock function for the type Service
-func (_mock *Service) OCSP(ctx context.Context, session authn.Session, serialNumber string, ocspRequestDER []byte) ([]byte, error) {
-	ret := _mock.Called(ctx, session, serialNumber, ocspRequestDER)
+func (_mock *Service) OCSP(ctx context.Context, serialNumber string, ocspRequestDER []byte) ([]byte, error) {
+	ret := _mock.Called(ctx, serialNumber, ocspRequestDER)
 
 	if len(ret) == 0 {
 		panic("no return value specified for OCSP")
@@ -641,18 +629,18 @@ func (_mock *Service) OCSP(ctx context.Context, session authn.Session, serialNum
 
 	var r0 []byte
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, authn.Session, string, []byte) ([]byte, error)); ok {
-		return returnFunc(ctx, session, serialNumber, ocspRequestDER)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, []byte) ([]byte, error)); ok {
+		return returnFunc(ctx, serialNumber, ocspRequestDER)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, authn.Session, string, []byte) []byte); ok {
-		r0 = returnFunc(ctx, session, serialNumber, ocspRequestDER)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, []byte) []byte); ok {
+		r0 = returnFunc(ctx, serialNumber, ocspRequestDER)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]byte)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, authn.Session, string, []byte) error); ok {
-		r1 = returnFunc(ctx, session, serialNumber, ocspRequestDER)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, []byte) error); ok {
+		r1 = returnFunc(ctx, serialNumber, ocspRequestDER)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -666,36 +654,30 @@ type Service_OCSP_Call struct {
 
 // OCSP is a helper method to define mock.On call
 //   - ctx context.Context
-//   - session authn.Session
 //   - serialNumber string
 //   - ocspRequestDER []byte
-func (_e *Service_Expecter) OCSP(ctx interface{}, session interface{}, serialNumber interface{}, ocspRequestDER interface{}) *Service_OCSP_Call {
-	return &Service_OCSP_Call{Call: _e.mock.On("OCSP", ctx, session, serialNumber, ocspRequestDER)}
+func (_e *Service_Expecter) OCSP(ctx interface{}, serialNumber interface{}, ocspRequestDER interface{}) *Service_OCSP_Call {
+	return &Service_OCSP_Call{Call: _e.mock.On("OCSP", ctx, serialNumber, ocspRequestDER)}
 }
 
-func (_c *Service_OCSP_Call) Run(run func(ctx context.Context, session authn.Session, serialNumber string, ocspRequestDER []byte)) *Service_OCSP_Call {
+func (_c *Service_OCSP_Call) Run(run func(ctx context.Context, serialNumber string, ocspRequestDER []byte)) *Service_OCSP_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 authn.Session
+		var arg1 string
 		if args[1] != nil {
-			arg1 = args[1].(authn.Session)
+			arg1 = args[1].(string)
 		}
-		var arg2 string
+		var arg2 []byte
 		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		var arg3 []byte
-		if args[3] != nil {
-			arg3 = args[3].([]byte)
+			arg2 = args[2].([]byte)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
-			arg3,
 		)
 	})
 	return _c
@@ -706,7 +688,7 @@ func (_c *Service_OCSP_Call) Return(bytes []byte, err error) *Service_OCSP_Call 
 	return _c
 }
 
-func (_c *Service_OCSP_Call) RunAndReturn(run func(ctx context.Context, session authn.Session, serialNumber string, ocspRequestDER []byte) ([]byte, error)) *Service_OCSP_Call {
+func (_c *Service_OCSP_Call) RunAndReturn(run func(ctx context.Context, serialNumber string, ocspRequestDER []byte) ([]byte, error)) *Service_OCSP_Call {
 	_c.Call.Return(run)
 	return _c
 }

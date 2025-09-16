@@ -59,10 +59,10 @@ func (tm *tracingMiddleware) ViewCert(ctx context.Context, session authn.Session
 	return tm.svc.ViewCert(ctx, session, serialNumber)
 }
 
-func (tm *tracingMiddleware) OCSP(ctx context.Context, session authn.Session, serialNumber string, ocspRequestDER []byte) ([]byte, error) {
+func (tm *tracingMiddleware) OCSP(ctx context.Context, serialNumber string, ocspRequestDER []byte) ([]byte, error) {
 	ctx, span := tm.tracer.Start(ctx, "ocsp")
 	defer span.End()
-	return tm.svc.OCSP(ctx, session, serialNumber, ocspRequestDER)
+	return tm.svc.OCSP(ctx, serialNumber, ocspRequestDER)
 }
 
 func (tm *tracingMiddleware) GetEntityID(ctx context.Context, serialNumber string) (string, error) {
@@ -71,10 +71,10 @@ func (tm *tracingMiddleware) GetEntityID(ctx context.Context, serialNumber strin
 	return tm.svc.GetEntityID(ctx, serialNumber)
 }
 
-func (tm *tracingMiddleware) GenerateCRL(ctx context.Context, session authn.Session, caType certs.CertType) ([]byte, error) {
+func (tm *tracingMiddleware) GenerateCRL(ctx context.Context) ([]byte, error) {
 	ctx, span := tm.tracer.Start(ctx, "generate_crl")
 	defer span.End()
-	return tm.svc.GenerateCRL(ctx, session, caType)
+	return tm.svc.GenerateCRL(ctx)
 }
 
 func (tm *tracingMiddleware) GetChainCA(ctx context.Context, session authn.Session) (certs.Certificate, error) {

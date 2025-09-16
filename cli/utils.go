@@ -113,8 +113,8 @@ func logSaveCSRFiles(cmd cobra.Command, csr certs.CSR) {
 	fmt.Fprintf(cmd.OutOrStdout(), "\nCSR file have been saved successfully.\n")
 }
 
-func logSaveCRLFile(cmd cobra.Command, crlBytes []byte, caType string) {
-	filename := fmt.Sprintf("%s_ca.crl", caType)
+func logSaveCRLFile(cmd cobra.Command, crlBytes []byte) {
+	filename := "ca.crl"
 	err := saveToFile(filename, crlBytes)
 	if err != nil {
 		logErrorCmd(cmd, err)

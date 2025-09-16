@@ -233,7 +233,7 @@ func (s *service) RenewCert(ctx context.Context, session authn.Session, serialNu
 
 // OCSP forwards OCSP requests to OpenBao's OCSP endpoint.
 // If ocspRequestDER is provided, it will be used directly; otherwise, a request will be built from the serialNumber.
-func (s *service) OCSP(ctx context.Context, session authn.Session, serialNumber string, ocspRequestDER []byte) ([]byte, error) {
+func (s *service) OCSP(ctx context.Context, serialNumber string, ocspRequestDER []byte) ([]byte, error) {
 	return s.pki.OCSP(serialNumber, ocspRequestDER)
 }
 
@@ -245,7 +245,7 @@ func (s *service) GetEntityID(ctx context.Context, serialNumber string) (string,
 	return entityID, nil
 }
 
-func (s *service) GenerateCRL(ctx context.Context, session authn.Session, caType CertType) ([]byte, error) {
+func (s *service) GenerateCRL(ctx context.Context) ([]byte, error) {
 	crl, err := s.pki.GetCRL()
 	if err != nil {
 		return nil, errors.Wrap(ErrFailedCertCreation, err)
