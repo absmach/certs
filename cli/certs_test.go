@@ -754,8 +754,9 @@ func TestIssueFromCSRInternalCmd(t *testing.T) {
 
 	agentToken := "agent-token-123"
 	csrPath := "test.csr"
+	bytes := []byte("-----BEGIN CERTIFICATE REQUEST-----\n-csr-content\n-----END CERTIFICATE REQUEST-----")
 
-	err := os.WriteFile(csrPath, []byte("-----BEGIN CERTIFICATE REQUEST-----\ntest-csr-content\n-----END CERTIFICATE REQUEST-----"), 0644)
+	err := os.WriteFile(csrPath, bytes, 0644)
 	if err != nil {
 		t.Fatalf("Failed to create test CSR file: %v", err)
 	}
