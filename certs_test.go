@@ -534,26 +534,17 @@ func TestGenerateCRL(t *testing.T) {
 
 	testCases := []struct {
 		desc     string
-		caType   certs.CertType
 		crlBytes []byte
 		agentErr error
 		err      error
 	}{
 		{
-			desc:     "generate CRL with root CA",
-			caType:   certs.RootCA,
-			crlBytes: []byte("test-crl-data"),
-			err:      nil,
-		},
-		{
-			desc:     "generate CRL with intermediate CA",
-			caType:   certs.IntermediateCA,
+			desc:     "generate CRL successfully",
 			crlBytes: []byte("test-crl-data"),
 			err:      nil,
 		},
 		{
 			desc:     "failed with agent error",
-			caType:   certs.RootCA,
 			crlBytes: nil,
 			agentErr: errors.New("agent error"),
 			err:      certs.ErrFailedCertCreation,
@@ -564,7 +555,7 @@ func TestGenerateCRL(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			agentCall := agent.On("GetCRL").Return(tc.crlBytes, tc.agentErr)
 
-			crlBytes, err := svc.GenerateCRL(context.Background(), testSession, tc.caType)
+			crlBytes, err := svc.GenerateCRL(context.Background())
 			if tc.err != nil {
 				assert.Error(t, err)
 			} else {
