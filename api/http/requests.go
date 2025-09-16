@@ -42,7 +42,7 @@ func (req deleteReq) validate() error {
 	return nil
 }
 
-type crlReq struct {}
+type crlReq struct{}
 
 func (req crlReq) validate() error {
 	return nil

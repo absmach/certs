@@ -119,7 +119,6 @@ func MakeHandler(svc certs.Service, authn authn.Authentication, mux *chi.Mux, lo
 					), "issue_from_csr").ServeHTTP)
 				})
 			})
-
 		})
 	})
 

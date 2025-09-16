@@ -1149,10 +1149,8 @@ func TestIssueFromCSRInternal(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			// Set up agent authentication mock
-			agentSession := smqauthn.Session{DomainUserID: "agent", UserID: "agent", DomainID: "agent"}
+			agentSession := smqauthn.Session{DomainUserID: id, UserID: id, DomainID: domainID}
 			authCall := auth.On("Authenticate", mock.Anything, agentToken).Return(agentSession, nil)
-			
 			svcCall := svc.On("IssueFromCSRInternal", mock.Anything, tc.entityID, tc.ttl, mock.Anything).Return(tc.svcresp, tc.svcerr)
 
 			c, err := ctsdk.IssueFromCSRInternal(tc.entityID, tc.ttl, tc.csr)
