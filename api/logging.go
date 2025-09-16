@@ -37,18 +37,6 @@ func (lm *loggingMiddleware) RenewCert(ctx context.Context, session authn.Sessio
 	return lm.svc.RenewCert(ctx, session, serialNumber)
 }
 
-func (lm *loggingMiddleware) RetrieveCAToken(ctx context.Context, session authn.Session) (tokenString string, err error) {
-	defer func(begin time.Time) {
-		message := fmt.Sprintf("Method get_ca_token took %s to complete", time.Since(begin))
-		if err != nil {
-			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
-			return
-		}
-		lm.logger.Info(message)
-	}(time.Now())
-	return lm.svc.RetrieveCAToken(ctx, session)
-}
-
 func (lm *loggingMiddleware) IssueCert(ctx context.Context, session authn.Session, entityID, ttl string, ipAddrs []string, options certs.SubjectOptions) (cert certs.Certificate, err error) {
 	defer func(begin time.Time) {
 		message := fmt.Sprintf("Method issue_cert for entity %s took %s to complete", entityID, time.Since(begin))

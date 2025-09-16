@@ -155,10 +155,6 @@ type Service interface {
 	// ListCerts retrieves the certificates from the database while applying filters.
 	ListCerts(ctx context.Context, session authn.Session, pm PageMetadata) (CertificatePage, error)
 
-	// RetrieveCAToken generates a CA download and view token.
-	// The token is needed to view and download the CA certificate.
-	RetrieveCAToken(ctx context.Context, session authn.Session) (string, error)
-
 	// IssueCert issues a certificate from the database.
 	IssueCert(ctx context.Context, session authn.Session, entityID, ttl string, ipAddrs []string, option SubjectOptions) (Certificate, error)
 

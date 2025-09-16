@@ -76,13 +76,6 @@ func (am *authorizationMiddleware) GetCA(ctx context.Context) (crt.Certificate, 
 	return am.svc.GetCA(ctx)
 }
 
-func (am *authorizationMiddleware) RetrieveCAToken(ctx context.Context, session authn.Session) (string, error) {
-	if err := am.checkUserDomainPermission(ctx, session, policies.MembershipPermission); err != nil {
-		return "", err
-	}
-	return am.svc.RetrieveCAToken(ctx, session)
-}
-
 func (am *authorizationMiddleware) OCSP(ctx context.Context, session authn.Session, serialNumber string, ocspRequestDER []byte) ([]byte, error) {
 	if err := am.checkUserDomainPermission(ctx, session, policies.MembershipPermission); err != nil {
 		return nil, err

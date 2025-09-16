@@ -37,15 +37,6 @@ func (mm *metricsMiddleware) RenewCert(ctx context.Context, session authn.Sessio
 	return mm.svc.RenewCert(ctx, session, serialNumber)
 }
 
-func (mm *metricsMiddleware) RetrieveCAToken(ctx context.Context, session authn.Session) (string, error) {
-	defer func(begin time.Time) {
-		mm.counter.With("method", "get_CA_token").Add(1)
-		mm.latency.With("method", "get_CA_token").Observe(time.Since(begin).Seconds())
-	}(time.Now())
-
-	return mm.svc.RetrieveCAToken(ctx, session)
-}
-
 func (mm *metricsMiddleware) IssueCert(ctx context.Context, session authn.Session, entityID, ttl string, ipAddrs []string, options certs.SubjectOptions) (certs.Certificate, error) {
 	defer func(begin time.Time) {
 		mm.counter.With("method", "issue_certificate").Add(1)

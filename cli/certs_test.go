@@ -409,69 +409,6 @@ func TestListCertsCmd(t *testing.T) {
 	}
 }
 
-func TestGetCATokenCmd(t *testing.T) {
-	sdkMock := new(sdkmocks.SDK)
-	cli.SetSDK(sdkMock)
-	certCmd := cli.NewCertsCmd()
-	rootCmd := setFlags(certCmd)
-
-	tk := "ca1121f5-d66a-44c9-bf3c-d267498a0f3d"
-
-	var tokenResult sdk.Token
-	cases := []struct {
-		desc          string
-		args          []string
-		sdkErr        errors.SDKError
-		errLogMessage string
-		logType       outputLog
-		token         sdk.Token
-	}{
-		{
-			desc: "get CA token successfully",
-			args: []string{
-				domainID,
-				token,
-			},
-			logType: entityLog,
-			token:   sdk.Token{Token: tk},
-		},
-		{
-			desc: "get CA token with invalid args",
-			args: []string{
-				extraArg,
-			},
-			logType: usageLog,
-		},
-		{
-			desc:    "get CA token failed",
-			args:    []string{},
-			sdkErr:  errors.NewSDKErrorWithStatus(certs.ErrGetToken, http.StatusUnprocessableEntity),
-			logType: usageLog,
-		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("GetCAToken", mock.Anything, mock.Anything).Return(tc.token, tc.sdkErr)
-			out := executeCommand(t, rootCmd, append([]string{CATokenCmd}, tc.args...)...)
-
-			switch tc.logType {
-			case errLog:
-				assert.Equal(t, tc.errLogMessage, out, fmt.Sprintf("%s unexpected error response: expected %s got errLogMessage:%s", tc.desc, tc.errLogMessage, out))
-			case usageLog:
-				assert.False(t, strings.Contains(out, rootCmd.Use), fmt.Sprintf("%s invalid usage: %s", tc.desc, out))
-			case entityLog:
-				err := json.Unmarshal([]byte(out), &tokenResult)
-				if err != nil {
-					t.Fatalf("Failed to unmarshal JSON: %v", err)
-				}
-				assert.Equal(t, tc.token, tokenResult, fmt.Sprintf("%v unexpected response, expected: %v, got: %v", tc.desc, tc.token, tokenResult))
-			}
-			sdkCall.Unset()
-		})
-	}
-}
-
 func TestDownloadCACmd(t *testing.T) {
 	sdkMock := new(sdkmocks.SDK)
 	cli.SetSDK(sdkMock)

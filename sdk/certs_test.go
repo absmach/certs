@@ -1046,8 +1046,6 @@ func TestGetCA(t *testing.T) {
 
 	cases := []struct {
 		desc            string
-		tokenResp       string
-		tokenErr        error
 		caResp          certs.Certificate
 		caErr           error
 		expectedCert    sdk.Certificate
@@ -1058,9 +1056,7 @@ func TestGetCA(t *testing.T) {
 		session         smqauthn.Session
 	}{
 		{
-			desc:      "GetCA success",
-			tokenResp: token,
-			tokenErr:  nil,
+			desc: "GetCA success",
 			caResp: certs.Certificate{
 				SerialNumber: serialNum,
 				Certificate:  []byte("ca-cert"),
@@ -1075,20 +1071,7 @@ func TestGetCA(t *testing.T) {
 			token:  token,
 		},
 		{
-			desc:         "GetCA token failure",
-			tokenResp:    "",
-			tokenErr:     certs.ErrGetToken,
-			caResp:       certs.Certificate{},
-			caErr:        nil,
-			expectedCert: sdk.Certificate{},
-			err:          errors.NewSDKErrorWithStatus(certs.ErrGetToken, http.StatusUnprocessableEntity),
-			domain:       domainID,
-			token:        token,
-		},
-		{
 			desc:         "GetCA view CA failure",
-			tokenResp:    token,
-			tokenErr:     nil,
 			caResp:       certs.Certificate{},
 			caErr:        certs.ErrViewEntity,
 			expectedCert: sdk.Certificate{},
@@ -1105,26 +1088,17 @@ func TestGetCA(t *testing.T) {
 			}
 
 			authCall := auth.On("Authenticate", mock.Anything, tc.token).Return(tc.session, tc.authenticateErr)
-			tokenCall := svc.On("RetrieveCAToken", mock.Anything, tc.session).Return(tc.tokenResp, tc.tokenErr)
-			caCall := svc.On("GetChainCA", mock.Anything, tc.session, tc.tokenResp).Return(tc.caResp, tc.caErr)
+			caCall := svc.On("GetChainCA", mock.Anything, tc.session).Return(tc.caResp, tc.caErr)
 
 			resp, err := ctsdk.GetCA(tc.domain, tc.token)
 			assert.Equal(t, tc.err, err)
 			assert.Equal(t, tc.expectedCert, resp)
 
-			if tc.desc == "GetCA success" {
-				ok := tokenCall.Parent.AssertCalled(t, "RetrieveCAToken", mock.Anything, tc.session)
-				assert.True(t, ok)
-				ok = caCall.Parent.AssertCalled(t, "GetChainCA", mock.Anything, tc.session, tc.tokenResp)
-				assert.True(t, ok)
-			} else if tc.desc == "GetCA view CA failure" {
-				ok := tokenCall.Parent.AssertCalled(t, "RetrieveCAToken", mock.Anything, tc.session)
-				assert.True(t, ok)
-				ok = caCall.Parent.AssertCalled(t, "GetChainCA", mock.Anything, tc.session, tc.tokenResp)
+			if tc.desc == "GetCA success" || tc.desc == "GetCA view CA failure" {
+				ok := caCall.Parent.AssertCalled(t, "GetChainCA", mock.Anything, tc.session)
 				assert.True(t, ok)
 			}
 
-			tokenCall.Unset()
 			caCall.Unset()
 			authCall.Unset()
 		})

@@ -12,19 +12,13 @@ import (
 
 	"github.com/absmach/supermq/pkg/authn"
 	"github.com/absmach/supermq/pkg/errors"
-	"github.com/golang-jwt/jwt/v5"
 )
 
 const (
-	Organization                 = "AbstractMacines"
-	emailAddress                 = "info@abstractmachines.rs"
 	PrivateKeyBytes              = 2048
 	RootCAValidityPeriod         = time.Hour * 24 * 365 // 365 days
 	IntermediateCAVAlidityPeriod = time.Hour * 24 * 90  // 90 days
 	certValidityPeriod           = time.Hour * 24 * 30  // 30 days
-	rCertExpiryThreshold         = time.Hour * 24 * 30  // 30 days
-	iCertExpiryThreshold         = time.Hour * 24 * 10  // 10 days
-	downloadTokenExpiry          = time.Minute * 5      // 5 minutes
 	PrivateKey                   = "PRIVATE KEY"
 	RSAPrivateKey                = "RSA PRIVATE KEY"
 	ECPrivateKey                 = "EC PRIVATE KEY"
@@ -37,7 +31,6 @@ var (
 	ErrConflict               = errors.New("entity already exists")
 	ErrCreateEntity           = errors.New("failed to create entity")
 	ErrViewEntity             = errors.New("view entity failed")
-	ErrGetToken               = errors.New("failed to get token")
 	ErrUpdateEntity           = errors.New("update entity failed")
 	ErrDeleteEntity           = errors.New("delete entity failed")
 	ErrMalformedEntity        = errors.New("malformed entity specification")
@@ -218,30 +211,6 @@ func (s *service) ViewCA(ctx context.Context) (Certificate, error) {
 		EntityID:     cert.Subject.CommonName,
 		Type:         IntermediateCA,
 	}, nil
-}
-
-// RetrieveCAToken generates a download token for a certificate.
-// It verifies the token and serial number, and returns a signed JWT token string.
-// The token is valid for 5 minutes.
-// Parameters:
-//   - ctx: the context.Context object for the request
-//
-// Returns:
-//   - string: the signed JWT token string
-//   - error: an error if the authentication fails or any other error occurs
-func (s *service) RetrieveCAToken(ctx context.Context, session authn.Session) (string, error) {
-	caCert, err := s.ViewCA(ctx)
-	if err != nil {
-		return "", errors.Wrap(ErrGetToken, err)
-	}
-
-	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{ExpiresAt: jwt.NewNumericDate(time.Now().UTC().Add(downloadTokenExpiry)), Issuer: Organization, Subject: "certs"})
-	token, err := jwtToken.SignedString([]byte(caCert.SerialNumber))
-	if err != nil {
-		return "", errors.Wrap(ErrGetToken, err)
-	}
-
-	return token, nil
 }
 
 // RenewCert renews a certificate by issuing a new certificate with the same parameters.

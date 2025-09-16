@@ -41,12 +41,6 @@ func (tm *tracingMiddleware) RevokeAll(ctx context.Context, session authn.Sessio
 	return tm.svc.RevokeAll(ctx, session, entityID)
 }
 
-func (tm *tracingMiddleware) RetrieveCAToken(ctx context.Context, session authn.Session) (string, error) {
-	ctx, span := tm.tracer.Start(ctx, "get_CA_download_token")
-	defer span.End()
-	return tm.svc.RetrieveCAToken(ctx, session)
-}
-
 func (tm *tracingMiddleware) IssueCert(ctx context.Context, session authn.Session, entityID, ttl string, ipAddrs []string, options certs.SubjectOptions) (certs.Certificate, error) {
 	ctx, span := tm.tracer.Start(ctx, "issue_cert")
 	defer span.End()

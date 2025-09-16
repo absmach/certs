@@ -708,9 +708,6 @@ func (pm PageMetadata) query() (string, error) {
 	if pm.EntityID != "" {
 		q.Add("entity_id", pm.EntityID)
 	}
-	if pm.Token != "" {
-		q.Add("token", pm.Token)
-	}
 	if pm.CommonName != "" {
 		q.Add("common_name", pm.CommonName)
 	}
