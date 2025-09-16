@@ -157,7 +157,7 @@ func (req IssueFromCSRReq) validate() error {
 type IssueFromCSRInternalReq struct {
 	entityID string
 	ttl      string
-	CSR      string `json:"csr"`
+	CSR      []byte `json:"csr"`
 }
 
 func (req IssueFromCSRInternalReq) validate() error {

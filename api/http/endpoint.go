@@ -301,7 +301,7 @@ func issueFromCSRInternalEndpoint(svc certs.Service) endpoint.Endpoint {
 			return issueFromCSRRes{}, err
 		}
 
-		cert, err := svc.IssueFromCSRInternal(ctx, req.entityID, req.ttl, certs.CSR{CSR: []byte(req.CSR)})
+		cert, err := svc.IssueFromCSRInternal(ctx, req.entityID, req.ttl, certs.CSR{CSR: req.CSR})
 		if err != nil {
 			return issueFromCSRRes{}, err
 		}

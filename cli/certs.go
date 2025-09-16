@@ -255,11 +255,11 @@ var cmdCerts = []cobra.Command{
 		},
 	},
 	{
-		Use:   "issue-csr-internal <entity_id> <ttl> <path_to_csr>",
+		Use:   "issue-csr-internal <entity_id> <ttl> <path_to_csr> <agent_token>",
 		Short: "Issue from CSR Internal (Agent)",
 		Long:  `Issues a certificate for a given CSR using agent authentication.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 3 {
+			if len(args) != 4 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
@@ -270,7 +270,7 @@ var cmdCerts = []cobra.Command{
 				return
 			}
 
-			cert, err := sdk.IssueFromCSRInternal(args[0], args[1], string(csrData))
+			cert, err := sdk.IssueFromCSRInternal(args[0], args[1], string(csrData), args[3])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return

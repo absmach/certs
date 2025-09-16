@@ -550,8 +550,8 @@ func (_c *SDK_IssueFromCSR_Call) RunAndReturn(run func(entityID string, ttl stri
 }
 
 // IssueFromCSRInternal provides a mock function for the type SDK
-func (_mock *SDK) IssueFromCSRInternal(entityID string, ttl string, csr string) (sdk.Certificate, errors.SDKError) {
-	ret := _mock.Called(entityID, ttl, csr)
+func (_mock *SDK) IssueFromCSRInternal(entityID string, ttl string, csr string, token string) (sdk.Certificate, errors.SDKError) {
+	ret := _mock.Called(entityID, ttl, csr, token)
 
 	if len(ret) == 0 {
 		panic("no return value specified for IssueFromCSRInternal")
@@ -559,16 +559,16 @@ func (_mock *SDK) IssueFromCSRInternal(entityID string, ttl string, csr string) 
 
 	var r0 sdk.Certificate
 	var r1 errors.SDKError
-	if returnFunc, ok := ret.Get(0).(func(string, string, string) (sdk.Certificate, errors.SDKError)); ok {
-		return returnFunc(entityID, ttl, csr)
+	if returnFunc, ok := ret.Get(0).(func(string, string, string, string) (sdk.Certificate, errors.SDKError)); ok {
+		return returnFunc(entityID, ttl, csr, token)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string, string, string) sdk.Certificate); ok {
-		r0 = returnFunc(entityID, ttl, csr)
+	if returnFunc, ok := ret.Get(0).(func(string, string, string, string) sdk.Certificate); ok {
+		r0 = returnFunc(entityID, ttl, csr, token)
 	} else {
 		r0 = ret.Get(0).(sdk.Certificate)
 	}
-	if returnFunc, ok := ret.Get(1).(func(string, string, string) errors.SDKError); ok {
-		r1 = returnFunc(entityID, ttl, csr)
+	if returnFunc, ok := ret.Get(1).(func(string, string, string, string) errors.SDKError); ok {
+		r1 = returnFunc(entityID, ttl, csr, token)
 	} else {
 		if ret.Get(1) != nil {
 			r1 = ret.Get(1).(errors.SDKError)
@@ -586,11 +586,12 @@ type SDK_IssueFromCSRInternal_Call struct {
 //   - entityID string
 //   - ttl string
 //   - csr string
-func (_e *SDK_Expecter) IssueFromCSRInternal(entityID interface{}, ttl interface{}, csr interface{}) *SDK_IssueFromCSRInternal_Call {
-	return &SDK_IssueFromCSRInternal_Call{Call: _e.mock.On("IssueFromCSRInternal", entityID, ttl, csr)}
+//   - token string
+func (_e *SDK_Expecter) IssueFromCSRInternal(entityID interface{}, ttl interface{}, csr interface{}, token interface{}) *SDK_IssueFromCSRInternal_Call {
+	return &SDK_IssueFromCSRInternal_Call{Call: _e.mock.On("IssueFromCSRInternal", entityID, ttl, csr, token)}
 }
 
-func (_c *SDK_IssueFromCSRInternal_Call) Run(run func(entityID string, ttl string, csr string)) *SDK_IssueFromCSRInternal_Call {
+func (_c *SDK_IssueFromCSRInternal_Call) Run(run func(entityID string, ttl string, csr string, token string)) *SDK_IssueFromCSRInternal_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 string
 		if args[0] != nil {
@@ -604,10 +605,15 @@ func (_c *SDK_IssueFromCSRInternal_Call) Run(run func(entityID string, ttl strin
 		if args[2] != nil {
 			arg2 = args[2].(string)
 		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
 		run(
 			arg0,
 			arg1,
 			arg2,
+			arg3,
 		)
 	})
 	return _c
@@ -618,7 +624,7 @@ func (_c *SDK_IssueFromCSRInternal_Call) Return(certificate sdk.Certificate, sDK
 	return _c
 }
 
-func (_c *SDK_IssueFromCSRInternal_Call) RunAndReturn(run func(entityID string, ttl string, csr string) (sdk.Certificate, errors.SDKError)) *SDK_IssueFromCSRInternal_Call {
+func (_c *SDK_IssueFromCSRInternal_Call) RunAndReturn(run func(entityID string, ttl string, csr string, token string) (sdk.Certificate, errors.SDKError)) *SDK_IssueFromCSRInternal_Call {
 	_c.Call.Return(run)
 	return _c
 }

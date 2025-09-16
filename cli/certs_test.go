@@ -745,3 +745,116 @@ func cleanupFiles(t *testing.T, filenames []string) {
 		}
 	}
 }
+
+func TestIssueFromCSRInternalCmd(t *testing.T) {
+	sdkMock := new(sdkmocks.SDK)
+	cli.SetSDK(sdkMock)
+	certCmd := cli.NewCertsCmd()
+	rootCmd := setFlags(certCmd)
+
+	agentToken := "agent-token-123"
+	csrPath := "test.csr"
+
+	err := os.WriteFile(csrPath, []byte("-----BEGIN CERTIFICATE REQUEST-----\ntest-csr-content\n-----END CERTIFICATE REQUEST-----"), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create test CSR file: %v", err)
+	}
+	defer os.Remove(csrPath)
+
+	var cert sdk.Certificate
+	cases := []struct {
+		desc          string
+		args          []string
+		sdkErr        errors.SDKError
+		errLogMessage string
+		logType       outputLog
+		cert          sdk.Certificate
+	}{
+		{
+			desc: "issue cert from CSR internal successfully",
+			args: []string{
+				id,
+				"10h",
+				csrPath,
+				agentToken,
+			},
+			logType: entityLog,
+			cert:    sdk.Certificate{SerialNumber: serialNumber},
+		},
+		{
+			desc: "issue cert from CSR internal with invalid args",
+			args: []string{
+				id,
+				extraArg,
+			},
+			logType: usageLog,
+		},
+		{
+			desc: "issue cert from CSR internal failed",
+			args: []string{
+				id,
+				"10h",
+				csrPath,
+				agentToken,
+			},
+			sdkErr:        errors.NewSDKErrorWithStatus(certs.ErrFailedCertCreation, http.StatusUnprocessableEntity),
+			errLogMessage: fmt.Sprintf("\nerror: %s\n\n", errors.NewSDKErrorWithStatus(certs.ErrFailedCertCreation, http.StatusUnprocessableEntity)),
+			logType:       errLog,
+		},
+		{
+			desc: "issue cert from CSR internal with non-existent file",
+			args: []string{
+				id,
+				"10h",
+				"non-existent.csr",
+				agentToken,
+			},
+			logType: errLog,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			sdkCall := sdkMock.On("IssueFromCSRInternal", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(tc.cert, tc.sdkErr)
+			out := executeCommand(t, rootCmd, append([]string{"issue-csr-internal"}, tc.args...)...)
+			switch tc.logType {
+			case entityLog:
+				lines := strings.Split(out, "\n")
+				var jsonLines []string
+				var inJSON bool
+
+				for _, line := range lines {
+					line = strings.TrimSpace(line)
+					if strings.HasPrefix(line, "{") {
+						inJSON = true
+						jsonLines = append(jsonLines, line)
+					} else if inJSON && strings.HasSuffix(line, "}") {
+						jsonLines = append(jsonLines, line)
+						break
+					} else if inJSON {
+						jsonLines = append(jsonLines, line)
+					}
+				}
+
+				if len(jsonLines) == 0 {
+					t.Fatalf("No JSON found in output: %s", out)
+				}
+
+				jsonPart := strings.Join(jsonLines, "")
+
+				err := json.Unmarshal([]byte(jsonPart), &cert)
+				assert.Nil(t, err)
+				assert.Equal(t, tc.cert, cert, fmt.Sprintf("%s unexpected response: expected: %v, got: %v", tc.desc, tc.cert, cert))
+			case errLog:
+				if tc.errLogMessage != "" {
+					assert.Equal(t, tc.errLogMessage, out, fmt.Sprintf("%s unexpected error response: expected %s got errLogMessage:%s", tc.desc, tc.errLogMessage, out))
+				} else {
+					assert.True(t, strings.Contains(out, "error"), fmt.Sprintf("%s should contain error message: %s", tc.desc, out))
+				}
+			case usageLog:
+				assert.False(t, strings.Contains(out, rootCmd.Use), fmt.Sprintf("%s invalid usage: %s", tc.desc, out))
+			}
+			sdkCall.Unset()
+		})
+	}
+}

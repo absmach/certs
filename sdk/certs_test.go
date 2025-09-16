@@ -1153,7 +1153,7 @@ func TestIssueFromCSRInternal(t *testing.T) {
 			authCall := auth.On("Authenticate", mock.Anything, agentToken).Return(agentSession, nil)
 			svcCall := svc.On("IssueFromCSRInternal", mock.Anything, tc.entityID, tc.ttl, mock.Anything).Return(tc.svcresp, tc.svcerr)
 
-			c, err := ctsdk.IssueFromCSRInternal(tc.entityID, tc.ttl, tc.csr)
+			c, err := ctsdk.IssueFromCSRInternal(tc.entityID, tc.ttl, tc.csr, agentToken)
 			assert.Equal(t, tc.err, err)
 			if tc.err == nil {
 				assert.Equal(t, tc.sdkCert.SerialNumber, c.SerialNumber)

@@ -17,6 +17,7 @@ import (
 
 	"github.com/absmach/certs"
 	api "github.com/absmach/supermq/api/http"
+	apiutil "github.com/absmach/supermq/api/http/util"
 	"github.com/absmach/supermq/pkg/authn"
 	"github.com/absmach/supermq/pkg/errors"
 	"github.com/go-chi/chi/v5"
@@ -40,7 +41,18 @@ const (
 func AgentAuthenticateMiddleware(authn authn.Authentication, expectedToken string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			resp, err := authn.Authenticate(r.Context(), expectedToken)
+			token := apiutil.ExtractBearerToken(r)
+			if token == "" {
+				EncodeError(r.Context(), apiutil.ErrBearerToken, w)
+				return
+			}
+
+			if token != expectedToken {
+				EncodeError(r.Context(), errors.Wrap(certs.ErrMalformedEntity, errors.New("invalid authentication token")), w)
+				return
+			}
+
+			resp, err := authn.Authenticate(r.Context(), token)
 			if err != nil {
 				EncodeError(r.Context(), err, w)
 				return

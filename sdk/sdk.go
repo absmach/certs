@@ -276,9 +276,9 @@ type SDK interface {
 	// IssueFromCSRInternal issues certificate from provided CSR using agent authentication
 	//
 	// example:
-	//	certs, err := sdk.IssueFromCSRInternal("entityID", "ttl", "csrFile")
+	//	certs, err := sdk.IssueFromCSRInternal("entityID", "ttl", "csrFile", "agentToken")
 	//	fmt.Println(err)
-	IssueFromCSRInternal(entityID, ttl, csr string) (Certificate, errors.SDKError)
+	IssueFromCSRInternal(entityID, ttl, csr, token string) (Certificate, errors.SDKError)
 
 	// GenerateCRL generates a Certificate Revocation List
 	//
@@ -520,7 +520,7 @@ func (sdk mgSDK) IssueFromCSR(entityID, ttl, csr, domainID, token string) (Certi
 	}
 
 	r := csrReq{
-		CSR: csr,
+		CSR: []byte(csr),
 	}
 
 	d, err := json.Marshal(r)
@@ -545,9 +545,9 @@ func (sdk mgSDK) IssueFromCSR(entityID, ttl, csr, domainID, token string) (Certi
 	return cert, nil
 }
 
-func (sdk mgSDK) IssueFromCSRInternal(entityID, ttl, csr string) (Certificate, errors.SDKError) {
+func (sdk mgSDK) IssueFromCSRInternal(entityID, ttl, csr, token string) (Certificate, errors.SDKError) {
 	r := csrReq{
-		CSR: csr,
+		CSR: []byte(csr),
 	}
 
 	d, err := json.Marshal(r)
@@ -564,7 +564,7 @@ func (sdk mgSDK) IssueFromCSRInternal(entityID, ttl, csr string) (Certificate, e
 		return Certificate{}, errors.NewSDKError(err)
 	}
 
-	_, body, sdkerr := sdk.processRequest(context.Background(), http.MethodPost, url, "", d, nil, http.StatusOK)
+	_, body, sdkerr := sdk.processRequest(context.Background(), http.MethodPost, url, token, d, nil, http.StatusOK)
 	if sdkerr != nil {
 		return Certificate{}, sdkerr
 	}
@@ -734,5 +734,5 @@ type certReq struct {
 }
 
 type csrReq struct {
-	CSR string `json:"csr,omitempty"`
+	CSR []byte `json:"csr,omitempty"`
 }
