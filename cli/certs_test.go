@@ -30,6 +30,7 @@ const (
 	downloadCACmd = "download-ca"
 	CATokenCmd    = "token-ca"
 	viewCACmd     = "view-ca"
+	filePermission = 0o644
 )
 
 var (
@@ -756,7 +757,7 @@ func TestIssueFromCSRInternalCmd(t *testing.T) {
 	csrPath := "test.csr"
 	bytes := []byte("-----BEGIN CERTIFICATE REQUEST-----\n-csr-content\n-----END CERTIFICATE REQUEST-----")
 
-	err := os.WriteFile(csrPath, bytes, 0644)
+	err := os.WriteFile(csrPath, bytes, filePermission)
 	if err != nil {
 		t.Fatalf("Failed to create test CSR file: %v", err)
 	}
