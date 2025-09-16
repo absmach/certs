@@ -21,15 +21,15 @@ import (
 )
 
 const (
-	revokeCmd     = "revoke"
-	deleteCmd     = "delete"
-	issueCmd      = "issue"
-	renewCmd      = "renew"
-	listCmd       = "get"
-	all           = "all"
-	downloadCACmd = "download-ca"
-	CATokenCmd    = "token-ca"
-	viewCACmd     = "view-ca"
+	revokeCmd      = "revoke"
+	deleteCmd      = "delete"
+	issueCmd       = "issue"
+	renewCmd       = "renew"
+	listCmd        = "get"
+	all            = "all"
+	downloadCACmd  = "download-ca"
+	CATokenCmd     = "token-ca"
+	viewCACmd      = "view-ca"
 	filePermission = 0o644
 )
 
