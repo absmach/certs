@@ -10,18 +10,13 @@ import (
 	"strings"
 
 	"github.com/absmach/certs"
-	"github.com/absmach/certs/errors"
+	"github.com/absmach/supermq/pkg/errors"
 	"golang.org/x/crypto/ocsp"
 )
 
-type downloadReq struct {
-	token string
-}
+type downloadReq struct{}
 
 func (req downloadReq) validate() error {
-	if req.token == "" {
-		return errors.Wrap(certs.ErrMalformedEntity, ErrEmptyToken)
-	}
 	return nil
 }
 
@@ -47,14 +42,9 @@ func (req deleteReq) validate() error {
 	return nil
 }
 
-type crlReq struct {
-	certtype certs.CertType
-}
+type crlReq struct{}
 
 func (req crlReq) validate() error {
-	if req.certtype != certs.IntermediateCA {
-		return errors.Wrap(certs.ErrMalformedEntity, errors.New("invalid CA type"))
-	}
 	return nil
 }
 
@@ -154,6 +144,23 @@ type IssueFromCSRReq struct {
 }
 
 func (req IssueFromCSRReq) validate() error {
+	if req.entityID == "" {
+		return errors.Wrap(certs.ErrMalformedEntity, ErrMissingEntityID)
+	}
+	if len(req.CSR) == 0 {
+		return errors.Wrap(certs.ErrMalformedEntity, ErrMissingCSR)
+	}
+
+	return nil
+}
+
+type IssueFromCSRInternalReq struct {
+	entityID string
+	ttl      string
+	CSR      []byte `json:"csr"`
+}
+
+func (req IssueFromCSRInternalReq) validate() error {
 	if req.entityID == "" {
 		return errors.Wrap(certs.ErrMalformedEntity, ErrMissingEntityID)
 	}

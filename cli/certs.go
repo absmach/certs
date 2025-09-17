@@ -17,8 +17,8 @@ import (
 	"os"
 
 	"github.com/absmach/certs"
-	"github.com/absmach/certs/errors"
 	ctxsdk "github.com/absmach/certs/sdk"
+	"github.com/absmach/supermq/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -31,20 +31,21 @@ func SetSDK(s ctxsdk.SDK) {
 
 var cmdCerts = []cobra.Command{
 	{
-		Use:   "get [all | <entity_id>]",
+		Use:   "get [all | <entity_id>] <domain_id> <token>",
 		Short: "Get certificate",
 		Long:  `Gets a certificate for a given entity ID or all certificates.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 1 {
+			if len(args) != 3 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
+
 			if args[0] == "all" {
 				pm := ctxsdk.PageMetadata{
 					Limit:  Limit,
 					Offset: Offset,
 				}
-				page, err := sdk.ListCerts(pm)
+				page, err := sdk.ListCerts(pm, args[1], args[2])
 				if err != nil {
 					logErrorCmd(*cmd, err)
 					return
@@ -57,7 +58,7 @@ var cmdCerts = []cobra.Command{
 				Limit:    Limit,
 				Offset:   Offset,
 			}
-			page, err := sdk.ListCerts(pm)
+			page, err := sdk.ListCerts(pm, args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -66,15 +67,15 @@ var cmdCerts = []cobra.Command{
 		},
 	},
 	{
-		Use:   "revoke <serial_number> ",
+		Use:   "revoke <serial_number> <domain_id> <token>",
 		Short: "Revoke certificate",
 		Long:  `Revokes a certificate for a given serial number.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 1 {
+			if len(args) != 3 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			err := sdk.RevokeCert(args[0])
+			err := sdk.RevokeCert(args[0], args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -83,15 +84,15 @@ var cmdCerts = []cobra.Command{
 		},
 	},
 	{
-		Use:   "delete <entity_id> ",
+		Use:   "delete <entity_id> <domain_id> <token>",
 		Short: "Delete certificate",
 		Long:  `Deletes certificates for a given entity id.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 1 {
+			if len(args) != 3 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			err := sdk.DeleteCert(args[0])
+			err := sdk.DeleteCert(args[0], args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -100,15 +101,15 @@ var cmdCerts = []cobra.Command{
 		},
 	},
 	{
-		Use:   "renew <serial_number> ",
+		Use:   "renew <serial_number> <domain_id> <token>",
 		Short: "Renew certificate",
 		Long:  `Renews a certificate for a given serial number.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 1 {
+			if len(args) != 3 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			_, err := sdk.RenewCert(args[0])
+			_, err := sdk.RenewCert(args[0], args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -148,15 +149,15 @@ var cmdCerts = []cobra.Command{
 		},
 	},
 	{
-		Use:   "view <serial_number>",
+		Use:   "view <serial_number> <domain_id> <token>",
 		Short: "View certificate",
 		Long:  `Views a certificate for a given serial number.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 1 {
+			if len(args) != 3 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			cert, err := sdk.ViewCert(args[0])
+			cert, err := sdk.ViewCert(args[0], args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -165,15 +166,15 @@ var cmdCerts = []cobra.Command{
 		},
 	},
 	{
-		Use:   "view-ca <token>",
+		Use:   "view-ca <domain_id> <token>",
 		Short: "View-ca certificate",
 		Long:  `Views ca certificate key with a given token.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 1 {
+			if len(args) != 2 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			cert, err := sdk.ViewCA(args[0])
+			cert, err := sdk.ViewCA(args[0], args[1])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -182,37 +183,20 @@ var cmdCerts = []cobra.Command{
 		},
 	},
 	{
-		Use:   "download-ca <token>",
+		Use:   "download-ca <domain_id> <token>",
 		Short: "Download signing CA",
 		Long:  `Download intermediate cert and ca with a given token.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 1 {
+			if len(args) != 2 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			bundle, err := sdk.DownloadCA(args[0])
+			bundle, err := sdk.DownloadCA(args[0], args[1])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
 			logSaveCAFiles(*cmd, bundle)
-		},
-	},
-	{
-		Use:   "token-ca",
-		Short: "Get CA token",
-		Long:  `Gets a download token for CA.`,
-		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 0 {
-				logUsageCmd(*cmd, cmd.Use)
-				return
-			}
-			token, err := sdk.GetCAToken()
-			if err != nil {
-				logErrorCmd(*cmd, err)
-				return
-			}
-			logJSONCmd(*cmd, token)
 		},
 	},
 	{
@@ -247,11 +231,11 @@ var cmdCerts = []cobra.Command{
 		},
 	},
 	{
-		Use:   "issue-csr <entity_id> <ttl> <path_to_csr>",
+		Use:   "issue-csr <entity_id> <ttl> <path_to_csr> <domain_id> <token>",
 		Short: "Issue from CSR",
 		Long:  `issues a certificate for a given csr.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 3 {
+			if len(args) != 5 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
@@ -262,7 +246,7 @@ var cmdCerts = []cobra.Command{
 				return
 			}
 
-			cert, err := sdk.IssueFromCSR(args[0], args[1], string(csrData))
+			cert, err := sdk.IssueFromCSR(args[0], args[1], string(csrData), args[3], args[4])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -271,44 +255,57 @@ var cmdCerts = []cobra.Command{
 		},
 	},
 	{
-		Use:   "crl [root | intermediate]",
-		Short: "Generate Certificate Revocation List",
-		Long:  `Generates a Certificate Revocation List (CRL) for the specified CA type.`,
+		Use:   "issue-csr-internal <entity_id> <ttl> <path_to_csr> <agent_token>",
+		Short: "Issue from CSR Internal (Agent)",
+		Long:  `Issues a certificate for a given CSR using agent authentication.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 1 {
+			if len(args) != 4 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
 
-			var certType ctxsdk.CertType
-			switch args[0] {
-			case "root":
-				certType = ctxsdk.RootCA
-			case "intermediate":
-				certType = ctxsdk.IntermediateCA
-			default:
-				logUsageCmd(*cmd, cmd.Use)
-				return
-			}
-
-			crlBytes, err := sdk.GenerateCRL(certType)
+			csrData, err := os.ReadFile(args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
-			logSaveCRLFile(*cmd, crlBytes, args[0])
+
+			cert, err := sdk.IssueFromCSRInternal(args[0], args[1], string(csrData), args[3])
+			if err != nil {
+				logErrorCmd(*cmd, err)
+				return
+			}
+			logJSONCmd(*cmd, cert)
 		},
 	},
 	{
-		Use:   "entity-id <serial_number>",
-		Short: "Get entity ID by serial number",
-		Long:  `Gets the entity ID for a certificate by its serial number.`,
+		Use:   "crl",
+		Short: "Generate CRL",
+		Long:  `Generates a Certificate Revocation List (CRL).`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 1 {
+			if len(args) != 0 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			entityID, err := sdk.GetEntityID(args[0])
+
+			crlBytes, err := sdk.GenerateCRL()
+			if err != nil {
+				logErrorCmd(*cmd, err)
+				return
+			}
+			logSaveCRLFile(*cmd, crlBytes)
+		},
+	},
+	{
+		Use:   "entity-id <serial_number> <domain_id> <token>",
+		Short: "Get entity ID by serial number",
+		Long:  `Gets the entity ID for a certificate by its serial number.`,
+		Run: func(cmd *cobra.Command, args []string) {
+			if len(args) != 3 {
+				logUsageCmd(*cmd, cmd.Use)
+				return
+			}
+			entityID, err := sdk.GetEntityID(args[0], args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -317,15 +314,15 @@ var cmdCerts = []cobra.Command{
 		},
 	},
 	{
-		Use:   "ca",
+		Use:   "ca <domain_id> <token>",
 		Short: "Get CA certificate",
-		Long:  `Gets the CA certificate without requiring a token.`,
+		Long:  `Gets the CA certificate.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 0 {
+			if len(args) != 2 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			cert, err := sdk.GetCA()
+			cert, err := sdk.GetCA(args[0], args[1])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -339,11 +336,11 @@ var cmdCerts = []cobra.Command{
 func NewCertsCmd() *cobra.Command {
 	var ttl string
 	issueCmd := cobra.Command{
-		Use:   "issue <entity_id> <common_name> '[\"<ip_addr_1>\", \"<ip_addr_2>\"] '{\"organization\":[\"organization_name\"]}' [--ttl=8760h]",
+		Use:   "issue <entity_id> <common_name> <ip_addrs_json> <domain_id> <token> [<options_json>] [--ttl=8760h]",
 		Short: "Issue certificate",
 		Long:  `Issues a certificate for a given entity ID.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) < 3 || len(args) > 4 {
+			if len(args) < 5 || len(args) > 6 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
@@ -356,14 +353,14 @@ func NewCertsCmd() *cobra.Command {
 			var option ctxsdk.Options
 			option.CommonName = args[1]
 
-			if len(args) == 4 {
-				if err := json.Unmarshal([]byte(args[3]), &option); err != nil {
+			if len(args) == 6 {
+				if err := json.Unmarshal([]byte(args[5]), &option); err != nil {
 					logErrorCmd(*cmd, err)
 					return
 				}
 			}
 
-			cert, err := sdk.IssueCert(args[0], ttl, ipAddrs, option)
+			cert, err := sdk.IssueCert(args[0], ttl, ipAddrs, option, args[3], args[4])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -376,9 +373,9 @@ func NewCertsCmd() *cobra.Command {
 	issueCmd.Flags().StringVar(&ttl, "ttl", "8760h", "certificate time to live in duration")
 
 	cmd := cobra.Command{
-		Use:   "certs [issue | get | revoke | renew | ocsp | view | download-ca | view-ca | token-ca | csr | issue-csr | crl | entity-id | ca]",
+		Use:   "certs [issue | get | revoke | renew | ocsp | view | download-ca | view-ca | csr | issue-csr | issue-csr-internal | crl | entity-id | ca]",
 		Short: "Certificates management",
-		Long:  `Certificates management: issue, get all, get by entity ID, revoke, renew, OCSP, view, CRL generation, entity ID lookup, and CA operations.`,
+		Long:  `Certificates management: issue, get all, get by entity ID, revoke, renew, OCSP, view, CRL generation, entity ID lookup, agent CSR issuing, and CA operations.`,
 	}
 
 	cmd.AddCommand(&issueCmd)

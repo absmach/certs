@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"github.com/absmach/certs"
+	"github.com/absmach/supermq/pkg/authn"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -22,46 +23,40 @@ func New(svc certs.Service, tracer trace.Tracer) certs.Service {
 	return &tracingMiddleware{tracer, svc}
 }
 
-func (tm *tracingMiddleware) RenewCert(ctx context.Context, serialNumber string) (certs.Certificate, error) {
+func (tm *tracingMiddleware) RenewCert(ctx context.Context, session authn.Session, serialNumber string) (certs.Certificate, error) {
 	ctx, span := tm.tracer.Start(ctx, "renew_cert")
 	defer span.End()
-	return tm.svc.RenewCert(ctx, serialNumber)
+	return tm.svc.RenewCert(ctx, session, serialNumber)
 }
 
-func (tm *tracingMiddleware) RevokeBySerial(ctx context.Context, serialNumber string) error {
+func (tm *tracingMiddleware) RevokeBySerial(ctx context.Context, session authn.Session, serialNumber string) error {
 	ctx, span := tm.tracer.Start(ctx, "revoke_by_serial")
 	defer span.End()
-	return tm.svc.RevokeBySerial(ctx, serialNumber)
+	return tm.svc.RevokeBySerial(ctx, session, serialNumber)
 }
 
-func (tm *tracingMiddleware) RevokeAll(ctx context.Context, entityID string) error {
+func (tm *tracingMiddleware) RevokeAll(ctx context.Context, session authn.Session, entityID string) error {
 	ctx, span := tm.tracer.Start(ctx, "revoke_all")
 	defer span.End()
-	return tm.svc.RevokeAll(ctx, entityID)
+	return tm.svc.RevokeAll(ctx, session, entityID)
 }
 
-func (tm *tracingMiddleware) RetrieveCAToken(ctx context.Context) (string, error) {
-	ctx, span := tm.tracer.Start(ctx, "get_CA_download_token")
-	defer span.End()
-	return tm.svc.RetrieveCAToken(ctx)
-}
-
-func (tm *tracingMiddleware) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options certs.SubjectOptions) (certs.Certificate, error) {
+func (tm *tracingMiddleware) IssueCert(ctx context.Context, session authn.Session, entityID, ttl string, ipAddrs []string, options certs.SubjectOptions) (certs.Certificate, error) {
 	ctx, span := tm.tracer.Start(ctx, "issue_cert")
 	defer span.End()
-	return tm.svc.IssueCert(ctx, entityID, ttl, ipAddrs, options)
+	return tm.svc.IssueCert(ctx, session, entityID, ttl, ipAddrs, options)
 }
 
-func (tm *tracingMiddleware) ListCerts(ctx context.Context, pm certs.PageMetadata) (certs.CertificatePage, error) {
+func (tm *tracingMiddleware) ListCerts(ctx context.Context, session authn.Session, pm certs.PageMetadata) (certs.CertificatePage, error) {
 	ctx, span := tm.tracer.Start(ctx, "list_certs")
 	defer span.End()
-	return tm.svc.ListCerts(ctx, pm)
+	return tm.svc.ListCerts(ctx, session, pm)
 }
 
-func (tm *tracingMiddleware) ViewCert(ctx context.Context, serialNumber string) (certs.Certificate, error) {
+func (tm *tracingMiddleware) ViewCert(ctx context.Context, session authn.Session, serialNumber string) (certs.Certificate, error) {
 	ctx, span := tm.tracer.Start(ctx, "view_cert")
 	defer span.End()
-	return tm.svc.ViewCert(ctx, serialNumber)
+	return tm.svc.ViewCert(ctx, session, serialNumber)
 }
 
 func (tm *tracingMiddleware) OCSP(ctx context.Context, serialNumber string, ocspRequestDER []byte) ([]byte, error) {
@@ -76,22 +71,28 @@ func (tm *tracingMiddleware) GetEntityID(ctx context.Context, serialNumber strin
 	return tm.svc.GetEntityID(ctx, serialNumber)
 }
 
-func (tm *tracingMiddleware) GenerateCRL(ctx context.Context, caType certs.CertType) ([]byte, error) {
+func (tm *tracingMiddleware) GenerateCRL(ctx context.Context) ([]byte, error) {
 	ctx, span := tm.tracer.Start(ctx, "generate_crl")
 	defer span.End()
-	return tm.svc.GenerateCRL(ctx, caType)
+	return tm.svc.GenerateCRL(ctx)
 }
 
-func (tm *tracingMiddleware) GetChainCA(ctx context.Context, token string) (certs.Certificate, error) {
+func (tm *tracingMiddleware) GetChainCA(ctx context.Context, session authn.Session) (certs.Certificate, error) {
 	ctx, span := tm.tracer.Start(ctx, "get_chain_ca")
 	defer span.End()
-	return tm.svc.GetChainCA(ctx, token)
+	return tm.svc.GetChainCA(ctx, session)
 }
 
-func (tm *tracingMiddleware) IssueFromCSR(ctx context.Context, entityID, ttl string, csr certs.CSR) (certs.Certificate, error) {
+func (tm *tracingMiddleware) IssueFromCSR(ctx context.Context, session authn.Session, entityID, ttl string, csr certs.CSR) (certs.Certificate, error) {
 	ctx, span := tm.tracer.Start(ctx, "issue_from_csr")
 	defer span.End()
-	return tm.svc.IssueFromCSR(ctx, entityID, ttl, csr)
+	return tm.svc.IssueFromCSR(ctx, session, entityID, ttl, csr)
+}
+
+func (tm *tracingMiddleware) IssueFromCSRInternal(ctx context.Context, entityID, ttl string, csr certs.CSR) (certs.Certificate, error) {
+	ctx, span := tm.tracer.Start(ctx, "issue_from_csr_internal")
+	defer span.End()
+	return tm.svc.IssueFromCSRInternal(ctx, entityID, ttl, csr)
 }
 
 func (tm *tracingMiddleware) GetCA(ctx context.Context) (certs.Certificate, error) {

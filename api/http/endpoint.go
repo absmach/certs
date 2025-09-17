@@ -7,6 +7,9 @@ import (
 	"context"
 
 	"github.com/absmach/certs"
+	api "github.com/absmach/supermq/api/http"
+	"github.com/absmach/supermq/pkg/authn"
+	svcerr "github.com/absmach/supermq/pkg/errors/service"
 	"github.com/go-kit/kit/endpoint"
 )
 
@@ -17,7 +20,12 @@ func renewCertEndpoint(svc certs.Service) endpoint.Endpoint {
 			return renewCertRes{}, err
 		}
 
-		cert, err := svc.RenewCert(ctx, req.id)
+		session, ok := ctx.Value(api.SessionKey).(authn.Session)
+		if !ok {
+			return renewCertRes{}, svcerr.ErrAuthentication
+		}
+
+		cert, err := svc.RenewCert(ctx, session, req.id)
 		if err != nil {
 			return renewCertRes{}, err
 		}
@@ -33,7 +41,12 @@ func revokeCertEndpoint(svc certs.Service) endpoint.Endpoint {
 			return revokeCertRes{revoked: false}, err
 		}
 
-		if err = svc.RevokeBySerial(ctx, req.id); err != nil {
+		session, ok := ctx.Value(api.SessionKey).(authn.Session)
+		if !ok {
+			return revokeCertRes{revoked: false}, svcerr.ErrAuthentication
+		}
+
+		if err = svc.RevokeBySerial(ctx, session, req.id); err != nil {
 			return revokeCertRes{revoked: false}, err
 		}
 
@@ -48,7 +61,12 @@ func deleteCertEndpoint(svc certs.Service) endpoint.Endpoint {
 			return deleteCertRes{deleted: false}, err
 		}
 
-		if err = svc.RevokeAll(ctx, req.entityID); err != nil {
+		session, ok := ctx.Value(api.SessionKey).(authn.Session)
+		if !ok {
+			return deleteCertRes{deleted: false}, svcerr.ErrAuthentication
+		}
+
+		if err = svc.RevokeAll(ctx, session, req.entityID); err != nil {
 			return deleteCertRes{deleted: false}, err
 		}
 
@@ -63,7 +81,12 @@ func issueCertEndpoint(svc certs.Service) endpoint.Endpoint {
 			return issueCertRes{}, err
 		}
 
-		cert, err := svc.IssueCert(ctx, req.entityID, req.TTL, req.IpAddrs, req.Options)
+		session, ok := ctx.Value(api.SessionKey).(authn.Session)
+		if !ok {
+			return issueCertRes{}, svcerr.ErrAuthentication
+		}
+
+		cert, err := svc.IssueCert(ctx, session, req.entityID, req.TTL, req.IpAddrs, req.Options)
 		if err != nil {
 			return issueCertRes{}, err
 		}
@@ -87,7 +110,12 @@ func listCertsEndpoint(svc certs.Service) endpoint.Endpoint {
 			return listCertsRes{}, err
 		}
 
-		certPage, err := svc.ListCerts(ctx, req.pm)
+		session, ok := ctx.Value(api.SessionKey).(authn.Session)
+		if !ok {
+			return listCertsRes{}, svcerr.ErrAuthentication
+		}
+
+		certPage, err := svc.ListCerts(ctx, session, req.pm)
 		if err != nil {
 			return listCertsRes{}, err
 		}
@@ -117,7 +145,13 @@ func viewCertEndpoint(svc certs.Service) endpoint.Endpoint {
 		if err := req.validate(); err != nil {
 			return viewCertRes{}, err
 		}
-		cert, err := svc.ViewCert(ctx, req.id)
+
+		session, ok := ctx.Value(api.SessionKey).(authn.Session)
+		if !ok {
+			return viewCertRes{}, svcerr.ErrAuthentication
+		}
+
+		cert, err := svc.ViewCert(ctx, session, req.id)
 		if err != nil {
 			return viewCertRes{}, err
 		}
@@ -169,7 +203,8 @@ func generateCRLEndpoint(svc certs.Service) endpoint.Endpoint {
 		if err := req.validate(); err != nil {
 			return crlRes{}, err
 		}
-		crlBytes, err := svc.GenerateCRL(ctx, req.certtype)
+
+		crlBytes, err := svc.GenerateCRL(ctx)
 		if err != nil {
 			return crlRes{}, err
 		}
@@ -180,17 +215,6 @@ func generateCRLEndpoint(svc certs.Service) endpoint.Endpoint {
 	}
 }
 
-func getDownloadCATokenEndpoint(svc certs.Service) endpoint.Endpoint {
-	return func(ctx context.Context, request any) (response any, err error) {
-		token, err := svc.RetrieveCAToken(ctx)
-		if err != nil {
-			return requestCertDownloadTokenRes{}, err
-		}
-
-		return requestCertDownloadTokenRes{Token: token}, nil
-	}
-}
-
 func downloadCAEndpoint(svc certs.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request any) (response any, err error) {
 		req := request.(downloadReq)
@@ -198,7 +222,12 @@ func downloadCAEndpoint(svc certs.Service) endpoint.Endpoint {
 			return fileDownloadRes{}, err
 		}
 
-		cert, err := svc.GetChainCA(ctx, req.token)
+		session, ok := ctx.Value(api.SessionKey).(authn.Session)
+		if !ok {
+			return fileDownloadRes{}, svcerr.ErrAuthentication
+		}
+
+		cert, err := svc.GetChainCA(ctx, session)
 		if err != nil {
 			return fileDownloadRes{}, err
 		}
@@ -218,7 +247,12 @@ func viewCAEndpoint(svc certs.Service) endpoint.Endpoint {
 			return viewCertRes{}, err
 		}
 
-		cert, err := svc.GetChainCA(ctx, req.token)
+		session, ok := ctx.Value(api.SessionKey).(authn.Session)
+		if !ok {
+			return viewCertRes{}, svcerr.ErrAuthentication
+		}
+
+		cert, err := svc.GetChainCA(ctx, session)
 		if err != nil {
 			return viewCertRes{}, err
 		}
@@ -240,7 +274,34 @@ func issueFromCSREndpoint(svc certs.Service) endpoint.Endpoint {
 			return issueFromCSRRes{}, err
 		}
 
-		cert, err := svc.IssueFromCSR(ctx, req.entityID, req.ttl, certs.CSR{CSR: []byte(req.CSR)})
+		session, ok := ctx.Value(api.SessionKey).(authn.Session)
+		if !ok {
+			return issueFromCSRRes{}, svcerr.ErrAuthentication
+		}
+
+		cert, err := svc.IssueFromCSR(ctx, session, req.entityID, req.ttl, certs.CSR{CSR: []byte(req.CSR)})
+		if err != nil {
+			return issueFromCSRRes{}, err
+		}
+
+		return issueFromCSRRes{
+			SerialNumber: cert.SerialNumber,
+			Certificate:  string(cert.Certificate),
+			Revoked:      cert.Revoked,
+			ExpiryTime:   cert.ExpiryTime,
+			EntityID:     cert.EntityID,
+		}, nil
+	}
+}
+
+func issueFromCSRInternalEndpoint(svc certs.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request any) (response any, err error) {
+		req := request.(IssueFromCSRInternalReq)
+		if err := req.validate(); err != nil {
+			return issueFromCSRRes{}, err
+		}
+
+		cert, err := svc.IssueFromCSRInternal(ctx, req.entityID, req.ttl, certs.CSR{CSR: req.CSR})
 		if err != nil {
 			return issueFromCSRRes{}, err
 		}

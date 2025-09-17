@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/absmach/certs"
-	"github.com/absmach/certs/api"
 	certsgrpc "github.com/absmach/certs/api/grpc"
 	httpapi "github.com/absmach/certs/api/http"
 	jaegerClient "github.com/absmach/certs/internal/jaeger"
@@ -21,9 +20,15 @@ import (
 	"github.com/absmach/certs/internal/server"
 	grpcserver "github.com/absmach/certs/internal/server/grpc"
 	"github.com/absmach/certs/internal/uuid"
+	"github.com/absmach/certs/middleware"
 	"github.com/absmach/certs/pki"
 	"github.com/absmach/certs/postgres"
 	"github.com/absmach/certs/tracing"
+	authsvcAuthn "github.com/absmach/supermq/pkg/authn/authsvc"
+	smqauthz "github.com/absmach/supermq/pkg/authz"
+	authsvcAuthz "github.com/absmach/supermq/pkg/authz/authsvc"
+	domainsAuthz "github.com/absmach/supermq/pkg/domains/grpcclient"
+	"github.com/absmach/supermq/pkg/grpcclient"
 	pgclient "github.com/absmach/supermq/pkg/postgres"
 	smq "github.com/absmach/supermq/pkg/server"
 	httpserver "github.com/absmach/supermq/pkg/server/http"
@@ -36,14 +41,15 @@ import (
 )
 
 const (
-	svcName        = "certs"
-	envPrefixHTTP  = "AM_CERTS_HTTP_"
-	envPrefixDB    = "AM_CERTS_DB_"
-	envPrefixGRPC  = "AM_CERTS_GRPC_"
-	envPrefixAuth  = "AM_AUTH_GRPC_"
-	defSvcHTTPPort = "9010"
-	defSvcGRPCPort = "7012"
-	defDB          = "certs"
+	svcName          = "certs"
+	envPrefixHTTP    = "AM_CERTS_HTTP_"
+	envPrefixDB      = "AM_CERTS_DB_"
+	envPrefixGRPC    = "AM_CERTS_GRPC_"
+	envPrefixAuth    = "AM_AUTH_GRPC_"
+	envPrefixDomains = "AM_DOMAINS_GRPC_"
+	defSvcHTTPPort   = "9010"
+	defSvcGRPCPort   = "7012"
+	defDB            = "certs"
 )
 
 type config struct {
@@ -51,6 +57,7 @@ type config struct {
 	JaegerURL  url.URL `env:"AM_JAEGER_URL"                 envDefault:"http://jaeger:4318"`
 	InstanceID string  `env:"AM_COMPUTATIONS_INSTANCE_ID"   envDefault:""`
 	TraceRatio float64 `env:"AM_JAEGER_TRACE_RATIO"         envDefault:"1.0"`
+	Token      string  `env:"AM_CERTS_TOKEN"                envDefault:""`
 
 	// OpenBao PKI settings
 	OpenBaoHost      string `env:"AM_CERTS_OPENBAO_HOST"         envDefault:"http://localhost:8200"`
@@ -121,12 +128,45 @@ func main() {
 	}()
 	tracer := tp.Tracer(svcName)
 
+	domsGrpcCfg := grpcclient.Config{}
+	if err := env.ParseWithOptions(&domsGrpcCfg, env.Options{Prefix: envPrefixDomains}); err != nil {
+		logger.Error(fmt.Sprintf("failed to load domains gRPC client configuration : %s", err))
+		return
+	}
+	domAuthz, _, domainsHandler, err := domainsAuthz.NewAuthorization(ctx, domsGrpcCfg)
+	if err != nil {
+		logger.Error(err.Error())
+		return
+	}
+	defer domainsHandler.Close()
+
+	authClientConfig := grpcclient.Config{}
+	if err := env.ParseWithOptions(&authClientConfig, env.Options{Prefix: envPrefixAuth}); err != nil {
+		logger.Error(fmt.Sprintf("failed to load %s auth configuration : %s", svcName, err))
+		return
+	}
+
+	authn, authnHandler, err := authsvcAuthn.NewAuthentication(ctx, authClientConfig)
+	if err != nil {
+		logger.Error("failed to create authn " + err.Error())
+		return
+	}
+	defer authnHandler.Close()
+	logger.Info("Authn successfully connected to auth gRPC server " + authnHandler.Secure())
+
+	authz, authzHandler, err := authsvcAuthz.NewAuthorization(ctx, authClientConfig, domAuthz)
+	if err != nil {
+		logger.Error("failed to create authz " + err.Error())
+		return
+	}
+	defer authzHandler.Close()
+	logger.Info("Authz successfully connected to auth gRPC server " + authzHandler.Secure())
 	httpServerConfig := smq.Config{Port: defSvcHTTPPort}
 	if err := env.ParseWithOptions(&httpServerConfig, env.Options{Prefix: envPrefixHTTP}); err != nil {
 		logger.Error(fmt.Sprintf("failed to load %s gRPC server configuration : %s", svcName, err))
 	}
 
-	svc := newService(ctx, db, dbConfig, tracer, logger, pkiAgent)
+	svc := newService(ctx, db, dbConfig, tracer, logger, pkiAgent, authz)
 
 	grpcServerConfig := smq.Config{Port: defSvcGRPCPort}
 	if err := env.ParseWithOptions(&grpcServerConfig, env.Options{Prefix: envPrefixGRPC}); err != nil {
@@ -140,7 +180,7 @@ func main() {
 	}
 	gs := grpcserver.NewServer(ctx, cancel, svcName, grpcServerConfig, registerCertsServiceServer, logger, nil, nil)
 
-	hs := httpserver.NewServer(ctx, cancel, svcName, httpServerConfig, httpapi.MakeHandler(svc, logger, cfg.InstanceID), logger)
+	hs := httpserver.NewServer(ctx, cancel, svcName, httpServerConfig, httpapi.MakeHandler(svc, authn, logger, cfg.InstanceID, cfg.Token), logger)
 
 	g.Go(func() error {
 		return hs.Start()
@@ -159,7 +199,7 @@ func main() {
 	}
 }
 
-func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, tracer trace.Tracer, logger *slog.Logger, pkiAgent certs.Agent) certs.Service {
+func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, tracer trace.Tracer, logger *slog.Logger, pkiAgent certs.Agent, authz smqauthz.Authorization) certs.Service {
 	database := pgclient.NewDatabase(db, dbConfig, tracer)
 	repo := postgres.NewRepository(database)
 	svc, err := certs.NewService(ctx, pkiAgent, repo)
@@ -167,9 +207,10 @@ func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, trac
 		logger.Error(fmt.Sprintf("failed to create service: %s", err))
 		return nil
 	}
-	svc = api.LoggingMiddleware(svc, logger)
+	svc = middleware.AuthorizationMiddleware(authz, svc)
+	svc = middleware.LoggingMiddleware(svc, logger)
 	counter, latency := prometheus.MakeMetrics(svcName, "api")
-	svc = api.MetricsMiddleware(svc, counter, latency)
+	svc = middleware.MetricsMiddleware(svc, counter, latency)
 	svc = tracing.New(svc, tracer)
 
 	return svc

@@ -20,7 +20,6 @@ func Migration() *migrate.MemoryMigrationSource {
 						created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 						PRIMARY KEY (serial_number)
                     )`,
-					// `CREATE INDEX IF NOT EXISTS idx_cert_entity_mappings_entity_id ON cert_entity_mappings(entity_id)`,
 				},
 				Down: []string{
 					"DROP TABLE cert_entity_mappings",

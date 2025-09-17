@@ -9,8 +9,9 @@ import (
 	"time"
 
 	"github.com/absmach/certs"
-	"github.com/absmach/certs/errors"
 	"github.com/absmach/certs/mocks"
+	smqauthn "github.com/absmach/supermq/pkg/authn"
+	"github.com/absmach/supermq/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -19,10 +20,18 @@ import (
 const (
 	serialNumber = "20:f4:bd:43:2c:c7:06:82:c7:f2:00:47:51:b6:81:6f:fa:c4:46:0c"
 	entityID     = "c1a1daea-ce24-4847-b892-1780bf25b10c"
+	domainID     = "domain-id"
 	testCertPEM  = "-----BEGIN CERTIFICATE-----\nMIIEMjCCAxqgAwIBAgIUIPS9QyzHBoLH8gBHUbaBb/rERgwwDQYJKoZIhvcNAQEL\nBQAwgaAxDzANBgNVBAYTBkZSQU5DRTEOMAwGA1UECBMFUEFSSVMxDjAMBgNVBAcT\nBVBBUklTMRowGAYDVQQKExFBYnN0cmFjdCBNYWNoaW5lczEaMBgGA1UECxMRQWJz\ndHJhY3QgTWFjaGluZXMxNTAzBgNVBAMTLEFic3RyYWN0IE1hY2hpbmVzIFJvb3Qg\nQ2VydGlmaWNhdGUgQXV0aG9yaXR5MB4XDTI1MDgyNTExNTAyNFoXDTI1MDgyNTIx\nNTA1NFowDzENMAsGA1UEAxMEMDAwMTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCC\nAQoCggEBAMT4eHWFYUVAmQWC0bcgcBuBQjDVWdXD2WJWx8ybeC8vIwsGyCRMEem4\nlveP937ZjM3TTX0Nst4chF0L3WN0FTGTztwlqtpCK67AxcMEdGj54kIlVMAZexLz\nY4mQ5Oe/S4L4elv/ARHDV87BZ0m7oD1b2AC+8CBdm9aWcaD1RZk6qtzLRjs17ouY\nuslj5dN33VuzTYYUlPaTFjCY2nnebK0FLNjJkBVjoIlmT1Oo56uw9SQpLczk4PtL\nlVzeNKHGh0mx3g13tyNOAjKrMvxb7GTQ3tKsL6zZfiWggw4gROqjGQuCejAibfrr\nftN77YndLF4JYqiUZRCsZlRMSkpcSWMCAwEAAaOB8zCB8DAOBgNVHQ8BAf8EBAMC\nA6gwHQYDVR0lBBYwFAYIKwYBBQUHAwEGCCsGAQUFBwMCMB0GA1UdDgQWBBSEDX9D\nU9O6ORjZOJzceZmE2yC93DAfBgNVHSMEGDAWgBSZCSNs3yScbg5YSiuN1VuS6o3g\nyTA7BggrBgEFBQcBAQQvMC0wKwYIKwYBBQUHMAKGH2h0dHA6Ly8xMjcuMC4wLjE6\nODIwMC92MS9wa2kvY2EwDwYDVR0RBAgwBocEwKhkFDAxBgNVHR8EKjAoMCagJKAi\nhiBodHRwOi8vMTI3LjAuMC4xOjgyMDAvdjEvcGtpL2NybDANBgkqhkiG9w0BAQsF\nAAOCAQEAK5fOOweOOJzWmjC0/6A9T/xnTOeXcwdp3gBmMNkaCs/qlh+3Dofo9vHS\nX1vitXbcqbMmJnXuRLkA+qTTlJvhVD8fa4RtixJZ5N0uDMPJ5FVv9tipSoqcnQH8\nwR4iPvrlQQr5hiBt/nfsaTLuDLZgMcKs5N30yHslJXfeLcWrawaQHpIddgavbgqM\n/9L/PoWM2hJknUyg7kis5SNejUGwOh/U1MUf1b18kaUKeK3Q4vhVHVz4foiRZ9M0\niw9xTj2rJJdOE/omE6qJFIfWIF0DuOCYt7z8TKhqKuTfNjmmiqlcgT14P6hniFkK\nl/5upJw86TWS8J0RXQJ1Nbw68EMEuQ==\n-----END CERTIFICATE-----"
 )
 
-var certValidityPeriod = time.Hour * 24 * 30
+var (
+	certValidityPeriod = time.Hour * 24 * 30
+	testSession        = smqauthn.Session{
+		DomainUserID: entityID,
+		UserID:       entityID,
+		DomainID:     domainID,
+	}
+)
 
 func TestIssueCert(t *testing.T) {
 	agent := new(mocks.Agent)
@@ -81,7 +90,7 @@ func TestIssueCert(t *testing.T) {
 			agentCall := agent.On("Issue", tc.ttl, []string{}, options).Return(tc.cert, tc.agentErr)
 			repoCall := repo.On("SaveCertEntityMapping", mock.Anything, tc.cert.SerialNumber, tc.entityID).Return(tc.repoErr)
 
-			cert, err := svc.IssueCert(context.Background(), tc.entityID, tc.ttl, []string{}, options)
+			cert, err := svc.IssueCert(context.Background(), testSession, tc.entityID, tc.ttl, []string{}, options)
 			if tc.err != nil {
 				require.True(t, errors.Contains(err, tc.err), "expected error %v, got %v", tc.err, err)
 			} else {
@@ -124,7 +133,7 @@ func TestRevokeBySerial(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			agentCall := agent.On("Revoke", tc.serial).Return(tc.agentErr)
 
-			err = svc.RevokeBySerial(context.Background(), tc.serial)
+			err = svc.RevokeBySerial(context.Background(), testSession, tc.serial)
 			if tc.err != nil {
 				require.True(t, errors.Contains(err, tc.err), "expected error %v, got %v", tc.err, err)
 			} else {
@@ -192,7 +201,7 @@ func TestRenewCert(t *testing.T) {
 			agentCall := agent.On("Renew", mock.Anything, certValidityPeriod.String()).Return(tc.newCert, tc.renewErr)
 			agentCall1 := agent.On("View", tc.serial).Return(certs.Certificate{Certificate: []byte(testCertPEM), Revoked: tc.revoked}, tc.viewErr)
 
-			renewedCert, err := svc.RenewCert(context.Background(), tc.serial)
+			renewedCert, err := svc.RenewCert(context.Background(), testSession, tc.serial)
 			require.True(t, errors.Contains(err, tc.expectedErr), "expected error %v, got %v", tc.expectedErr, err)
 			if tc.expectedErr == nil {
 				require.Equal(t, tc.newCert, renewedCert)
@@ -337,7 +346,7 @@ func TestListCerts(t *testing.T) {
 				}
 			}
 
-			certPage, err := svc.ListCerts(context.Background(), tc.pm)
+			certPage, err := svc.ListCerts(context.Background(), testSession, tc.pm)
 			if tc.err != nil {
 				require.True(t, errors.Contains(err, tc.err), "expected error %v, got %v", tc.err, err)
 			} else {
@@ -417,7 +426,7 @@ func TestRevokeAll(t *testing.T) {
 				}
 			}
 
-			err := svc.RevokeAll(context.Background(), tc.entityID)
+			err := svc.RevokeAll(context.Background(), testSession, tc.entityID)
 			if tc.err != nil {
 				require.True(t, errors.Contains(err, tc.err), "expected error %v, got %v", tc.err, err)
 			} else {
@@ -501,7 +510,7 @@ func TestIssueFromCSR(t *testing.T) {
 				repoCall = repo.On("SaveCertEntityMapping", mock.Anything, tc.cert.SerialNumber, tc.entityID).Return(tc.repoErr)
 			}
 
-			cert, err := svc.IssueFromCSR(context.Background(), tc.entityID, tc.ttl, tc.csr)
+			cert, err := svc.IssueFromCSR(context.Background(), testSession, tc.entityID, tc.ttl, tc.csr)
 			if tc.err != nil {
 				require.True(t, errors.Contains(err, tc.err), "expected error %v, got %v", tc.err, err)
 			} else {
@@ -525,26 +534,17 @@ func TestGenerateCRL(t *testing.T) {
 
 	testCases := []struct {
 		desc     string
-		caType   certs.CertType
 		crlBytes []byte
 		agentErr error
 		err      error
 	}{
 		{
-			desc:     "generate CRL with root CA",
-			caType:   certs.RootCA,
-			crlBytes: []byte("test-crl-data"),
-			err:      nil,
-		},
-		{
-			desc:     "generate CRL with intermediate CA",
-			caType:   certs.IntermediateCA,
+			desc:     "generate CRL successfully",
 			crlBytes: []byte("test-crl-data"),
 			err:      nil,
 		},
 		{
 			desc:     "failed with agent error",
-			caType:   certs.RootCA,
 			crlBytes: nil,
 			agentErr: errors.New("agent error"),
 			err:      certs.ErrFailedCertCreation,
@@ -555,7 +555,7 @@ func TestGenerateCRL(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			agentCall := agent.On("GetCRL").Return(tc.crlBytes, tc.agentErr)
 
-			crlBytes, err := svc.GenerateCRL(context.Background(), tc.caType)
+			crlBytes, err := svc.GenerateCRL(context.Background())
 			if tc.err != nil {
 				assert.Error(t, err)
 			} else {

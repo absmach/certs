@@ -16,7 +16,10 @@ import (
 	"strings"
 
 	"github.com/absmach/certs"
-	"github.com/absmach/certs/errors"
+	api "github.com/absmach/supermq/api/http"
+	apiutil "github.com/absmach/supermq/api/http/util"
+	"github.com/absmach/supermq/pkg/authn"
+	"github.com/absmach/supermq/pkg/errors"
 	"github.com/go-chi/chi/v5"
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -28,62 +31,112 @@ const (
 	offsetKey       = "offset"
 	limitKey        = "limit"
 	entityKey       = "entity_id"
-	approve         = "approve"
-	status          = "status"
-	token           = "token"
 	ocspStatusParam = "force_status"
 	entityIDParam   = "entityID"
 	ttl             = "ttl"
 	defOffset       = 0
 	defLimit        = 10
-	defType         = 1
 )
 
+func authMiddleware(authn authn.Authentication, expectedToken string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			token := apiutil.ExtractBearerToken(r)
+			if token == "" {
+				EncodeError(r.Context(), apiutil.ErrBearerToken, w)
+				return
+			}
+
+			if token != expectedToken {
+				EncodeError(r.Context(), errors.Wrap(certs.ErrMalformedEntity, errors.New("invalid authentication token")), w)
+				return
+			}
+
+			resp, err := authn.Authenticate(r.Context(), token)
+			if err != nil {
+				EncodeError(r.Context(), err, w)
+				return
+			}
+			ctx := context.WithValue(r.Context(), api.SessionKey, resp)
+
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}
+
 // MakeHandler returns a HTTP handler for API endpoints.
-func MakeHandler(svc certs.Service, logger *slog.Logger, instanceID string) http.Handler {
+func MakeHandler(svc certs.Service, authn authn.Authentication, logger *slog.Logger, instanceID string, token string) http.Handler {
 	opts := []kithttp.ServerOption{
 		kithttp.ServerErrorEncoder(loggingErrorEncoder(logger, EncodeError)),
 	}
 
-	r := chi.NewRouter()
+	mux := chi.NewRouter()
 
-	r.Route("/certs", func(r chi.Router) {
-		r.Post("/issue/{entityID}", otelhttp.NewHandler(kithttp.NewServer(
-			issueCertEndpoint(svc),
-			decodeIssueCert,
-			EncodeResponse,
-			opts...,
-		), "issue_cert").ServeHTTP)
-		r.Patch("/{id}/renew", otelhttp.NewHandler(kithttp.NewServer(
-			renewCertEndpoint(svc),
-			decodeView,
-			EncodeResponse,
-			opts...,
-		), "renew_cert").ServeHTTP)
-		r.Patch("/{id}/revoke", otelhttp.NewHandler(kithttp.NewServer(
-			revokeCertEndpoint(svc),
-			decodeView,
-			EncodeResponse,
-			opts...,
-		), "revoke_cert").ServeHTTP)
-		r.Delete("/{entityID}/delete", otelhttp.NewHandler(kithttp.NewServer(
-			deleteCertEndpoint(svc),
-			decodeDelete,
-			EncodeResponse,
-			opts...,
-		), "delete_cert").ServeHTTP)
-		r.Get("/", otelhttp.NewHandler(kithttp.NewServer(
-			listCertsEndpoint(svc),
-			decodeListCerts,
-			EncodeResponse,
-			opts...,
-		), "list_certs").ServeHTTP)
-		r.Get("/{id}", otelhttp.NewHandler(kithttp.NewServer(
-			viewCertEndpoint(svc),
-			decodeView,
-			EncodeResponse,
-			opts...,
-		), "view_cert").ServeHTTP)
+	mux.Route("/{domainID}", func(r chi.Router) {
+		r.Route("/certs", func(r chi.Router) {
+			r.Group(func(r chi.Router) {
+				r.Use(api.AuthenticateMiddleware(authn, true))
+				r.Post("/issue/{entityID}", otelhttp.NewHandler(kithttp.NewServer(
+					issueCertEndpoint(svc),
+					decodeIssueCert,
+					api.EncodeResponse,
+					opts...,
+				), "issue_cert").ServeHTTP)
+				r.Patch("/{id}/renew", otelhttp.NewHandler(kithttp.NewServer(
+					renewCertEndpoint(svc),
+					decodeView,
+					api.EncodeResponse,
+					opts...,
+				), "renew_cert").ServeHTTP)
+				r.Patch("/{id}/revoke", otelhttp.NewHandler(kithttp.NewServer(
+					revokeCertEndpoint(svc),
+					decodeView,
+					api.EncodeResponse,
+					opts...,
+				), "revoke_cert").ServeHTTP)
+				r.Delete("/{entityID}/delete", otelhttp.NewHandler(kithttp.NewServer(
+					deleteCertEndpoint(svc),
+					decodeDelete,
+					api.EncodeResponse,
+					opts...,
+				), "delete_cert").ServeHTTP)
+				r.Get("/", otelhttp.NewHandler(kithttp.NewServer(
+					listCertsEndpoint(svc),
+					decodeListCerts,
+					api.EncodeResponse,
+					opts...,
+				), "list_certs").ServeHTTP)
+				r.Get("/{id}", otelhttp.NewHandler(kithttp.NewServer(
+					viewCertEndpoint(svc),
+					decodeView,
+					api.EncodeResponse,
+					opts...,
+				), "view_cert").ServeHTTP)
+				r.Get("/view-ca", otelhttp.NewHandler(kithttp.NewServer(
+					viewCAEndpoint(svc),
+					decodeDownloadCA,
+					api.EncodeResponse,
+					opts...,
+				), "view_ca").ServeHTTP)
+				r.Get("/download-ca", otelhttp.NewHandler(kithttp.NewServer(
+					downloadCAEndpoint(svc),
+					decodeDownloadCA,
+					encodeCADownloadResponse,
+					opts...,
+				), "download_ca").ServeHTTP)
+				r.Route("/csrs", func(r chi.Router) {
+					r.Post("/{entityID}", otelhttp.NewHandler(kithttp.NewServer(
+						issueFromCSREndpoint(svc),
+						decodeIssueFromCSR,
+						api.EncodeResponse,
+						opts...,
+					), "issue_from_csr").ServeHTTP)
+				})
+			})
+		})
+	})
+
+	mux.Route("/certs", func(r chi.Router) {
 		r.Post("/ocsp", otelhttp.NewHandler(kithttp.NewServer(
 			ocspEndpoint(svc),
 			decodeOCSPRequest,
@@ -93,41 +146,25 @@ func MakeHandler(svc certs.Service, logger *slog.Logger, instanceID string) http
 		r.Get("/crl", otelhttp.NewHandler(kithttp.NewServer(
 			generateCRLEndpoint(svc),
 			decodeCRL,
-			EncodeResponse,
+			api.EncodeResponse,
 			opts...,
 		), "generate_crl").ServeHTTP)
-		r.Get("/get-ca/token", otelhttp.NewHandler(kithttp.NewServer(
-			getDownloadCATokenEndpoint(svc),
-			decodeView,
-			EncodeResponse,
-			opts...,
-		), "get_ca_token").ServeHTTP)
-		r.Get("/view-ca", otelhttp.NewHandler(kithttp.NewServer(
-			viewCAEndpoint(svc),
-			decodeDownloadCA,
-			EncodeResponse,
-			opts...,
-		), "view_ca").ServeHTTP)
-		r.Get("/download-ca", otelhttp.NewHandler(kithttp.NewServer(
-			downloadCAEndpoint(svc),
-			decodeDownloadCA,
-			encodeCADownloadResponse,
-			opts...,
-		), "download_ca").ServeHTTP)
-		r.Route("/csrs", func(r chi.Router) {
-			r.Post("/{entityID}", otelhttp.NewHandler(kithttp.NewServer(
-				issueFromCSREndpoint(svc),
-				decodeIssueFromCSR,
-				EncodeResponse,
-				opts...,
-			), "issue_from_csr").ServeHTTP)
-		})
 	})
 
-	r.Get("/health", certs.Health("certs", instanceID))
-	r.Handle("/metrics", promhttp.Handler())
+	mux.Group(func(r chi.Router) {
+		r.Use(authMiddleware(authn, token))
+		r.Post("/certs/csrs/{entityID}", otelhttp.NewHandler(kithttp.NewServer(
+			issueFromCSRInternalEndpoint(svc),
+			decodeIssueFromCSRInternal,
+			api.EncodeResponse,
+			opts...,
+		), "issue_from_csr_internal").ServeHTTP)
+	})
 
-	return r
+	mux.Get("/health", certs.Health("certs", instanceID))
+	mux.Handle("/metrics", promhttp.Handler())
+
+	return mux
 }
 
 func decodeView(_ context.Context, r *http.Request) (any, error) {
@@ -145,25 +182,12 @@ func decodeDelete(_ context.Context, r *http.Request) (any, error) {
 }
 
 func decodeCRL(_ context.Context, r *http.Request) (any, error) {
-	certType, err := readNumQuery(r, "", defType)
-	if err != nil {
-		return nil, err
-	}
-	req := crlReq{
-		certtype: certs.CertType(certType),
-	}
+	req := crlReq{}
 	return req, nil
 }
 
 func decodeDownloadCA(_ context.Context, r *http.Request) (any, error) {
-	token, err := readStringQuery(r, token, "")
-	if err != nil {
-		return nil, err
-	}
-	req := downloadReq{
-		token: token,
-	}
-
+	req := downloadReq{}
 	return req, nil
 }
 
@@ -187,6 +211,7 @@ func decodeOCSPRequest(_ context.Context, r *http.Request) (any, error) {
 		req:         req,
 		StatusParam: strings.TrimSpace(r.URL.Query().Get(ocspStatusParam)),
 	}
+
 	return request, nil
 }
 
@@ -200,6 +225,7 @@ func decodeJsonOCSPRequest(body []byte) (any, error) {
 		SerialNumber: simple.SerialNumber,
 		Certificate:  simple.Certificate,
 	}
+
 	return request, nil
 }
 
@@ -268,21 +294,28 @@ func decodeIssueFromCSR(_ context.Context, r *http.Request) (any, error) {
 	return req, nil
 }
 
-// EncodeResponse encodes successful response.
-func EncodeResponse(_ context.Context, w http.ResponseWriter, response any) error {
-	if ar, ok := response.(Response); ok {
-		for k, v := range ar.Headers() {
-			w.Header().Set(k, v)
-		}
-		w.Header().Set("Content-Type", ContentType)
-		w.WriteHeader(ar.Code())
-
-		if ar.Empty() {
-			return nil
-		}
+func decodeIssueFromCSRInternal(_ context.Context, r *http.Request) (any, error) {
+	t, err := readStringQuery(r, ttl, "")
+	if err != nil {
+		return nil, err
 	}
 
-	return json.NewEncoder(w).Encode(response)
+	req := IssueFromCSRInternalReq{
+		entityID: chi.URLParam(r, "entityID"),
+		ttl:      t,
+	}
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		return nil, errors.Wrap(ErrInvalidRequest, errors.New("failed to read request body"))
+	}
+	defer r.Body.Close()
+
+	if err := json.Unmarshal(body, &req); err != nil {
+		return nil, errors.Wrap(ErrInvalidRequest, errors.New("failed to decode JSON"))
+	}
+
+	return req, nil
 }
 
 func encodeOSCPResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {

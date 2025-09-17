@@ -10,20 +10,15 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/absmach/certs/errors"
-	"github.com/golang-jwt/jwt/v5"
+	"github.com/absmach/supermq/pkg/authn"
+	"github.com/absmach/supermq/pkg/errors"
 )
 
 const (
-	Organization                 = "AbstractMacines"
-	emailAddress                 = "info@abstractmachines.rs"
 	PrivateKeyBytes              = 2048
 	RootCAValidityPeriod         = time.Hour * 24 * 365 // 365 days
 	IntermediateCAVAlidityPeriod = time.Hour * 24 * 90  // 90 days
 	certValidityPeriod           = time.Hour * 24 * 30  // 30 days
-	rCertExpiryThreshold         = time.Hour * 24 * 30  // 30 days
-	iCertExpiryThreshold         = time.Hour * 24 * 10  // 10 days
-	downloadTokenExpiry          = time.Minute * 5      // 5 minutes
 	PrivateKey                   = "PRIVATE KEY"
 	RSAPrivateKey                = "RSA PRIVATE KEY"
 	ECPrivateKey                 = "EC PRIVATE KEY"
@@ -36,7 +31,6 @@ var (
 	ErrConflict               = errors.New("entity already exists")
 	ErrCreateEntity           = errors.New("failed to create entity")
 	ErrViewEntity             = errors.New("view entity failed")
-	ErrGetToken               = errors.New("failed to get token")
 	ErrUpdateEntity           = errors.New("update entity failed")
 	ErrDeleteEntity           = errors.New("delete entity failed")
 	ErrMalformedEntity        = errors.New("malformed entity specification")
@@ -73,7 +67,7 @@ func NewService(ctx context.Context, pki Agent, repo Repository) (Service, error
 // It uses the PKI agent to generate and issue a certificate.
 // The certificate is managed by OpenBao PKI internally.
 // EntityType is used to customize certificate properties based on the entity type.
-func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options SubjectOptions) (Certificate, error) {
+func (s *service) IssueCert(ctx context.Context, session authn.Session, entityID, ttl string, ipAddrs []string, options SubjectOptions) (Certificate, error) {
 	cert, err := s.pki.Issue(ttl, ipAddrs, options)
 	if err != nil {
 		return Certificate{}, errors.Wrap(ErrFailedCertCreation, err)
@@ -88,7 +82,7 @@ func (s *service) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs [
 	return cert, nil
 }
 
-func (s *service) ListCerts(ctx context.Context, pm PageMetadata) (CertificatePage, error) {
+func (s *service) ListCerts(ctx context.Context, session authn.Session, pm PageMetadata) (CertificatePage, error) {
 	if pm.EntityID != "" {
 		serialNumbers, err := s.repo.ListCertsByEntityID(ctx, pm.EntityID)
 		if err != nil {
@@ -139,7 +133,7 @@ func (s *service) ListCerts(ctx context.Context, pm PageMetadata) (CertificatePa
 	return certPg, nil
 }
 
-func (s *service) RevokeBySerial(ctx context.Context, serialNumber string) error {
+func (s *service) RevokeBySerial(ctx context.Context, session authn.Session, serialNumber string) error {
 	err := s.pki.Revoke(serialNumber)
 	if err != nil {
 		return errors.Wrap(ErrUpdateEntity, err)
@@ -149,7 +143,7 @@ func (s *service) RevokeBySerial(ctx context.Context, serialNumber string) error
 
 // RevokeAll revokes all certificates for a given entity ID.
 // It uses the repository to find all certificates for the entity ID, then revokes each one.
-func (s *service) RevokeAll(ctx context.Context, entityID string) error {
+func (s *service) RevokeAll(ctx context.Context, session authn.Session, entityID string) error {
 	serialNumbers, err := s.repo.ListCertsByEntityID(ctx, entityID)
 	if err != nil {
 		return errors.Wrap(ErrViewEntity, err)
@@ -171,7 +165,7 @@ func (s *service) RevokeAll(ctx context.Context, entityID string) error {
 	return nil
 }
 
-func (s *service) ViewCert(ctx context.Context, serialNumber string) (Certificate, error) {
+func (s *service) ViewCert(ctx context.Context, session authn.Session, serialNumber string) (Certificate, error) {
 	cert, err := s.pki.View(serialNumber)
 	if err != nil {
 		return Certificate{}, errors.Wrap(ErrViewEntity, err)
@@ -219,33 +213,9 @@ func (s *service) ViewCA(ctx context.Context) (Certificate, error) {
 	}, nil
 }
 
-// RetrieveCAToken generates a download token for a certificate.
-// It verifies the token and serial number, and returns a signed JWT token string.
-// The token is valid for 5 minutes.
-// Parameters:
-//   - ctx: the context.Context object for the request
-//
-// Returns:
-//   - string: the signed JWT token string
-//   - error: an error if the authentication fails or any other error occurs
-func (s *service) RetrieveCAToken(ctx context.Context) (string, error) {
-	caCert, err := s.ViewCA(ctx)
-	if err != nil {
-		return "", errors.Wrap(ErrGetToken, err)
-	}
-
-	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{ExpiresAt: jwt.NewNumericDate(time.Now().UTC().Add(downloadTokenExpiry)), Issuer: Organization, Subject: "certs"})
-	token, err := jwtToken.SignedString([]byte(caCert.SerialNumber))
-	if err != nil {
-		return "", errors.Wrap(ErrGetToken, err)
-	}
-
-	return token, nil
-}
-
 // RenewCert renews a certificate by issuing a new certificate with the same parameters.
 // Returns the new certificate with extended TTL and a new serial number.
-func (s *service) RenewCert(ctx context.Context, serialNumber string) (Certificate, error) {
+func (s *service) RenewCert(ctx context.Context, session authn.Session, serialNumber string) (Certificate, error) {
 	cert, err := s.pki.View(serialNumber)
 	if err != nil {
 		return Certificate{}, errors.Wrap(ErrViewEntity, err)
@@ -275,7 +245,7 @@ func (s *service) GetEntityID(ctx context.Context, serialNumber string) (string,
 	return entityID, nil
 }
 
-func (s *service) GenerateCRL(ctx context.Context, caType CertType) ([]byte, error) {
+func (s *service) GenerateCRL(ctx context.Context) ([]byte, error) {
 	crl, err := s.pki.GetCRL()
 	if err != nil {
 		return nil, errors.Wrap(ErrFailedCertCreation, err)
@@ -283,22 +253,26 @@ func (s *service) GenerateCRL(ctx context.Context, caType CertType) ([]byte, err
 	return crl, nil
 }
 
-func (s *service) GetChainCA(ctx context.Context, token string) (Certificate, error) {
-	caCert, err := s.ViewCA(ctx)
-	if err != nil {
-		return Certificate{}, errors.Wrap(ErrViewEntity, err)
-	}
-
-	if _, err := jwt.ParseWithClaims(token, &jwt.RegisteredClaims{Issuer: Organization, Subject: "certs"}, func(token *jwt.Token) (any, error) {
-		return []byte(caCert.SerialNumber), nil
-	}); err != nil {
-		return Certificate{}, errors.Wrap(err, ErrMalformedEntity)
-	}
-
+func (s *service) GetChainCA(ctx context.Context, session authn.Session) (Certificate, error) {
 	return s.getConcatCAs(ctx)
 }
 
-func (s *service) IssueFromCSR(ctx context.Context, entityID, ttl string, csr CSR) (Certificate, error) {
+func (s *service) IssueFromCSR(ctx context.Context, session authn.Session, entityID, ttl string, csr CSR) (Certificate, error) {
+	cert, err := s.pki.SignCSR(csr.CSR, ttl)
+	if err != nil {
+		return Certificate{}, errors.Wrap(ErrFailedCertCreation, err)
+	}
+
+	if err := s.repo.SaveCertEntityMapping(ctx, cert.SerialNumber, entityID); err != nil {
+		return Certificate{}, errors.Wrap(ErrFailedCertCreation, err)
+	}
+
+	cert.EntityID = entityID
+
+	return cert, nil
+}
+
+func (s *service) IssueFromCSRInternal(ctx context.Context, entityID, ttl string, csr CSR) (Certificate, error) {
 	cert, err := s.pki.SignCSR(csr.CSR, ttl)
 	if err != nil {
 		return Certificate{}, errors.Wrap(ErrFailedCertCreation, err)

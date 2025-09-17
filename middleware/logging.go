@@ -1,7 +1,7 @@
 // Copyright (c) Abstract Machines
 // SPDX-License-Identifier: Apache-2.0
 
-package api
+package middleware
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/absmach/certs"
+	"github.com/absmach/supermq/pkg/authn"
 )
 
 var _ certs.Service = (*loggingMiddleware)(nil)
@@ -24,7 +25,7 @@ func LoggingMiddleware(svc certs.Service, logger *slog.Logger) certs.Service {
 	return &loggingMiddleware{logger, svc}
 }
 
-func (lm *loggingMiddleware) RenewCert(ctx context.Context, serialNumber string) (cert certs.Certificate, err error) {
+func (lm *loggingMiddleware) RenewCert(ctx context.Context, session authn.Session, serialNumber string) (cert certs.Certificate, err error) {
 	defer func(begin time.Time) {
 		message := fmt.Sprintf("Method renew_cert for cert %s took %s to complete", serialNumber, time.Since(begin))
 		if err != nil {
@@ -33,22 +34,10 @@ func (lm *loggingMiddleware) RenewCert(ctx context.Context, serialNumber string)
 		}
 		lm.logger.Info(fmt.Sprintf("%s and returned new cert %s.", message, cert.SerialNumber))
 	}(time.Now())
-	return lm.svc.RenewCert(ctx, serialNumber)
+	return lm.svc.RenewCert(ctx, session, serialNumber)
 }
 
-func (lm *loggingMiddleware) RetrieveCAToken(ctx context.Context) (tokenString string, err error) {
-	defer func(begin time.Time) {
-		message := fmt.Sprintf("Method get_ca_token took %s to complete", time.Since(begin))
-		if err != nil {
-			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
-			return
-		}
-		lm.logger.Info(message)
-	}(time.Now())
-	return lm.svc.RetrieveCAToken(ctx)
-}
-
-func (lm *loggingMiddleware) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, options certs.SubjectOptions) (cert certs.Certificate, err error) {
+func (lm *loggingMiddleware) IssueCert(ctx context.Context, session authn.Session, entityID, ttl string, ipAddrs []string, options certs.SubjectOptions) (cert certs.Certificate, err error) {
 	defer func(begin time.Time) {
 		message := fmt.Sprintf("Method issue_cert for entity %s took %s to complete", entityID, time.Since(begin))
 		if err != nil {
@@ -57,10 +46,10 @@ func (lm *loggingMiddleware) IssueCert(ctx context.Context, entityID, ttl string
 		}
 		lm.logger.Info(message)
 	}(time.Now())
-	return lm.svc.IssueCert(ctx, entityID, ttl, ipAddrs, options)
+	return lm.svc.IssueCert(ctx, session, entityID, ttl, ipAddrs, options)
 }
 
-func (lm *loggingMiddleware) ListCerts(ctx context.Context, pm certs.PageMetadata) (cp certs.CertificatePage, err error) {
+func (lm *loggingMiddleware) ListCerts(ctx context.Context, session authn.Session, pm certs.PageMetadata) (cp certs.CertificatePage, err error) {
 	defer func(begin time.Time) {
 		message := fmt.Sprintf("Method list_certs took %s to complete", time.Since(begin))
 		if err != nil {
@@ -69,10 +58,10 @@ func (lm *loggingMiddleware) ListCerts(ctx context.Context, pm certs.PageMetadat
 		}
 		lm.logger.Info(message)
 	}(time.Now())
-	return lm.svc.ListCerts(ctx, pm)
+	return lm.svc.ListCerts(ctx, session, pm)
 }
 
-func (lm *loggingMiddleware) RevokeBySerial(ctx context.Context, serialNumber string) (err error) {
+func (lm *loggingMiddleware) RevokeBySerial(ctx context.Context, session authn.Session, serialNumber string) (err error) {
 	defer func(begin time.Time) {
 		message := fmt.Sprintf("Method revoke_by_serial took %s to complete", time.Since(begin))
 		if err != nil {
@@ -81,10 +70,10 @@ func (lm *loggingMiddleware) RevokeBySerial(ctx context.Context, serialNumber st
 		}
 		lm.logger.Info(message)
 	}(time.Now())
-	return lm.svc.RevokeBySerial(ctx, serialNumber)
+	return lm.svc.RevokeBySerial(ctx, session, serialNumber)
 }
 
-func (lm *loggingMiddleware) RevokeAll(ctx context.Context, entityId string) (err error) {
+func (lm *loggingMiddleware) RevokeAll(ctx context.Context, session authn.Session, entityId string) (err error) {
 	defer func(begin time.Time) {
 		message := fmt.Sprintf("Method revoke_all took %s to complete", time.Since(begin))
 		if err != nil {
@@ -93,10 +82,10 @@ func (lm *loggingMiddleware) RevokeAll(ctx context.Context, entityId string) (er
 		}
 		lm.logger.Info(message)
 	}(time.Now())
-	return lm.svc.RevokeAll(ctx, entityId)
+	return lm.svc.RevokeAll(ctx, session, entityId)
 }
 
-func (lm *loggingMiddleware) ViewCert(ctx context.Context, serialNumber string) (cert certs.Certificate, err error) {
+func (lm *loggingMiddleware) ViewCert(ctx context.Context, session authn.Session, serialNumber string) (cert certs.Certificate, err error) {
 	defer func(begin time.Time) {
 		message := fmt.Sprintf("Method view_cert for serial number %s took %s to complete", serialNumber, time.Since(begin))
 		if err != nil {
@@ -105,7 +94,7 @@ func (lm *loggingMiddleware) ViewCert(ctx context.Context, serialNumber string) 
 		}
 		lm.logger.Info(message)
 	}(time.Now())
-	return lm.svc.ViewCert(ctx, serialNumber)
+	return lm.svc.ViewCert(ctx, session, serialNumber)
 }
 
 func (lm *loggingMiddleware) OCSP(ctx context.Context, serialNumber string, ocspRequestDER []byte) (ocspBytes []byte, err error) {
@@ -136,7 +125,7 @@ func (lm *loggingMiddleware) GetEntityID(ctx context.Context, serialNumber strin
 	return lm.svc.GetEntityID(ctx, serialNumber)
 }
 
-func (lm *loggingMiddleware) GenerateCRL(ctx context.Context, caType certs.CertType) (crl []byte, err error) {
+func (lm *loggingMiddleware) GenerateCRL(ctx context.Context) (crl []byte, err error) {
 	defer func(begin time.Time) {
 		message := fmt.Sprintf("Method generate_crl took %s to complete", time.Since(begin))
 		if err != nil {
@@ -145,10 +134,10 @@ func (lm *loggingMiddleware) GenerateCRL(ctx context.Context, caType certs.CertT
 		}
 		lm.logger.Info(message)
 	}(time.Now())
-	return lm.svc.GenerateCRL(ctx, caType)
+	return lm.svc.GenerateCRL(ctx)
 }
 
-func (lm *loggingMiddleware) GetChainCA(ctx context.Context, token string) (cert certs.Certificate, err error) {
+func (lm *loggingMiddleware) GetChainCA(ctx context.Context, session authn.Session) (cert certs.Certificate, err error) {
 	defer func(begin time.Time) {
 		message := fmt.Sprintf("Method get_chain_ca took %s to complete", time.Since(begin))
 		if err != nil {
@@ -157,10 +146,10 @@ func (lm *loggingMiddleware) GetChainCA(ctx context.Context, token string) (cert
 		}
 		lm.logger.Info(message)
 	}(time.Now())
-	return lm.svc.GetChainCA(ctx, token)
+	return lm.svc.GetChainCA(ctx, session)
 }
 
-func (lm *loggingMiddleware) IssueFromCSR(ctx context.Context, entityID, ttl string, csr certs.CSR) (c certs.Certificate, err error) {
+func (lm *loggingMiddleware) IssueFromCSR(ctx context.Context, session authn.Session, entityID, ttl string, csr certs.CSR) (c certs.Certificate, err error) {
 	defer func(begin time.Time) {
 		message := fmt.Sprintf("Method issue_from_csr took %s to complete", time.Since(begin))
 		if err != nil {
@@ -169,7 +158,19 @@ func (lm *loggingMiddleware) IssueFromCSR(ctx context.Context, entityID, ttl str
 		}
 		lm.logger.Info(message)
 	}(time.Now())
-	return lm.svc.IssueFromCSR(ctx, entityID, ttl, csr)
+	return lm.svc.IssueFromCSR(ctx, session, entityID, ttl, csr)
+}
+
+func (lm *loggingMiddleware) IssueFromCSRInternal(ctx context.Context, entityID, ttl string, csr certs.CSR) (c certs.Certificate, err error) {
+	defer func(begin time.Time) {
+		message := fmt.Sprintf("Method issue_from_csr_internal for entity %s took %s to complete", entityID, time.Since(begin))
+		if err != nil {
+			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
+			return
+		}
+		lm.logger.Info(message)
+	}(time.Now())
+	return lm.svc.IssueFromCSRInternal(ctx, entityID, ttl, csr)
 }
 
 func (lm *loggingMiddleware) GetCA(ctx context.Context) (cert certs.Certificate, err error) {
