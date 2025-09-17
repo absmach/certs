@@ -90,28 +90,28 @@ func NewAgent(appRole, appSecret, host, namespace, path, role string, logger *sl
 		intermediatePath: intermediatePath,
 		client:           client,
 		logger:           logger,
-		issueURL:         "/" + intermediatePath + "/" + issue + "/" + role,
-		signURL:          "/" + intermediatePath + "/" + sign + "/" + role,
-		readURL:          "/" + intermediatePath + "/" + cert + "/",
-		revokeURL:        "/" + intermediatePath + "/" + revoke,
-		caURL:            "/" + intermediatePath + "/" + ca,
-		caChainURL:       "/" + intermediatePath + "/" + caChain,
-		rootCAURL:        "/" + path + "/" + ca,
-		rootCAChainURL:   "/" + path + "/" + caChain,
-		crlURL:           "/" + intermediatePath + "/" + crl,
-		ocspURL:          "/" + intermediatePath + "/" + ocspPath,
-		certsURL:         "/" + intermediatePath + "/" + certsList,
+		issueURL:         fmt.Sprintf("/%s/%s/%s", intermediatePath, issue, role),
+		signURL:          fmt.Sprintf("/%s/%s/%s", intermediatePath, sign, role),
+		readURL:          fmt.Sprintf("/%s/%s/", intermediatePath, cert),
+		revokeURL:        fmt.Sprintf("/%s/%s", intermediatePath, revoke),
+		caURL:            fmt.Sprintf("/%s/%s", intermediatePath, ca),
+		caChainURL:       fmt.Sprintf("/%s/%s", intermediatePath, caChain),
+		rootCAURL:        fmt.Sprintf("/%s/%s", path, ca),
+		rootCAChainURL:   fmt.Sprintf("/%s/%s", path, caChain),
+		crlURL:           fmt.Sprintf("/%s/%s", intermediatePath, crl),
+		ocspURL:          fmt.Sprintf("/%s/%s", intermediatePath, ocspPath),
+		certsURL:         fmt.Sprintf("/%s/%s", intermediatePath, certsList),
 	}
 	return &p, nil
 }
 
-func (va *openbaoPKIAgent) getIntermediateCADefaultSANs() ([]string, []string, error) {
-	err := va.LoginAndRenew()
+func (agent *openbaoPKIAgent) getIntermediateCADefaultSANs() ([]string, []string, error) {
+	err := agent.LoginAndRenew()
 	if err != nil {
 		return nil, nil, err
 	}
 
-	certData, err := va.GetCA()
+	certData, err := agent.GetCA()
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get intermediate CA certificate: %w", err)
 	}
@@ -134,8 +134,8 @@ func (va *openbaoPKIAgent) getIntermediateCADefaultSANs() ([]string, []string, e
 	return cert.DNSNames, ipSANs, nil
 }
 
-func (va *openbaoPKIAgent) Issue(ttl string, ipAddrs []string, options certs.SubjectOptions) (certs.Certificate, error) {
-	err := va.LoginAndRenew()
+func (agent *openbaoPKIAgent) Issue(ttl string, ipAddrs []string, options certs.SubjectOptions) (certs.Certificate, error) {
+	err := agent.LoginAndRenew()
 	if err != nil {
 		return certs.Certificate{}, err
 	}
@@ -171,9 +171,9 @@ func (va *openbaoPKIAgent) Issue(ttl string, ipAddrs []string, options certs.Sub
 	allDNSNames := make([]string, 0)
 	allDNSNames = append(allDNSNames, options.DnsNames...)
 
-	defaultDNSNames, defaultIPSANs, err := va.getIntermediateCADefaultSANs()
+	defaultDNSNames, defaultIPSANs, err := agent.getIntermediateCADefaultSANs()
 	if err != nil {
-		va.logger.Warn("failed to get default SANs from intermediate CA", "error", err)
+		agent.logger.Warn("failed to get default SANs from intermediate CA", "error", err)
 	} else {
 		for _, defaultDNS := range defaultDNSNames {
 			found := false
@@ -218,7 +218,7 @@ func (va *openbaoPKIAgent) Issue(ttl string, ipAddrs []string, options certs.Sub
 		secretValues["ip_sans"] = ipSansValue
 	}
 
-	secret, err := va.client.Logical().Write(va.issueURL, secretValues)
+	secret, err := agent.client.Logical().Write(agent.issueURL, secretValues)
 	if err != nil {
 		return certs.Certificate{}, err
 	}
@@ -257,13 +257,13 @@ func (va *openbaoPKIAgent) Issue(ttl string, ipAddrs []string, options certs.Sub
 	return cert, nil
 }
 
-func (va *openbaoPKIAgent) View(serialNumber string) (certs.Certificate, error) {
-	err := va.LoginAndRenew()
+func (agent *openbaoPKIAgent) View(serialNumber string) (certs.Certificate, error) {
+	err := agent.LoginAndRenew()
 	if err != nil {
 		return certs.Certificate{}, err
 	}
 
-	secret, err := va.client.Logical().Read(va.readURL + serialNumber)
+	secret, err := agent.client.Logical().Read(fmt.Sprintf("%s%s", agent.readURL, serialNumber))
 	if err != nil {
 		return certs.Certificate{}, err
 	}
@@ -286,14 +286,14 @@ func (va *openbaoPKIAgent) View(serialNumber string) (certs.Certificate, error) 
 	}
 
 	if len(cert.Certificate) > 0 {
-		if expiry, err := va.parseCertificateExpiry(string(cert.Certificate)); err == nil {
+		if expiry, err := agent.parseCertificateExpiry(string(cert.Certificate)); err == nil {
 			cert.ExpiryTime = expiry
 		}
 	}
 	return cert, nil
 }
 
-func (va *openbaoPKIAgent) parseCertificateExpiry(certPEM string) (time.Time, error) {
+func (agent *openbaoPKIAgent) parseCertificateExpiry(certPEM string) (time.Time, error) {
 	block, _ := pem.Decode([]byte(certPEM))
 	if block == nil {
 		return time.Time{}, fmt.Errorf("failed to decode PEM certificate")
@@ -307,8 +307,8 @@ func (va *openbaoPKIAgent) parseCertificateExpiry(certPEM string) (time.Time, er
 	return cert.NotAfter, nil
 }
 
-func (va *openbaoPKIAgent) Renew(existingCert certs.Certificate, increment string) (certs.Certificate, error) {
-	err := va.LoginAndRenew()
+func (agent *openbaoPKIAgent) Renew(existingCert certs.Certificate, increment string) (certs.Certificate, error) {
+	err := agent.LoginAndRenew()
 	if err != nil {
 		return certs.Certificate{}, err
 	}
@@ -357,7 +357,7 @@ func (va *openbaoPKIAgent) Renew(existingCert certs.Certificate, increment strin
 		ipAddrs = append(ipAddrs, ip.String())
 	}
 
-	newCert, err := va.Issue(increment, ipAddrs, options)
+	newCert, err := agent.Issue(increment, ipAddrs, options)
 	if err != nil {
 		return certs.Certificate{}, fmt.Errorf("failed to issue renewed certificate: %w", err)
 	}
@@ -365,8 +365,8 @@ func (va *openbaoPKIAgent) Renew(existingCert certs.Certificate, increment strin
 	return newCert, nil
 }
 
-func (va *openbaoPKIAgent) Revoke(serialNumber string) error {
-	err := va.LoginAndRenew()
+func (agent *openbaoPKIAgent) Revoke(serialNumber string) error {
+	err := agent.LoginAndRenew()
 	if err != nil {
 		return err
 	}
@@ -375,20 +375,20 @@ func (va *openbaoPKIAgent) Revoke(serialNumber string) error {
 		"serial_number": serialNumber,
 	}
 
-	_, err = va.client.Logical().Write(va.revokeURL, secretValues)
+	_, err = agent.client.Logical().Write(agent.revokeURL, secretValues)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (va *openbaoPKIAgent) ListCerts(pm certs.PageMetadata) (certs.CertificatePage, error) {
-	err := va.LoginAndRenew()
+func (agent *openbaoPKIAgent) ListCerts(pm certs.PageMetadata) (certs.CertificatePage, error) {
+	err := agent.LoginAndRenew()
 	if err != nil {
 		return certs.CertificatePage{}, err
 	}
 
-	secret, err := va.client.Logical().List(va.certsURL)
+	secret, err := agent.client.Logical().List(agent.certsURL)
 	if err != nil {
 		return certs.CertificatePage{}, err
 	}
@@ -414,9 +414,9 @@ func (va *openbaoPKIAgent) ListCerts(pm certs.PageMetadata) (certs.CertificatePa
 
 	var allCerts []certs.Certificate
 	for _, serialNumber := range serialNumbers {
-		cert, err := va.View(serialNumber)
+		cert, err := agent.View(serialNumber)
 		if err != nil {
-			va.logger.Warn("failed to retrieve certificate details", "serial", serialNumber, "error", err)
+			agent.logger.Warn("failed to retrieve certificate details", "serial", serialNumber, "error", err)
 			continue
 		}
 
@@ -444,20 +444,20 @@ func (va *openbaoPKIAgent) ListCerts(pm certs.PageMetadata) (certs.CertificatePa
 	return certPage, nil
 }
 
-func (va *openbaoPKIAgent) LoginAndRenew() error {
-	if va.secret != nil && va.secret.Auth != nil && va.secret.Auth.ClientToken != "" {
-		_, err := va.client.Auth().Token().LookupSelf()
+func (agent *openbaoPKIAgent) LoginAndRenew() error {
+	if agent.secret != nil && agent.secret.Auth != nil && agent.secret.Auth.ClientToken != "" {
+		_, err := agent.client.Auth().Token().LookupSelf()
 		if err == nil {
 			return nil
 		}
 	}
 
 	authData := map[string]any{
-		"role_id":   va.appRole,
-		"secret_id": va.appSecret,
+		"role_id":   agent.appRole,
+		"secret_id": agent.appSecret,
 	}
 
-	authResp, err := va.client.Logical().Write("auth/approle/login", authData)
+	authResp, err := agent.client.Logical().Write("auth/approle/login", authData)
 	if err != nil {
 		return fmt.Errorf("%s: %w", errFailedToLogin, err)
 	}
@@ -466,24 +466,24 @@ func (va *openbaoPKIAgent) LoginAndRenew() error {
 		return errNoAuthInfo
 	}
 
-	va.secret = authResp
-	va.client.SetToken(authResp.Auth.ClientToken)
+	agent.secret = authResp
+	agent.client.SetToken(authResp.Auth.ClientToken)
 
 	if authResp.Auth.Renewable {
-		watcher, err := va.client.NewLifetimeWatcher(&api.LifetimeWatcherInput{
+		watcher, err := agent.client.NewLifetimeWatcher(&api.LifetimeWatcherInput{
 			Secret: authResp,
 		})
 		if err != nil {
 			return fmt.Errorf("%s: %w", errRenewWatcher, err)
 		}
 
-		go va.renewToken(watcher)
+		go agent.renewToken(watcher)
 	}
 
 	return nil
 }
 
-func (va *openbaoPKIAgent) renewToken(watcher *api.LifetimeWatcher) {
+func (agent *openbaoPKIAgent) renewToken(watcher *api.LifetimeWatcher) {
 	defer watcher.Stop()
 
 	watcher.Start()
@@ -491,49 +491,33 @@ func (va *openbaoPKIAgent) renewToken(watcher *api.LifetimeWatcher) {
 		select {
 		case err := <-watcher.DoneCh():
 			if err != nil {
-				va.logger.Error("token renewal failed", "error", err)
+				agent.logger.Error("token renewal failed", "error", err)
 			}
 			return
 		case renewal := <-watcher.RenewCh():
-			va.logger.Info("token renewed successfully", "lease_duration", renewal.Secret.LeaseDuration)
+			agent.logger.Info("token renewed successfully", "lease_duration", renewal.Secret.LeaseDuration)
 		}
 	}
 }
 
-func (va *openbaoPKIAgent) GetCA() ([]byte, error) {
-	err := va.LoginAndRenew()
+func (agent *openbaoPKIAgent) GetCA() ([]byte, error) {
+	err := agent.LoginAndRenew()
 	if err != nil {
 		return nil, err
 	}
 
-	url := va.host + "/v1/" + va.intermediatePath + "/ca"
-
-	req, err := http.NewRequest("GET", url, nil)
+	secret, err := agent.client.Logical().ReadRaw(agent.caURL)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
+		return nil, fmt.Errorf("failed to get CA certificate: %w", err)
+	}
+	defer secret.Body.Close()
+
+	if secret.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(secret.Body)
+		return nil, fmt.Errorf("failed to get CA certificate: HTTP %d - %s", secret.StatusCode, string(body))
 	}
 
-	if va.secret != nil && va.secret.Auth != nil && va.secret.Auth.ClientToken != "" {
-		req.Header.Set("X-Vault-Token", va.secret.Auth.ClientToken)
-	}
-
-	if va.namespace != "" {
-		req.Header.Set("X-Vault-Namespace", va.namespace)
-	}
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to make HTTP request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("failed to get CA certificate: HTTP %d - %s", resp.StatusCode, string(body))
-	}
-
-	certData, err := io.ReadAll(resp.Body)
+	certData, err := io.ReadAll(secret.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read CA response: %w", err)
 	}
@@ -542,6 +526,12 @@ func (va *openbaoPKIAgent) GetCA() ([]byte, error) {
 		return nil, fmt.Errorf("CA certificate response is empty - PKI may not be initialized")
 	}
 
+	// Check if it's already PEM encoded
+	if strings.HasPrefix(string(certData), "-----BEGIN CERTIFICATE-----") {
+		return certData, nil
+	}
+
+	// If it's DER, convert to PEM
 	_, err = x509.ParseCertificate(certData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse DER certificate: %w", err)
@@ -556,40 +546,24 @@ func (va *openbaoPKIAgent) GetCA() ([]byte, error) {
 	return pemData, nil
 }
 
-func (va *openbaoPKIAgent) GetRootCA() ([]byte, error) {
-	err := va.LoginAndRenew()
+func (agent *openbaoPKIAgent) GetRootCA() ([]byte, error) {
+	err := agent.LoginAndRenew()
 	if err != nil {
 		return nil, err
 	}
 
-	url := va.host + "/v1/" + va.path + "/ca"
-
-	req, err := http.NewRequest("GET", url, nil)
+	secret, err := agent.client.Logical().ReadRaw(agent.rootCAURL)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
+		return nil, fmt.Errorf("failed to get root CA certificate: %w", err)
+	}
+	defer secret.Body.Close()
+
+	if secret.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(secret.Body)
+		return nil, fmt.Errorf("failed to get root CA certificate: HTTP %d - %s", secret.StatusCode, string(body))
 	}
 
-	if va.secret != nil && va.secret.Auth != nil && va.secret.Auth.ClientToken != "" {
-		req.Header.Set("X-Vault-Token", va.secret.Auth.ClientToken)
-	}
-
-	if va.namespace != "" {
-		req.Header.Set("X-Vault-Namespace", va.namespace)
-	}
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to make HTTP request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("failed to get root CA certificate: HTTP %d - %s", resp.StatusCode, string(body))
-	}
-
-	certData, err := io.ReadAll(resp.Body)
+	certData, err := io.ReadAll(secret.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read root CA response: %w", err)
 	}
@@ -598,6 +572,12 @@ func (va *openbaoPKIAgent) GetRootCA() ([]byte, error) {
 		return nil, fmt.Errorf("root CA certificate response is empty")
 	}
 
+	// Check if it's already PEM encoded
+	if strings.HasPrefix(string(certData), "-----BEGIN CERTIFICATE-----") {
+		return certData, nil
+	}
+
+	// If it's DER, convert to PEM
 	_, err = x509.ParseCertificate(certData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse DER certificate: %w", err)
@@ -612,47 +592,23 @@ func (va *openbaoPKIAgent) GetRootCA() ([]byte, error) {
 	return pemData, nil
 }
 
-func (va *openbaoPKIAgent) GetCAChain() ([]byte, error) {
-	err := va.LoginAndRenew()
+func (agent *openbaoPKIAgent) GetCAChain() ([]byte, error) {
+	err := agent.LoginAndRenew()
 	if err != nil {
 		return nil, err
 	}
 
-	intermediateChainURL := va.host + "/v1/" + va.intermediatePath + "/ca_chain"
-	intermediateChain, err := va.fetchCAChain(intermediateChainURL)
+	secret, err := agent.client.Logical().ReadRaw(agent.caChainURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get intermediate CA chain: %w", err)
 	}
+	defer secret.Body.Close()
 
-	return intermediateChain, nil
-}
-
-func (va *openbaoPKIAgent) fetchCAChain(url string) ([]byte, error) {
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
+	if secret.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to get CA chain: HTTP %d", secret.StatusCode)
 	}
 
-	if va.secret != nil && va.secret.Auth != nil && va.secret.Auth.ClientToken != "" {
-		req.Header.Set("X-Vault-Token", va.secret.Auth.ClientToken)
-	}
-
-	if va.namespace != "" {
-		req.Header.Set("X-Vault-Namespace", va.namespace)
-	}
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to make HTTP request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to get CA chain: HTTP %d", resp.StatusCode)
-	}
-
-	chainData, err := io.ReadAll(resp.Body)
+	chainData, err := io.ReadAll(secret.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read CA chain response: %w", err)
 	}
@@ -660,39 +616,23 @@ func (va *openbaoPKIAgent) fetchCAChain(url string) ([]byte, error) {
 	return chainData, nil
 }
 
-func (va *openbaoPKIAgent) GetCRL() ([]byte, error) {
-	err := va.LoginAndRenew()
+func (agent *openbaoPKIAgent) GetCRL() ([]byte, error) {
+	err := agent.LoginAndRenew()
 	if err != nil {
 		return nil, err
 	}
 
-	url := va.host + "/v1/" + va.intermediatePath + "/crl"
-
-	req, err := http.NewRequest("GET", url, nil)
+	secret, err := agent.client.Logical().ReadRaw(agent.crlURL)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
+		return nil, fmt.Errorf("failed to get CRL: %w", err)
+	}
+	defer secret.Body.Close()
+
+	if secret.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to get CRL: HTTP %d", secret.StatusCode)
 	}
 
-	if va.secret != nil && va.secret.Auth != nil && va.secret.Auth.ClientToken != "" {
-		req.Header.Set("X-Vault-Token", va.secret.Auth.ClientToken)
-	}
-
-	if va.namespace != "" {
-		req.Header.Set("X-Vault-Namespace", va.namespace)
-	}
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to make HTTP request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to get CRL: HTTP %d", resp.StatusCode)
-	}
-
-	crlData, err := io.ReadAll(resp.Body)
+	crlData, err := io.ReadAll(secret.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read CRL response: %w", err)
 	}
@@ -700,8 +640,8 @@ func (va *openbaoPKIAgent) GetCRL() ([]byte, error) {
 	return crlData, nil
 }
 
-func (va *openbaoPKIAgent) SignCSR(csr []byte, ttl string) (certs.Certificate, error) {
-	err := va.LoginAndRenew()
+func (agent *openbaoPKIAgent) SignCSR(csr []byte, ttl string) (certs.Certificate, error) {
+	err := agent.LoginAndRenew()
 	if err != nil {
 		return certs.Certificate{}, err
 	}
@@ -711,7 +651,7 @@ func (va *openbaoPKIAgent) SignCSR(csr []byte, ttl string) (certs.Certificate, e
 		"ttl": ttl,
 	}
 
-	secret, err := va.client.Logical().Write(va.signURL, secretValues)
+	secret, err := agent.client.Logical().Write(agent.signURL, secretValues)
 	if err != nil {
 		return certs.Certificate{}, err
 	}
@@ -746,8 +686,8 @@ func (va *openbaoPKIAgent) SignCSR(csr []byte, ttl string) (certs.Certificate, e
 	return cert, nil
 }
 
-func (va *openbaoPKIAgent) OCSP(serialNumber string, ocspRequestDER []byte) ([]byte, error) {
-	err := va.LoginAndRenew()
+func (agent *openbaoPKIAgent) OCSP(serialNumber string, ocspRequestDER []byte) ([]byte, error) {
+	err := agent.LoginAndRenew()
 	if err != nil {
 		return nil, err
 	}
@@ -757,12 +697,12 @@ func (va *openbaoPKIAgent) OCSP(serialNumber string, ocspRequestDER []byte) ([]b
 	if len(ocspRequestDER) > 0 {
 		requestDER = ocspRequestDER
 	} else {
-		issuerCert, err := va.getIssuerCertificate()
+		issuerCert, err := agent.getIssuerCertificate()
 		if err != nil {
 			return nil, fmt.Errorf("failed to get issuer certificate for OCSP: %w", err)
 		}
 
-		cert, err := va.View(serialNumber)
+		cert, err := agent.View(serialNumber)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get certificate for OCSP: %w", err)
 		}
@@ -785,35 +725,35 @@ func (va *openbaoPKIAgent) OCSP(serialNumber string, ocspRequestDER []byte) ([]b
 		}
 	}
 
-	url := fmt.Sprintf("%s/v1/%s/ocsp", va.host, va.intermediatePath)
-	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(string(requestDER)))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create OCSP POST request: %w", err)
+	// For OCSP, we use WriteBytes since it handles binary data properly
+	// Create a map with the binary request data
+	requestData := map[string]interface{}{
+		"req": requestDER,
 	}
 
-	req.Header.Set("Content-Type", "application/ocsp-request")
-	if va.secret != nil && va.secret.Auth != nil && va.secret.Auth.ClientToken != "" {
-		req.Header.Set("X-Vault-Token", va.secret.Auth.ClientToken)
-	}
-	if va.namespace != "" {
-		req.Header.Set("X-Vault-Namespace", va.namespace)
-	}
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	secret, err := agent.client.Logical().Write(agent.ocspURL, requestData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query OpenBao OCSP: %w", err)
 	}
-	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("OCSP request failed: HTTP %d - %s", resp.StatusCode, string(body))
+	if secret == nil || secret.Data == nil {
+		return nil, fmt.Errorf("no OCSP response data returned from OpenBao")
 	}
 
-	der, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read OCSP response: %w", err)
+	// Extract the DER response from the secret data
+	var der []byte
+	if respData, ok := secret.Data["response"]; ok {
+		switch resp := respData.(type) {
+		case []byte:
+			der = resp
+		case string:
+			// If it's base64 encoded, decode it
+			der = []byte(resp)
+		default:
+			return nil, fmt.Errorf("unexpected OCSP response data type: %T", respData)
+		}
+	} else {
+		return nil, fmt.Errorf("no OCSP response found in secret data")
 	}
 
 	_, err = ocsp.ParseResponse(der, nil)
@@ -824,8 +764,8 @@ func (va *openbaoPKIAgent) OCSP(serialNumber string, ocspRequestDER []byte) ([]b
 	return der, nil
 }
 
-func (va *openbaoPKIAgent) getIssuerCertificate() (*x509.Certificate, error) {
-	certData, err := va.GetCA()
+func (agent *openbaoPKIAgent) getIssuerCertificate() (*x509.Certificate, error) {
+	certData, err := agent.GetCA()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get CA certificate: %w", err)
 	}
