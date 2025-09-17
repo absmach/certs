@@ -17,7 +17,6 @@ import (
 	smqauthn "github.com/absmach/supermq/pkg/authn"
 	authnmocks "github.com/absmach/supermq/pkg/authn/mocks"
 	"github.com/absmach/supermq/pkg/errors"
-	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -37,10 +36,9 @@ const (
 
 func setupCerts() (*httptest.Server, *mocks.Service, *authnmocks.Authentication) {
 	svc := new(mocks.Service)
-	mux := chi.NewRouter()
 	logger := logger.NewMock()
 	authn := new(authnmocks.Authentication)
-	handler := httpapi.MakeHandler(svc, authn, mux, logger, instanceID, agentToken)
+	handler := httpapi.MakeHandler(svc, authn, logger, instanceID, agentToken)
 
 	return httptest.NewServer(handler), svc, authn
 }
