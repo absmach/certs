@@ -7,8 +7,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/absmach/certs/errors"
 	"github.com/absmach/certs/postgres"
+	"github.com/absmach/supermq/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
