@@ -559,7 +559,7 @@ func (sdk mgSDK) IssueFromCSRInternal(entityID, ttl, csr, token string) (Certifi
 		TTL: ttl,
 	}
 
-	url, err := sdk.withQueryParams(fmt.Sprintf("%s/agent/certs/csrs/%s", sdk.certsURL, entityID), "", pm)
+	url, err := sdk.withQueryParams(fmt.Sprintf("%s/certs/csrs/%s", sdk.certsURL, entityID), "", pm)
 	if err != nil {
 		return Certificate{}, errors.NewSDKError(err)
 	}

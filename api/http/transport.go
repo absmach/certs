@@ -38,7 +38,7 @@ const (
 	defLimit        = 10
 )
 
-func AgentAuthenticateMiddleware(authn authn.Authentication, expectedToken string) func(http.Handler) http.Handler {
+func authMiddleware(authn authn.Authentication, expectedToken string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			token := apiutil.ExtractBearerToken(r)
@@ -150,8 +150,8 @@ func MakeHandler(svc certs.Service, authn authn.Authentication, mux *chi.Mux, lo
 	})
 
 	mux.Group(func(r chi.Router) {
-		r.Use(AgentAuthenticateMiddleware(authn, token))
-		r.Post("/agent/certs/csrs/{entityID}", otelhttp.NewHandler(kithttp.NewServer(
+		r.Use(authMiddleware(authn, token))
+		r.Post("/certs/csrs/{entityID}", otelhttp.NewHandler(kithttp.NewServer(
 			issueFromCSRInternalEndpoint(svc),
 			decodeIssueFromCSRInternal,
 			api.EncodeResponse,
