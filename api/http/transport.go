@@ -65,10 +65,12 @@ func authMiddleware(authn authn.Authentication, expectedToken string) func(http.
 }
 
 // MakeHandler returns a HTTP handler for API endpoints.
-func MakeHandler(svc certs.Service, authn authn.Authentication, mux *chi.Mux, logger *slog.Logger, instanceID string, token string) http.Handler {
+func MakeHandler(svc certs.Service, authn authn.Authentication, logger *slog.Logger, instanceID string, token string) http.Handler {
 	opts := []kithttp.ServerOption{
 		kithttp.ServerErrorEncoder(loggingErrorEncoder(logger, EncodeError)),
 	}
+
+	mux := chi.NewRouter()
 
 	mux.Route("/{domainID}", func(r chi.Router) {
 		r.Route("/certs", func(r chi.Router) {
