@@ -322,13 +322,13 @@ var cmdCerts = []cobra.Command{
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			certBundle, err := sdk.DownloadCA(args[0], args[1])
+			cert, err := sdk.ViewCA(args[0], args[1])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
-			logJSONCmd(*cmd, certBundle.CA)
-			logSaveCAFile(*cmd, certBundle.CA)
+			logJSONCmd(*cmd, cert)
+			logSaveCAFile(*cmd, cert.Certificate)
 		},
 	},
 }

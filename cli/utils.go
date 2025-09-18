@@ -113,9 +113,9 @@ func logSaveCSRFiles(cmd cobra.Command, csr certs.CSR) {
 	fmt.Fprintf(cmd.OutOrStdout(), "\nCSR file have been saved successfully.\n")
 }
 
-func logSaveCAFile(cmd cobra.Command, cert []byte) {
+func logSaveCAFile(cmd cobra.Command, cert string) {
 	files := map[string][]byte{
-		"ca.crt": cert,
+		"ca.crt": []byte(cert),
 	}
 
 	for filename, content := range files {
