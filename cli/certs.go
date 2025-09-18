@@ -313,24 +313,6 @@ var cmdCerts = []cobra.Command{
 			logJSONCmd(*cmd, map[string]string{"entity_id": entityID})
 		},
 	},
-	{
-		Use:   "ca <domain_id> <token>",
-		Short: "Get CA certificate",
-		Long:  `Gets the CA certificate.`,
-		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 2 {
-				logUsageCmd(*cmd, cmd.Use)
-				return
-			}
-			cert, err := sdk.ViewCA(args[0], args[1])
-			if err != nil {
-				logErrorCmd(*cmd, err)
-				return
-			}
-			logJSONCmd(*cmd, cert)
-			logSaveCAFile(*cmd, cert.Certificate)
-		},
-	},
 }
 
 // NewCertsCmd returns certificate command.
@@ -380,7 +362,7 @@ func NewCertsCmd() *cobra.Command {
 	issueCmd.Flags().StringVar(&ttl, "ttl", "8760h", "certificate time to live in duration")
 
 	cmd := cobra.Command{
-		Use:   "certs [issue | get | revoke | renew | ocsp | view | download-ca | view-ca | csr | issue-csr | issue-csr-internal | crl | entity-id | ca]",
+		Use:   "certs [issue | get | revoke | renew | ocsp | view | download-ca | view-ca | csr | issue-csr | issue-csr-internal | crl | entity-id]",
 		Short: "Certificates management",
 		Long:  `Certificates management: issue, get all, get by entity ID, revoke, renew, OCSP, view, CRL generation, entity ID lookup, agent CSR issuing, and CA operations.`,
 	}
