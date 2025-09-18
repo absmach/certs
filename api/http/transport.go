@@ -52,10 +52,7 @@ func authMiddleware(expectedToken string) func(http.Handler) http.Handler {
 				return
 			}
 
-			resp := authn.Session{}
-			ctx := context.WithValue(r.Context(), api.SessionKey, resp)
-
-			next.ServeHTTP(w, r.WithContext(ctx))
+			next.ServeHTTP(w, r)
 		})
 	}
 }
