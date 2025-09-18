@@ -279,7 +279,7 @@ func issueFromCSREndpoint(svc certs.Service) endpoint.Endpoint {
 			return issueFromCSRRes{}, svcerr.ErrAuthentication
 		}
 
-		cert, err := svc.IssueFromCSR(ctx, session, req.entityID, req.ttl, certs.CSR{CSR: []byte(req.CSR)})
+		cert, err := svc.IssueFromCSR(ctx, session, req.entityID, req.ttl, certs.CSR{CSR: req.CSR})
 		if err != nil {
 			return issueFromCSRRes{}, err
 		}
