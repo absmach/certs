@@ -98,9 +98,9 @@ func TestIssueCertCmd(t *testing.T) {
 				id,
 				commonName,
 				ipAddrs,
+				"{\"organization\":[\"organization_name\"]}",
 				domainID,
 				token,
-				"{\"organization\":[\"organization_name\"]}",
 			},
 			logType: entityLog,
 			cert:    sdk.Certificate{SerialNumber: serialNumber},
@@ -685,7 +685,6 @@ func TestGetCACmd(t *testing.T) {
 	certCmd := cli.NewCertsCmd()
 	rootCmd := setFlags(certCmd)
 
-	var cert sdk.Certificate
 	cases := []struct {
 		desc          string
 		args          []string
@@ -709,15 +708,19 @@ func TestGetCACmd(t *testing.T) {
 			logType: usageLog,
 		},
 		{
-			desc:    "get CA failed",
-			args:    []string{domainID, token},
-			sdkErr:  errors.NewSDKErrorWithStatus(certs.ErrViewEntity, http.StatusUnprocessableEntity),
-			logType: usageLog,
+			desc:          "get CA failed",
+			args:          []string{domainID, token},
+			sdkErr:        errors.NewSDKErrorWithStatus(certs.ErrViewEntity, http.StatusUnprocessableEntity),
+			errLogMessage: fmt.Sprintf("\nerror: %s\n\n", errors.NewSDKErrorWithStatus(certs.ErrViewEntity, http.StatusUnprocessableEntity)),
+			logType:       errLog,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
+			defer func() {
+				cleanupFiles(t, []string{"ca.crt"})
+			}()
 			sdkMock := new(sdkmocks.SDK)
 			cli.SetSDK(sdkMock)
 			sdkCall := sdkMock.On("GetCA", mock.Anything, mock.Anything).Return(tc.cert, tc.sdkErr)
@@ -725,9 +728,8 @@ func TestGetCACmd(t *testing.T) {
 
 			switch tc.logType {
 			case entityLog:
-				err := json.Unmarshal([]byte(out), &cert)
-				assert.Nil(t, err)
-				assert.Equal(t, tc.cert, cert, fmt.Sprintf("%s unexpected response: expected: %v, got: %v", tc.desc, tc.cert, cert))
+				assert.True(t, strings.Contains(out, "Saved ca.crt"), fmt.Sprintf("%s should save CA file", tc.desc))
+				assert.True(t, strings.Contains(out, "CA certificate file has been saved successfully"), fmt.Sprintf("%s should show success message", tc.desc))
 			case usageLog:
 				assert.False(t, strings.Contains(out, rootCmd.Use), fmt.Sprintf("%s invalid usage: %s", tc.desc, out))
 			case errLog:

@@ -125,11 +125,3 @@ func (mm *metricsMiddleware) IssueFromCSRInternal(ctx context.Context, entityID,
 	}(time.Now())
 	return mm.svc.IssueFromCSRInternal(ctx, entityID, ttl, csr)
 }
-
-func (mm *metricsMiddleware) GetCA(ctx context.Context) (certs.Certificate, error) {
-	defer func(begin time.Time) {
-		mm.counter.With("method", "get_ca").Add(1)
-		mm.latency.With("method", "get_ca").Observe(time.Since(begin).Seconds())
-	}(time.Now())
-	return mm.svc.GetCA(ctx)
-}

@@ -300,13 +300,6 @@ type SDK interface {
 	//	entityID, err := sdk.GetEntityID("serialNumber", "domainID", "token")
 	//	fmt.Println(entityID)
 	GetEntityID(serialNumber, domainID, token string) (string, errors.SDKError)
-
-	// GetCA gets the CA certificate
-	//
-	// example:
-	//	ca, err := sdk.GetCA("domainID", "token")
-	//	fmt.Println(ca)
-	GetCA(domainID, token string) (Certificate, errors.SDKError)
 }
 
 func (sdk mgSDK) IssueCert(entityID, ttl string, ipAddrs []string, opts Options, domainID, token string) (Certificate, errors.SDKError) {
@@ -611,10 +604,6 @@ func (sdk mgSDK) GetEntityID(serialNumber, domainID, token string) (string, erro
 		return "", err
 	}
 	return cert.EntityID, nil
-}
-
-func (sdk mgSDK) GetCA(domainID, token string) (Certificate, errors.SDKError) {
-	return sdk.ViewCA(domainID, token)
 }
 
 func NewSDK(conf Config) SDK {

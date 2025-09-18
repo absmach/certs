@@ -526,58 +526,6 @@ func (agent *openbaoPKIAgent) GetCA() ([]byte, error) {
 		return nil, fmt.Errorf("CA certificate response is empty - PKI may not be initialized")
 	}
 
-	// Check if it's already PEM encoded
-	if strings.HasPrefix(string(certData), "-----BEGIN CERTIFICATE-----") {
-		return certData, nil
-	}
-
-	// If it's DER, convert to PEM
-	_, err = x509.ParseCertificate(certData)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse DER certificate: %w", err)
-	}
-
-	pemBlock := &pem.Block{
-		Type:  "CERTIFICATE",
-		Bytes: certData,
-	}
-
-	pemData := pem.EncodeToMemory(pemBlock)
-	return pemData, nil
-}
-
-func (agent *openbaoPKIAgent) GetRootCA() ([]byte, error) {
-	err := agent.LoginAndRenew()
-	if err != nil {
-		return nil, err
-	}
-
-	secret, err := agent.client.Logical().ReadRaw(agent.rootCAURL)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get root CA certificate: %w", err)
-	}
-	defer secret.Body.Close()
-
-	if secret.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(secret.Body)
-		return nil, fmt.Errorf("failed to get root CA certificate: HTTP %d - %s", secret.StatusCode, string(body))
-	}
-
-	certData, err := io.ReadAll(secret.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read root CA response: %w", err)
-	}
-
-	if len(certData) == 0 {
-		return nil, fmt.Errorf("root CA certificate response is empty")
-	}
-
-	// Check if it's already PEM encoded
-	if strings.HasPrefix(string(certData), "-----BEGIN CERTIFICATE-----") {
-		return certData, nil
-	}
-
-	// If it's DER, convert to PEM
 	_, err = x509.ParseCertificate(certData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse DER certificate: %w", err)
@@ -600,7 +548,7 @@ func (agent *openbaoPKIAgent) GetCAChain() ([]byte, error) {
 
 	secret, err := agent.client.Logical().ReadRaw(agent.caChainURL)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get intermediate CA chain: %w", err)
+		return nil, fmt.Errorf("failed to get CA chain: %w", err)
 	}
 	defer secret.Body.Close()
 
@@ -725,35 +673,35 @@ func (agent *openbaoPKIAgent) OCSP(serialNumber string, ocspRequestDER []byte) (
 		}
 	}
 
-	// For OCSP, we use WriteBytes since it handles binary data properly
-	// Create a map with the binary request data
-	requestData := map[string]interface{}{
-		"req": requestDER,
+	url := fmt.Sprintf("%s/v1/%s/ocsp", agent.host, agent.intermediatePath)
+	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(string(requestDER)))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create OCSP POST request: %w", err)
 	}
 
-	secret, err := agent.client.Logical().Write(agent.ocspURL, requestData)
+	req.Header.Set("Content-Type", "application/ocsp-request")
+	if agent.secret != nil && agent.secret.Auth != nil && agent.secret.Auth.ClientToken != "" {
+		req.Header.Set("X-Vault-Token", agent.secret.Auth.ClientToken)
+	}
+	if agent.namespace != "" {
+		req.Header.Set("X-Vault-Namespace", agent.namespace)
+	}
+
+	httpClient := agent.client.CloneConfig().HttpClient
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query OpenBao OCSP: %w", err)
 	}
+	defer resp.Body.Close()
 
-	if secret == nil || secret.Data == nil {
-		return nil, fmt.Errorf("no OCSP response data returned from OpenBao")
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("OCSP request failed: HTTP %d - %s", resp.StatusCode, string(body))
 	}
 
-	// Extract the DER response from the secret data
-	var der []byte
-	if respData, ok := secret.Data["response"]; ok {
-		switch resp := respData.(type) {
-		case []byte:
-			der = resp
-		case string:
-			// If it's base64 encoded, decode it
-			der = []byte(resp)
-		default:
-			return nil, fmt.Errorf("unexpected OCSP response data type: %T", respData)
-		}
-	} else {
-		return nil, fmt.Errorf("no OCSP response found in secret data")
+	der, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read OCSP response: %w", err)
 	}
 
 	_, err = ocsp.ParseResponse(der, nil)

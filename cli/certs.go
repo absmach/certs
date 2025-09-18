@@ -322,12 +322,13 @@ var cmdCerts = []cobra.Command{
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			cert, err := sdk.GetCA(args[0], args[1])
+			certBundle, err := sdk.DownloadCA(args[0], args[1])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
-			logJSONCmd(*cmd, cert)
+			logJSONCmd(*cmd, certBundle.CA)
+			logSaveCAFile(*cmd, certBundle.CA)
 		},
 	},
 }
@@ -336,7 +337,7 @@ var cmdCerts = []cobra.Command{
 func NewCertsCmd() *cobra.Command {
 	var ttl string
 	issueCmd := cobra.Command{
-		Use:   "issue <entity_id> <common_name> <ip_addrs_json> <domain_id> <token> [<options_json>] [--ttl=8760h]",
+		Use:   "issue <entity_id> <common_name> <ip_addrs_json> [<options_json>] <domain_id> <token> [--ttl=8760h]",
 		Short: "Issue certificate",
 		Long:  `Issues a certificate for a given entity ID.`,
 		Run: func(cmd *cobra.Command, args []string) {
@@ -353,14 +354,20 @@ func NewCertsCmd() *cobra.Command {
 			var option ctxsdk.Options
 			option.CommonName = args[1]
 
-			if len(args) == 6 {
-				if err := json.Unmarshal([]byte(args[5]), &option); err != nil {
+			var domainID, token string
+			if len(args) == 5 {
+				domainID = args[3]
+				token = args[4]
+			} else {
+				if err := json.Unmarshal([]byte(args[3]), &option); err != nil {
 					logErrorCmd(*cmd, err)
 					return
 				}
+				domainID = args[4]
+				token = args[5]
 			}
 
-			cert, err := sdk.IssueCert(args[0], ttl, ipAddrs, option, args[3], args[4])
+			cert, err := sdk.IssueCert(args[0], ttl, ipAddrs, option, domainID, token)
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return

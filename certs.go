@@ -176,9 +176,6 @@ type Service interface {
 
 	// IssueFromCSRInternal creates a certificate from a given CSR using agent token authentication.
 	IssueFromCSRInternal(ctx context.Context, entityID, ttl string, csr CSR) (Certificate, error)
-
-	// GetCA retieve CA certificates.
-	GetCA(ctx context.Context) (Certificate, error)
 }
 
 type Repository interface {

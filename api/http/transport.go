@@ -38,7 +38,7 @@ const (
 	defLimit        = 10
 )
 
-func authMiddleware(authn authn.Authentication, expectedToken string) func(http.Handler) http.Handler {
+func authMiddleware(expectedToken string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			token := apiutil.ExtractBearerToken(r)
@@ -52,11 +52,7 @@ func authMiddleware(authn authn.Authentication, expectedToken string) func(http.
 				return
 			}
 
-			resp, err := authn.Authenticate(r.Context(), token)
-			if err != nil {
-				EncodeError(r.Context(), err, w)
-				return
-			}
+			resp := authn.Session{}
 			ctx := context.WithValue(r.Context(), api.SessionKey, resp)
 
 			next.ServeHTTP(w, r.WithContext(ctx))
@@ -152,7 +148,7 @@ func MakeHandler(svc certs.Service, authn authn.Authentication, logger *slog.Log
 	})
 
 	mux.Group(func(r chi.Router) {
-		r.Use(authMiddleware(authn, token))
+		r.Use(authMiddleware(token))
 		r.Post("/certs/csrs/{entityID}", otelhttp.NewHandler(kithttp.NewServer(
 			issueFromCSRInternalEndpoint(svc),
 			decodeIssueFromCSRInternal,

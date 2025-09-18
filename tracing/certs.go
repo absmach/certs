@@ -94,9 +94,3 @@ func (tm *tracingMiddleware) IssueFromCSRInternal(ctx context.Context, entityID,
 	defer span.End()
 	return tm.svc.IssueFromCSRInternal(ctx, entityID, ttl, csr)
 }
-
-func (tm *tracingMiddleware) GetCA(ctx context.Context) (certs.Certificate, error) {
-	ctx, span := tm.tracer.Start(ctx, "get_ca")
-	defer span.End()
-	return tm.svc.GetCA(ctx)
-}

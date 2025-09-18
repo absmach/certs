@@ -172,15 +172,3 @@ func (lm *loggingMiddleware) IssueFromCSRInternal(ctx context.Context, entityID,
 	}(time.Now())
 	return lm.svc.IssueFromCSRInternal(ctx, entityID, ttl, csr)
 }
-
-func (lm *loggingMiddleware) GetCA(ctx context.Context) (cert certs.Certificate, err error) {
-	defer func(begin time.Time) {
-		message := fmt.Sprintf("Method get_ca took %s to complete", time.Since(begin))
-		if err != nil {
-			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
-			return
-		}
-		lm.logger.Info(message)
-	}(time.Now())
-	return lm.svc.GetCA(ctx)
-}

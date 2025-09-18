@@ -308,12 +308,3 @@ func (s *service) getConcatCAs(_ context.Context) (Certificate, error) {
 		ExpiryTime:  cert.NotAfter,
 	}, nil
 }
-
-func (s *service) GetCA(ctx context.Context) (Certificate, error) {
-	cert, err := s.ViewCA(ctx)
-	if err != nil {
-		return Certificate{}, errors.Wrap(ErrViewEntity, err)
-	}
-
-	return cert, nil
-}

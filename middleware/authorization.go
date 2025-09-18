@@ -72,10 +72,6 @@ func (am *authorizationMiddleware) GetEntityID(ctx context.Context, serialNumber
 	return am.svc.GetEntityID(ctx, serialNumber)
 }
 
-func (am *authorizationMiddleware) GetCA(ctx context.Context) (crt.Certificate, error) {
-	return am.svc.GetCA(ctx)
-}
-
 func (am *authorizationMiddleware) OCSP(ctx context.Context, serialNumber string, ocspRequestDER []byte) ([]byte, error) {
 	return am.svc.OCSP(ctx, serialNumber, ocspRequestDER)
 }
