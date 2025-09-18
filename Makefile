@@ -57,7 +57,7 @@ clean:
 
 cleandocker:
 	# Stops containers and removes containers, networks, volumes, and images created by up
-	docker compose -f docker/docker-compose.yml -p $(DOCKER_PROJECT) down --rmi all -v --remove-orphans
+	docker compose -f docker/docker-compose.yaml -p $(DOCKER_PROJECT) down --rmi all -v --remove-orphans
 
 install:
 	for file in $(BUILD_DIR)/*; do \
@@ -97,8 +97,8 @@ docker: $(DOCKER)
 docker_dev: $(DOCKER_DEV)
 
 run:
-	docker compose -f docker/docker-compose.yml --env-file docker/.env -p absmach up
+	docker compose -f docker/docker-compose.yaml --env-file docker/.env -p absmach up
 
 deploy:
-	docker compose -f docker/docker-compose.yml pull
-	docker compose -f docker/docker-compose.yml --env-file docker/.env -p absmach up -d
+	docker compose -f docker/docker-compose.yaml pull
+	docker compose -f docker/docker-compose.yaml --env-file docker/.env -p absmach up -d

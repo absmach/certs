@@ -124,20 +124,6 @@ type SubjectOptions struct {
 	IpAddresses        []net.IP `json:"ip_addresses"`
 }
 
-type Config struct {
-	CommonName         string   `yaml:"common_name"`
-	Organization       []string `yaml:"organization"`
-	OrganizationalUnit []string `yaml:"organizational_unit"`
-	Country            []string `yaml:"country"`
-	Province           []string `yaml:"province"`
-	Locality           []string `yaml:"locality"`
-	StreetAddress      []string `yaml:"street_address"`
-	PostalCode         []string `yaml:"postal_code"`
-	DNSNames           []string `yaml:"dns_names"`
-	IPAddresses        []net.IP `yaml:"ip_addresses"`
-	ValidityPeriod     string   `yaml:"validity_period"`
-}
-
 type Service interface {
 	// RenewCert renews a certificate by issuing a new certificate with the same parameters.
 	// Returns the new certificate with extended TTL and a new serial number.

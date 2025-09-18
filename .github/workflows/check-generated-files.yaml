@@ -43,10 +43,10 @@ jobs:
           base: main
           filters: |
             proto:
-              - ".github/workflows/check-generated-files.yml"
+              - ".github/workflows/check-generated-files.yaml"
               
             mocks:
-              - ".github/workflows/check-generated-files.yml"
+              - ".github/workflows/check-generated-files.yaml"
               - "sdk/mocks/sdk.go"
               - "mocks/agent.go"
               - "mocks/service.go"
