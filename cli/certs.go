@@ -403,17 +403,19 @@ func CreateCSR(metadata certs.CSRMetadata, privKey any) (certs.CSR, errors.SDKEr
 	var signer crypto.Signer
 	var err error
 
-	switch key := privKey.(type) {
+	actualKey := privKey
+	if keyBytes, ok := privKey.([]byte); ok {
+		actualKey, err = extractPrivateKey(keyBytes)
+		if err != nil {
+			return certs.CSR{}, errors.NewSDKError(errors.Wrap(certs.ErrCreateEntity, err))
+		}
+	}
+
+	switch key := actualKey.(type) {
 	case *rsa.PrivateKey, *ecdsa.PrivateKey:
 		signer = key.(crypto.Signer)
 	case ed25519.PrivateKey:
 		signer = key
-	case []byte:
-		parsedKey, err := extractPrivateKey(key)
-		if err != nil {
-			return certs.CSR{}, errors.NewSDKError(errors.Wrap(certs.ErrCreateEntity, err))
-		}
-		return CreateCSR(metadata, parsedKey)
 	default:
 		return certs.CSR{}, errors.NewSDKError(errors.Wrap(certs.ErrCreateEntity, certs.ErrPrivKeyType))
 	}
