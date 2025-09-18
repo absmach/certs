@@ -38,7 +38,7 @@ const (
 	defLimit        = 10
 )
 
-func authMiddleware(expectedToken string) func(http.Handler) http.Handler {
+func authMiddleware(expectedSecret string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			token := apiutil.ExtractBearerToken(r)
@@ -47,7 +47,7 @@ func authMiddleware(expectedToken string) func(http.Handler) http.Handler {
 				return
 			}
 
-			if token != expectedToken {
+			if token != expectedSecret {
 				EncodeError(r.Context(), errors.Wrap(certs.ErrMalformedEntity, errors.New("invalid authentication token")), w)
 				return
 			}
@@ -58,7 +58,7 @@ func authMiddleware(expectedToken string) func(http.Handler) http.Handler {
 }
 
 // MakeHandler returns a HTTP handler for API endpoints.
-func MakeHandler(svc certs.Service, authn authn.Authentication, logger *slog.Logger, instanceID string, token string) http.Handler {
+func MakeHandler(svc certs.Service, authn authn.Authentication, logger *slog.Logger, instanceID string, secret string) http.Handler {
 	opts := []kithttp.ServerOption{
 		kithttp.ServerErrorEncoder(loggingErrorEncoder(logger, EncodeError)),
 	}
@@ -145,7 +145,7 @@ func MakeHandler(svc certs.Service, authn authn.Authentication, logger *slog.Log
 	})
 
 	mux.Group(func(r chi.Router) {
-		r.Use(authMiddleware(token))
+		r.Use(authMiddleware(secret))
 		r.Post("/certs/csrs/{entityID}", otelhttp.NewHandler(kithttp.NewServer(
 			issueFromCSRInternalEndpoint(svc),
 			decodeIssueFromCSRInternal,
