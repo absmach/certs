@@ -142,6 +142,12 @@ func MakeHandler(svc certs.Service, authn authn.Authentication, logger *slog.Log
 			api.EncodeResponse,
 			opts...,
 		), "generate_crl").ServeHTTP)
+		r.Get("/view-ca", otelhttp.NewHandler(kithttp.NewServer(
+			viewCAEndpoint(svc),
+			decodeViewCA,
+			api.EncodeResponse,
+			opts...,
+		), "view_ca").ServeHTTP)
 	})
 
 	mux.Group(func(r chi.Router) {
@@ -180,7 +186,16 @@ func decodeCRL(_ context.Context, r *http.Request) (any, error) {
 }
 
 func decodeDownloadCA(_ context.Context, r *http.Request) (any, error) {
-	req := downloadReq{}
+	req := downloadReq{
+		auth: true,
+	}
+	return req, nil
+}
+
+func decodeViewCA(_ context.Context, r *http.Request) (any, error) {
+	req := downloadReq{
+		auth: false,
+	}
 	return req, nil
 }
 

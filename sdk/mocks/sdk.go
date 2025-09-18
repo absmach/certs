@@ -908,8 +908,8 @@ func (_c *SDK_RevokeCert_Call) RunAndReturn(run func(serialNumber string, domain
 }
 
 // ViewCA provides a mock function for the type SDK
-func (_mock *SDK) ViewCA(domainID string, token string) (sdk.Certificate, errors.SDKError) {
-	ret := _mock.Called(domainID, token)
+func (_mock *SDK) ViewCA() (sdk.Certificate, errors.SDKError) {
+	ret := _mock.Called()
 
 	if len(ret) == 0 {
 		panic("no return value specified for ViewCA")
@@ -917,16 +917,16 @@ func (_mock *SDK) ViewCA(domainID string, token string) (sdk.Certificate, errors
 
 	var r0 sdk.Certificate
 	var r1 errors.SDKError
-	if returnFunc, ok := ret.Get(0).(func(string, string) (sdk.Certificate, errors.SDKError)); ok {
-		return returnFunc(domainID, token)
+	if returnFunc, ok := ret.Get(0).(func() (sdk.Certificate, errors.SDKError)); ok {
+		return returnFunc()
 	}
-	if returnFunc, ok := ret.Get(0).(func(string, string) sdk.Certificate); ok {
-		r0 = returnFunc(domainID, token)
+	if returnFunc, ok := ret.Get(0).(func() sdk.Certificate); ok {
+		r0 = returnFunc()
 	} else {
 		r0 = ret.Get(0).(sdk.Certificate)
 	}
-	if returnFunc, ok := ret.Get(1).(func(string, string) errors.SDKError); ok {
-		r1 = returnFunc(domainID, token)
+	if returnFunc, ok := ret.Get(1).(func() errors.SDKError); ok {
+		r1 = returnFunc()
 	} else {
 		if ret.Get(1) != nil {
 			r1 = ret.Get(1).(errors.SDKError)
@@ -941,26 +941,13 @@ type SDK_ViewCA_Call struct {
 }
 
 // ViewCA is a helper method to define mock.On call
-//   - domainID string
-//   - token string
-func (_e *SDK_Expecter) ViewCA(domainID interface{}, token interface{}) *SDK_ViewCA_Call {
-	return &SDK_ViewCA_Call{Call: _e.mock.On("ViewCA", domainID, token)}
+func (_e *SDK_Expecter) ViewCA() *SDK_ViewCA_Call {
+	return &SDK_ViewCA_Call{Call: _e.mock.On("ViewCA")}
 }
 
-func (_c *SDK_ViewCA_Call) Run(run func(domainID string, token string)) *SDK_ViewCA_Call {
+func (_c *SDK_ViewCA_Call) Run(run func()) *SDK_ViewCA_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run()
 	})
 	return _c
 }
@@ -970,7 +957,7 @@ func (_c *SDK_ViewCA_Call) Return(certificate sdk.Certificate, sDKError errors.S
 	return _c
 }
 
-func (_c *SDK_ViewCA_Call) RunAndReturn(run func(domainID string, token string) (sdk.Certificate, errors.SDKError)) *SDK_ViewCA_Call {
+func (_c *SDK_ViewCA_Call) RunAndReturn(run func() (sdk.Certificate, errors.SDKError)) *SDK_ViewCA_Call {
 	_c.Call.Return(run)
 	return _c
 }

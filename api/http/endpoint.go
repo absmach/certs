@@ -222,12 +222,17 @@ func downloadCAEndpoint(svc certs.Service) endpoint.Endpoint {
 			return fileDownloadRes{}, err
 		}
 
-		session, ok := ctx.Value(api.SessionKey).(authn.Session)
-		if !ok {
-			return fileDownloadRes{}, svcerr.ErrAuthentication
+		var cert certs.Certificate
+		if req.auth {
+			session, ok := ctx.Value(api.SessionKey).(authn.Session)
+			if !ok {
+				return fileDownloadRes{}, svcerr.ErrAuthentication
+			}
+			cert, err = svc.GetChainCA(ctx, session)
+		} else {
+			cert, err = svc.GetChainCA(ctx, authn.Session{})
 		}
 
-		cert, err := svc.GetChainCA(ctx, session)
 		if err != nil {
 			return fileDownloadRes{}, err
 		}
@@ -247,12 +252,17 @@ func viewCAEndpoint(svc certs.Service) endpoint.Endpoint {
 			return viewCertRes{}, err
 		}
 
-		session, ok := ctx.Value(api.SessionKey).(authn.Session)
-		if !ok {
-			return viewCertRes{}, svcerr.ErrAuthentication
+		var cert certs.Certificate
+		if req.auth {
+			session, ok := ctx.Value(api.SessionKey).(authn.Session)
+			if !ok {
+				return viewCertRes{}, svcerr.ErrAuthentication
+			}
+			cert, err = svc.GetChainCA(ctx, session)
+		} else {
+			cert, err = svc.GetChainCA(ctx, authn.Session{})
 		}
 
-		cert, err := svc.GetChainCA(ctx, session)
 		if err != nil {
 			return viewCertRes{}, err
 		}

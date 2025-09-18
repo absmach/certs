@@ -166,15 +166,15 @@ var cmdCerts = []cobra.Command{
 		},
 	},
 	{
-		Use:   "view-ca <domain_id> <token>",
+		Use:   "view-ca",
 		Short: "View-ca certificate",
-		Long:  `Views ca certificate key with a given token.`,
+		Long:  `Views ca certificate (public endpoint).`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 2 {
+			if len(args) != 0 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			cert, err := sdk.ViewCA(args[0], args[1])
+			cert, err := sdk.ViewCA()
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return

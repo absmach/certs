@@ -252,12 +252,12 @@ type SDK interface {
 	//  fmt.Println(response)
 	OCSP(serialNumber, cert string) (OCSPResponse, errors.SDKError)
 
-	// ViewCA views the signing certificate
+	// ViewCA views the signing certificate (public endpoint)
 	//
 	// example:
-	//  response, _ := sdk.ViewCA("domainID", "token")
+	//  response, _ := sdk.ViewCA()
 	//  fmt.Println(response)
-	ViewCA(domainID, token string) (Certificate, errors.SDKError)
+	ViewCA() (Certificate, errors.SDKError)
 
 	// DownloadCA downloads the signing certificate
 	//
@@ -464,10 +464,10 @@ func (sdk mgSDK) OCSP(serialNumber, cert string) (OCSPResponse, errors.SDKError)
 	return resp, nil
 }
 
-func (sdk mgSDK) ViewCA(domainID, token string) (Certificate, errors.SDKError) {
-	url := fmt.Sprintf("%s/%s/%s/view-ca", sdk.certsURL, domainID, certsEndpoint)
+func (sdk mgSDK) ViewCA() (Certificate, errors.SDKError) {
+	url := fmt.Sprintf("%s/%s/view-ca", sdk.certsURL, certsEndpoint)
 
-	_, body, sdkerr := sdk.processRequest(context.Background(), http.MethodGet, url, token, nil, nil, http.StatusOK)
+	_, body, sdkerr := sdk.processRequest(context.Background(), http.MethodGet, url, "", nil, nil, http.StatusOK)
 	if sdkerr != nil {
 		return Certificate{}, sdkerr
 	}
