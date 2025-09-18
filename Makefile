@@ -102,4 +102,3 @@ run:
 deploy:
 	docker compose -f docker/docker-compose.yml pull
 	docker compose -f docker/docker-compose.yml --env-file docker/.env -p absmach up -d
-	
