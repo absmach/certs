@@ -103,66 +103,6 @@ func (_c *Service_GenerateCRL_Call) RunAndReturn(run func(ctx context.Context) (
 	return _c
 }
 
-// GetChainCA provides a mock function for the type Service
-func (_mock *Service) GetChainCA(ctx context.Context) (certs.Certificate, error) {
-	ret := _mock.Called(ctx)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetChainCA")
-	}
-
-	var r0 certs.Certificate
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context) (certs.Certificate, error)); ok {
-		return returnFunc(ctx)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context) certs.Certificate); ok {
-		r0 = returnFunc(ctx)
-	} else {
-		r0 = ret.Get(0).(certs.Certificate)
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = returnFunc(ctx)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// Service_GetChainCA_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetChainCA'
-type Service_GetChainCA_Call struct {
-	*mock.Call
-}
-
-// GetChainCA is a helper method to define mock.On call
-//   - ctx context.Context
-func (_e *Service_Expecter) GetChainCA(ctx interface{}) *Service_GetChainCA_Call {
-	return &Service_GetChainCA_Call{Call: _e.mock.On("GetChainCA", ctx)}
-}
-
-func (_c *Service_GetChainCA_Call) Run(run func(ctx context.Context)) *Service_GetChainCA_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		run(
-			arg0,
-		)
-	})
-	return _c
-}
-
-func (_c *Service_GetChainCA_Call) Return(certificate certs.Certificate, err error) *Service_GetChainCA_Call {
-	_c.Call.Return(certificate, err)
-	return _c
-}
-
-func (_c *Service_GetChainCA_Call) RunAndReturn(run func(ctx context.Context) (certs.Certificate, error)) *Service_GetChainCA_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // GetEntityID provides a mock function for the type Service
 func (_mock *Service) GetEntityID(ctx context.Context, serialNumber string) (string, error) {
 	ret := _mock.Called(ctx, serialNumber)
@@ -695,6 +635,66 @@ func (_c *Service_RenewCert_Call) Return(certificate certs.Certificate, err erro
 }
 
 func (_c *Service_RenewCert_Call) RunAndReturn(run func(ctx context.Context, session authn.Session, serialNumber string) (certs.Certificate, error)) *Service_RenewCert_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RetrieveCAChain provides a mock function for the type Service
+func (_mock *Service) RetrieveCAChain(ctx context.Context) (certs.Certificate, error) {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RetrieveCAChain")
+	}
+
+	var r0 certs.Certificate
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) (certs.Certificate, error)); ok {
+		return returnFunc(ctx)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context) certs.Certificate); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		r0 = ret.Get(0).(certs.Certificate)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = returnFunc(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// Service_RetrieveCAChain_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RetrieveCAChain'
+type Service_RetrieveCAChain_Call struct {
+	*mock.Call
+}
+
+// RetrieveCAChain is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *Service_Expecter) RetrieveCAChain(ctx interface{}) *Service_RetrieveCAChain_Call {
+	return &Service_RetrieveCAChain_Call{Call: _e.mock.On("RetrieveCAChain", ctx)}
+}
+
+func (_c *Service_RetrieveCAChain_Call) Run(run func(ctx context.Context)) *Service_RetrieveCAChain_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *Service_RetrieveCAChain_Call) Return(certificate certs.Certificate, err error) *Service_RetrieveCAChain_Call {
+	_c.Call.Return(certificate, err)
+	return _c
+}
+
+func (_c *Service_RetrieveCAChain_Call) RunAndReturn(run func(ctx context.Context) (certs.Certificate, error)) *Service_RetrieveCAChain_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -681,12 +681,12 @@ func TestDownloadCACert(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			svcCall := svc.On("GetChainCA", mock.Anything).Return(tc.svcresp, tc.svcerr)
+			svcCall := svc.On("RetrieveCAChain", mock.Anything).Return(tc.svcresp, tc.svcerr)
 
 			_, err := ctsdk.DownloadCA()
 			assert.Equal(t, tc.err, err)
 			if tc.err == nil {
-				ok := svcCall.Parent.AssertCalled(t, "GetChainCA", mock.Anything)
+				ok := svcCall.Parent.AssertCalled(t, "RetrieveCAChain", mock.Anything)
 				assert.True(t, ok)
 			}
 			svcCall.Unset()
@@ -738,12 +738,12 @@ func TestViewCA(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			svcCall := svc.On("GetChainCA", mock.Anything).Return(tc.svcresp, tc.svcerr)
+			svcCall := svc.On("RetrieveCAChain", mock.Anything).Return(tc.svcresp, tc.svcerr)
 
 			c, err := ctsdk.ViewCA()
 			assert.Equal(t, tc.err, err)
 			if tc.err == nil {
-				ok := svcCall.Parent.AssertCalled(t, "GetChainCA", mock.Anything)
+				ok := svcCall.Parent.AssertCalled(t, "RetrieveCAChain", mock.Anything)
 				assert.True(t, ok)
 			}
 			assert.Equal(t, tc.sdkCert.Certificate, c.Certificate, fmt.Sprintf("expected: %v, got: %v", tc.sdkCert.Certificate, c.Certificate))

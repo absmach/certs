@@ -154,8 +154,8 @@ type Service interface {
 	// GenerateCRL creates cert revocation list.
 	GenerateCRL(ctx context.Context) ([]byte, error)
 
-	// GetChainCA retrieves the chain of CA i.e. root and intermediate cert concat together.
-	GetChainCA(ctx context.Context) (Certificate, error)
+	// RetrieveCAChain retrieves the chain of CA i.e. root and intermediate cert concat together.
+	RetrieveCAChain(ctx context.Context) (Certificate, error)
 
 	// IssueFromCSR creates a certificate from a given CSR.
 	IssueFromCSR(ctx context.Context, session authn.Session, entityID, ttl string, csr CSR) (Certificate, error)
