@@ -594,9 +594,76 @@ func (agent *openbaoPKIAgent) SignCSR(csr []byte, ttl string) (certs.Certificate
 		return certs.Certificate{}, err
 	}
 
+	block, _ := pem.Decode(csr)
+	if block == nil {
+		return certs.Certificate{}, fmt.Errorf("failed to decode CSR PEM")
+	}
+
+	csrData, err := x509.ParseCertificateRequest(block.Bytes)
+	if err != nil {
+		return certs.Certificate{}, fmt.Errorf("failed to parse CSR: %w", err)
+	}
+
+	existingDNSNames := csrData.DNSNames
+	var existingIPs []string
+	for _, ip := range csrData.IPAddresses {
+		existingIPs = append(existingIPs, ip.String())
+	}
+
+	defaultDNSNames, defaultIPSANs, err := agent.getIntermediateCADefaultSANs()
+	if err != nil {
+		agent.logger.Warn("failed to get default SANs from intermediate CA", "error", err)
+	}
+
+	allDNSNames := make([]string, 0)
+	allDNSNames = append(allDNSNames, existingDNSNames...)
+
+	if err == nil {
+		for _, defaultDNS := range defaultDNSNames {
+			found := false
+			for _, existing := range allDNSNames {
+				if existing == defaultDNS {
+					found = true
+					break
+				}
+			}
+			if !found {
+				allDNSNames = append(allDNSNames, defaultDNS)
+			}
+		}
+	}
+
+	allIPs := make([]string, 0)
+	allIPs = append(allIPs, existingIPs...)
+
+	if err == nil {
+		for _, defaultIP := range defaultIPSANs {
+			found := false
+			for _, existing := range allIPs {
+				if existing == defaultIP {
+					found = true
+					break
+				}
+			}
+			if !found {
+				allIPs = append(allIPs, defaultIP)
+			}
+		}
+	}
+
 	secretValues := map[string]any{
 		"csr": string(csr),
 		"ttl": ttl,
+	}
+
+	if len(allDNSNames) > len(existingDNSNames) {
+		altNamesValue := strings.Join(allDNSNames, ",")
+		secretValues["alt_names"] = altNamesValue
+	}
+
+	if len(allIPs) > len(existingIPs) {
+		ipSansValue := strings.Join(allIPs, ",")
+		secretValues["ip_sans"] = ipSansValue
 	}
 
 	secret, err := agent.client.Logical().Write(agent.signURL, secretValues)

@@ -104,8 +104,8 @@ func (_c *Service_GenerateCRL_Call) RunAndReturn(run func(ctx context.Context) (
 }
 
 // GetChainCA provides a mock function for the type Service
-func (_mock *Service) GetChainCA(ctx context.Context, session authn.Session) (certs.Certificate, error) {
-	ret := _mock.Called(ctx, session)
+func (_mock *Service) GetChainCA(ctx context.Context) (certs.Certificate, error) {
+	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetChainCA")
@@ -113,16 +113,16 @@ func (_mock *Service) GetChainCA(ctx context.Context, session authn.Session) (ce
 
 	var r0 certs.Certificate
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, authn.Session) (certs.Certificate, error)); ok {
-		return returnFunc(ctx, session)
+	if returnFunc, ok := ret.Get(0).(func(context.Context) (certs.Certificate, error)); ok {
+		return returnFunc(ctx)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, authn.Session) certs.Certificate); ok {
-		r0 = returnFunc(ctx, session)
+	if returnFunc, ok := ret.Get(0).(func(context.Context) certs.Certificate); ok {
+		r0 = returnFunc(ctx)
 	} else {
 		r0 = ret.Get(0).(certs.Certificate)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, authn.Session) error); ok {
-		r1 = returnFunc(ctx, session)
+	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = returnFunc(ctx)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -136,24 +136,18 @@ type Service_GetChainCA_Call struct {
 
 // GetChainCA is a helper method to define mock.On call
 //   - ctx context.Context
-//   - session authn.Session
-func (_e *Service_Expecter) GetChainCA(ctx interface{}, session interface{}) *Service_GetChainCA_Call {
-	return &Service_GetChainCA_Call{Call: _e.mock.On("GetChainCA", ctx, session)}
+func (_e *Service_Expecter) GetChainCA(ctx interface{}) *Service_GetChainCA_Call {
+	return &Service_GetChainCA_Call{Call: _e.mock.On("GetChainCA", ctx)}
 }
 
-func (_c *Service_GetChainCA_Call) Run(run func(ctx context.Context, session authn.Session)) *Service_GetChainCA_Call {
+func (_c *Service_GetChainCA_Call) Run(run func(ctx context.Context)) *Service_GetChainCA_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 authn.Session
-		if args[1] != nil {
-			arg1 = args[1].(authn.Session)
-		}
 		run(
 			arg0,
-			arg1,
 		)
 	})
 	return _c
@@ -164,7 +158,7 @@ func (_c *Service_GetChainCA_Call) Return(certificate certs.Certificate, err err
 	return _c
 }
 
-func (_c *Service_GetChainCA_Call) RunAndReturn(run func(ctx context.Context, session authn.Session) (certs.Certificate, error)) *Service_GetChainCA_Call {
+func (_c *Service_GetChainCA_Call) RunAndReturn(run func(ctx context.Context) (certs.Certificate, error)) *Service_GetChainCA_Call {
 	_c.Call.Return(run)
 	return _c
 }

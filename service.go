@@ -253,7 +253,7 @@ func (s *service) GenerateCRL(ctx context.Context) ([]byte, error) {
 	return crl, nil
 }
 
-func (s *service) GetChainCA(ctx context.Context, session authn.Session) (Certificate, error) {
+func (s *service) GetChainCA(ctx context.Context) (Certificate, error) {
 	return s.getConcatCAs(ctx)
 }
 

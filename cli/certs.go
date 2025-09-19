@@ -168,7 +168,7 @@ var cmdCerts = []cobra.Command{
 	{
 		Use:   "view-ca",
 		Short: "View-ca certificate",
-		Long:  `Views ca certificate (public endpoint).`,
+		Long:  `Views ca certificate.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 0 {
 				logUsageCmd(*cmd, cmd.Use)
@@ -183,15 +183,15 @@ var cmdCerts = []cobra.Command{
 		},
 	},
 	{
-		Use:   "download-ca <domain_id> <token>",
+		Use:   "download-ca",
 		Short: "Download signing CA",
-		Long:  `Download intermediate cert and ca with a given token.`,
+		Long:  `Download intermediate cert and ca.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 2 {
+			if len(args) != 0 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			bundle, err := sdk.DownloadCA(args[0], args[1])
+			bundle, err := sdk.DownloadCA()
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -252,6 +252,7 @@ var cmdCerts = []cobra.Command{
 				return
 			}
 			logJSONCmd(*cmd, cert)
+			logSaveCertFiles(*cmd, cert)
 		},
 	},
 	{
@@ -276,6 +277,7 @@ var cmdCerts = []cobra.Command{
 				return
 			}
 			logJSONCmd(*cmd, cert)
+			logSaveCertFiles(*cmd, cert)
 		},
 	},
 	{

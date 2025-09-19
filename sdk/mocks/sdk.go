@@ -105,8 +105,8 @@ func (_c *SDK_DeleteCert_Call) RunAndReturn(run func(entityID string, domainID s
 }
 
 // DownloadCA provides a mock function for the type SDK
-func (_mock *SDK) DownloadCA(domainID string, token string) (sdk.CertificateBundle, errors.SDKError) {
-	ret := _mock.Called(domainID, token)
+func (_mock *SDK) DownloadCA() (sdk.CertificateBundle, errors.SDKError) {
+	ret := _mock.Called()
 
 	if len(ret) == 0 {
 		panic("no return value specified for DownloadCA")
@@ -114,16 +114,16 @@ func (_mock *SDK) DownloadCA(domainID string, token string) (sdk.CertificateBund
 
 	var r0 sdk.CertificateBundle
 	var r1 errors.SDKError
-	if returnFunc, ok := ret.Get(0).(func(string, string) (sdk.CertificateBundle, errors.SDKError)); ok {
-		return returnFunc(domainID, token)
+	if returnFunc, ok := ret.Get(0).(func() (sdk.CertificateBundle, errors.SDKError)); ok {
+		return returnFunc()
 	}
-	if returnFunc, ok := ret.Get(0).(func(string, string) sdk.CertificateBundle); ok {
-		r0 = returnFunc(domainID, token)
+	if returnFunc, ok := ret.Get(0).(func() sdk.CertificateBundle); ok {
+		r0 = returnFunc()
 	} else {
 		r0 = ret.Get(0).(sdk.CertificateBundle)
 	}
-	if returnFunc, ok := ret.Get(1).(func(string, string) errors.SDKError); ok {
-		r1 = returnFunc(domainID, token)
+	if returnFunc, ok := ret.Get(1).(func() errors.SDKError); ok {
+		r1 = returnFunc()
 	} else {
 		if ret.Get(1) != nil {
 			r1 = ret.Get(1).(errors.SDKError)
@@ -138,26 +138,13 @@ type SDK_DownloadCA_Call struct {
 }
 
 // DownloadCA is a helper method to define mock.On call
-//   - domainID string
-//   - token string
-func (_e *SDK_Expecter) DownloadCA(domainID interface{}, token interface{}) *SDK_DownloadCA_Call {
-	return &SDK_DownloadCA_Call{Call: _e.mock.On("DownloadCA", domainID, token)}
+func (_e *SDK_Expecter) DownloadCA() *SDK_DownloadCA_Call {
+	return &SDK_DownloadCA_Call{Call: _e.mock.On("DownloadCA")}
 }
 
-func (_c *SDK_DownloadCA_Call) Run(run func(domainID string, token string)) *SDK_DownloadCA_Call {
+func (_c *SDK_DownloadCA_Call) Run(run func()) *SDK_DownloadCA_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run()
 	})
 	return _c
 }
@@ -167,7 +154,7 @@ func (_c *SDK_DownloadCA_Call) Return(certificateBundle sdk.CertificateBundle, s
 	return _c
 }
 
-func (_c *SDK_DownloadCA_Call) RunAndReturn(run func(domainID string, token string) (sdk.CertificateBundle, errors.SDKError)) *SDK_DownloadCA_Call {
+func (_c *SDK_DownloadCA_Call) RunAndReturn(run func() (sdk.CertificateBundle, errors.SDKError)) *SDK_DownloadCA_Call {
 	_c.Call.Return(run)
 	return _c
 }

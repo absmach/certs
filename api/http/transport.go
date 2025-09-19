@@ -105,18 +105,6 @@ func MakeHandler(svc certs.Service, authn authn.Authentication, logger *slog.Log
 					api.EncodeResponse,
 					opts...,
 				), "view_cert").ServeHTTP)
-				r.Get("/view-ca", otelhttp.NewHandler(kithttp.NewServer(
-					viewCAEndpoint(svc),
-					decodeDownloadCA,
-					api.EncodeResponse,
-					opts...,
-				), "view_ca").ServeHTTP)
-				r.Get("/download-ca", otelhttp.NewHandler(kithttp.NewServer(
-					downloadCAEndpoint(svc),
-					decodeDownloadCA,
-					encodeCADownloadResponse,
-					opts...,
-				), "download_ca").ServeHTTP)
 				r.Route("/csrs", func(r chi.Router) {
 					r.Post("/{entityID}", otelhttp.NewHandler(kithttp.NewServer(
 						issueFromCSREndpoint(svc),
@@ -148,6 +136,12 @@ func MakeHandler(svc certs.Service, authn authn.Authentication, logger *slog.Log
 			api.EncodeResponse,
 			opts...,
 		), "view_ca").ServeHTTP)
+		r.Get("/download-ca", otelhttp.NewHandler(kithttp.NewServer(
+			downloadCAEndpoint(svc),
+			decodeDownloadCA,
+			encodeCADownloadResponse,
+			opts...,
+		), "download_ca").ServeHTTP)
 	})
 
 	mux.Group(func(r chi.Router) {
@@ -186,16 +180,12 @@ func decodeCRL(_ context.Context, r *http.Request) (any, error) {
 }
 
 func decodeDownloadCA(_ context.Context, r *http.Request) (any, error) {
-	req := downloadReq{
-		auth: true,
-	}
+	req := downloadReq{}
 	return req, nil
 }
 
 func decodeViewCA(_ context.Context, r *http.Request) (any, error) {
-	req := downloadReq{
-		auth: false,
-	}
+	req := downloadReq{}
 	return req, nil
 }
 

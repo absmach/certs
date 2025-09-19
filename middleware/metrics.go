@@ -102,12 +102,12 @@ func (mm *metricsMiddleware) GenerateCRL(ctx context.Context) ([]byte, error) {
 	return mm.svc.GenerateCRL(ctx)
 }
 
-func (mm *metricsMiddleware) GetChainCA(ctx context.Context, session authn.Session) (certs.Certificate, error) {
+func (mm *metricsMiddleware) GetChainCA(ctx context.Context) (certs.Certificate, error) {
 	defer func(begin time.Time) {
 		mm.counter.With("method", "get_chain_ca").Add(1)
 		mm.latency.With("method", "get_chain_ca").Observe(time.Since(begin).Seconds())
 	}(time.Now())
-	return mm.svc.GetChainCA(ctx, session)
+	return mm.svc.GetChainCA(ctx)
 }
 
 func (mm *metricsMiddleware) IssueFromCSR(ctx context.Context, session authn.Session, entityID, ttl string, csr certs.CSR) (certs.Certificate, error) {
