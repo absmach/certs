@@ -18,7 +18,7 @@ import (
 	"github.com/absmach/certs"
 	api "github.com/absmach/supermq/api/http"
 	apiutil "github.com/absmach/supermq/api/http/util"
-	"github.com/absmach/supermq/pkg/authn"
+	smqauthn "github.com/absmach/supermq/pkg/authn"
 	"github.com/absmach/supermq/pkg/errors"
 	"github.com/go-chi/chi/v5"
 	kithttp "github.com/go-kit/kit/transport/http"
@@ -58,7 +58,7 @@ func authMiddleware(expectedSecret string) func(http.Handler) http.Handler {
 }
 
 // MakeHandler returns a HTTP handler for API endpoints.
-func MakeHandler(svc certs.Service, authn authn.Authentication, logger *slog.Logger, instanceID string, secret string) http.Handler {
+func MakeHandler(svc certs.Service, authn smqauthn.AuthNMiddleware, logger *slog.Logger, instanceID string, secret string) http.Handler {
 	opts := []kithttp.ServerOption{
 		kithttp.ServerErrorEncoder(loggingErrorEncoder(logger, EncodeError)),
 	}
@@ -68,7 +68,7 @@ func MakeHandler(svc certs.Service, authn authn.Authentication, logger *slog.Log
 	mux.Route("/{domainID}", func(r chi.Router) {
 		r.Route("/certs", func(r chi.Router) {
 			r.Group(func(r chi.Router) {
-				r.Use(api.AuthenticateMiddleware(authn, true))
+				r.Use(authn.Middleware())
 				r.Post("/issue/{entityID}", otelhttp.NewHandler(kithttp.NewServer(
 					issueCertEndpoint(svc),
 					decodeIssueCert,

@@ -7,7 +7,6 @@ import (
 	"context"
 
 	"github.com/absmach/certs"
-	api "github.com/absmach/supermq/api/http"
 	"github.com/absmach/supermq/pkg/authn"
 	svcerr "github.com/absmach/supermq/pkg/errors/service"
 	"github.com/go-kit/kit/endpoint"
@@ -20,7 +19,7 @@ func renewCertEndpoint(svc certs.Service) endpoint.Endpoint {
 			return renewCertRes{}, err
 		}
 
-		session, ok := ctx.Value(api.SessionKey).(authn.Session)
+		session, ok := ctx.Value(authn.SessionKey).(authn.Session)
 		if !ok {
 			return renewCertRes{}, svcerr.ErrAuthentication
 		}
@@ -41,7 +40,7 @@ func revokeCertEndpoint(svc certs.Service) endpoint.Endpoint {
 			return revokeCertRes{revoked: false}, err
 		}
 
-		session, ok := ctx.Value(api.SessionKey).(authn.Session)
+		session, ok := ctx.Value(authn.SessionKey).(authn.Session)
 		if !ok {
 			return revokeCertRes{revoked: false}, svcerr.ErrAuthentication
 		}
@@ -61,7 +60,7 @@ func deleteCertEndpoint(svc certs.Service) endpoint.Endpoint {
 			return deleteCertRes{deleted: false}, err
 		}
 
-		session, ok := ctx.Value(api.SessionKey).(authn.Session)
+		session, ok := ctx.Value(authn.SessionKey).(authn.Session)
 		if !ok {
 			return deleteCertRes{deleted: false}, svcerr.ErrAuthentication
 		}
@@ -81,7 +80,7 @@ func issueCertEndpoint(svc certs.Service) endpoint.Endpoint {
 			return issueCertRes{}, err
 		}
 
-		session, ok := ctx.Value(api.SessionKey).(authn.Session)
+		session, ok := ctx.Value(authn.SessionKey).(authn.Session)
 		if !ok {
 			return issueCertRes{}, svcerr.ErrAuthentication
 		}
@@ -110,7 +109,7 @@ func listCertsEndpoint(svc certs.Service) endpoint.Endpoint {
 			return listCertsRes{}, err
 		}
 
-		session, ok := ctx.Value(api.SessionKey).(authn.Session)
+		session, ok := ctx.Value(authn.SessionKey).(authn.Session)
 		if !ok {
 			return listCertsRes{}, svcerr.ErrAuthentication
 		}
@@ -146,7 +145,7 @@ func viewCertEndpoint(svc certs.Service) endpoint.Endpoint {
 			return viewCertRes{}, err
 		}
 
-		session, ok := ctx.Value(api.SessionKey).(authn.Session)
+		session, ok := ctx.Value(authn.SessionKey).(authn.Session)
 		if !ok {
 			return viewCertRes{}, svcerr.ErrAuthentication
 		}
@@ -264,7 +263,7 @@ func issueFromCSREndpoint(svc certs.Service) endpoint.Endpoint {
 			return issueFromCSRRes{}, err
 		}
 
-		session, ok := ctx.Value(api.SessionKey).(authn.Session)
+		session, ok := ctx.Value(authn.SessionKey).(authn.Session)
 		if !ok {
 			return issueFromCSRRes{}, svcerr.ErrAuthentication
 		}
