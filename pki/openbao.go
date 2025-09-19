@@ -612,13 +612,8 @@ func (agent *openbaoPKIAgent) SignCSR(csr []byte, ttl string) (certs.Certificate
 
 	defaultDNSNames, defaultIPSANs, err := agent.getIntermediateCADefaultSANs()
 	if err != nil {
-		agent.logger.Warn("failed to get default SANs from intermediate CA", "error", err)
 		defaultDNSNames = []string{}
 		defaultIPSANs = []string{}
-	} else {
-		agent.logger.Info("retrieved default SANs from intermediate CA", 
-			"dns_names", defaultDNSNames, 
-			"ip_sans", defaultIPSANs)
 	}
 
 	allDNSNames := make([]string, 0)
@@ -661,13 +656,11 @@ func (agent *openbaoPKIAgent) SignCSR(csr []byte, ttl string) (certs.Certificate
 	if len(allDNSNames) > 0 {
 		altNamesValue := strings.Join(allDNSNames, ",")
 		secretValues["alt_names"] = altNamesValue
-		agent.logger.Info("adding DNS SANs to CSR signing", "alt_names", altNamesValue)
 	}
 
 	if len(allIPs) > 0 {
 		ipSansValue := strings.Join(allIPs, ",")
 		secretValues["ip_sans"] = ipSansValue
-		agent.logger.Info("adding IP SANs to CSR signing", "ip_sans", ipSansValue)
 	}
 
 	secret, err := agent.client.Logical().Write(agent.signURL, secretValues)
