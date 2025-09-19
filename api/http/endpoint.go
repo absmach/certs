@@ -222,7 +222,7 @@ func downloadCAEndpoint(svc certs.Service) endpoint.Endpoint {
 			return fileDownloadRes{}, err
 		}
 
-	cert, err := svc.GetChainCA(ctx)
+		cert, err := svc.GetChainCA(ctx)
 		if err != nil {
 			return fileDownloadRes{}, err
 		}
