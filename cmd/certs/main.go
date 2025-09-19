@@ -24,6 +24,7 @@ import (
 	"github.com/absmach/certs/pki"
 	"github.com/absmach/certs/postgres"
 	"github.com/absmach/certs/tracing"
+	smqauthn "github.com/absmach/supermq/pkg/authn"
 	authsvcAuthn "github.com/absmach/supermq/pkg/authn/authsvc"
 	smqauthz "github.com/absmach/supermq/pkg/authz"
 	authsvcAuthz "github.com/absmach/supermq/pkg/authz/authsvc"
@@ -153,7 +154,7 @@ func main() {
 	}
 	defer authnHandler.Close()
 	logger.Info("Authn successfully connected to auth gRPC server " + authnHandler.Secure())
-
+	authnMiddleware := smqauthn.NewAuthNMiddleware(authn)
 	authz, authzHandler, err := authsvcAuthz.NewAuthorization(ctx, authClientConfig, domAuthz)
 	if err != nil {
 		logger.Error("failed to create authz " + err.Error())
@@ -180,7 +181,7 @@ func main() {
 	}
 	gs := grpcserver.NewServer(ctx, cancel, svcName, grpcServerConfig, registerCertsServiceServer, logger, nil, nil)
 
-	hs := httpserver.NewServer(ctx, cancel, svcName, httpServerConfig, httpapi.MakeHandler(svc, authn, logger, cfg.InstanceID, cfg.Secret), logger)
+	hs := httpserver.NewServer(ctx, cancel, svcName, httpServerConfig, httpapi.MakeHandler(svc, authnMiddleware, logger, cfg.InstanceID, cfg.Secret), logger)
 
 	g.Go(func() error {
 		return hs.Start()

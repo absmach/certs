@@ -7,7 +7,6 @@ import (
 	"context"
 
 	"github.com/absmach/certs"
-	api "github.com/absmach/supermq/api/http"
 	"github.com/absmach/supermq/pkg/authn"
 	svcerr "github.com/absmach/supermq/pkg/errors/service"
 	"github.com/go-kit/kit/endpoint"
@@ -31,7 +30,7 @@ func revokeCertsEndpoint(svc certs.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request any) (any, error) {
 		req := request.(*certs.RevokeReq)
 
-		session, ok := ctx.Value(api.SessionKey).(authn.Session)
+		session, ok := ctx.Value(authn.SessionKey).(authn.Session)
 		if !ok {
 			return nil, svcerr.ErrAuthentication
 		}
