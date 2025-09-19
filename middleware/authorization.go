@@ -72,10 +72,6 @@ func (am *authorizationMiddleware) GetEntityID(ctx context.Context, serialNumber
 	return am.svc.GetEntityID(ctx, serialNumber)
 }
 
-func (am *authorizationMiddleware) GetCA(ctx context.Context) (crt.Certificate, error) {
-	return am.svc.GetCA(ctx)
-}
-
 func (am *authorizationMiddleware) OCSP(ctx context.Context, serialNumber string, ocspRequestDER []byte) ([]byte, error) {
 	return am.svc.OCSP(ctx, serialNumber, ocspRequestDER)
 }
@@ -84,11 +80,8 @@ func (am *authorizationMiddleware) GenerateCRL(ctx context.Context) ([]byte, err
 	return am.svc.GenerateCRL(ctx)
 }
 
-func (am *authorizationMiddleware) GetChainCA(ctx context.Context, session authn.Session) (crt.Certificate, error) {
-	if err := am.checkUserDomainPermission(ctx, session, policies.MembershipPermission); err != nil {
-		return crt.Certificate{}, err
-	}
-	return am.svc.GetChainCA(ctx, session)
+func (am *authorizationMiddleware) RetrieveCAChain(ctx context.Context) (crt.Certificate, error) {
+	return am.svc.RetrieveCAChain(ctx)
 }
 
 func (am *authorizationMiddleware) IssueFromCSR(ctx context.Context, session authn.Session, entityID, ttl string, csr crt.CSR) (crt.Certificate, error) {

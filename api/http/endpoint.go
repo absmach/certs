@@ -222,12 +222,7 @@ func downloadCAEndpoint(svc certs.Service) endpoint.Endpoint {
 			return fileDownloadRes{}, err
 		}
 
-		session, ok := ctx.Value(api.SessionKey).(authn.Session)
-		if !ok {
-			return fileDownloadRes{}, svcerr.ErrAuthentication
-		}
-
-		cert, err := svc.GetChainCA(ctx, session)
+		cert, err := svc.RetrieveCAChain(ctx)
 		if err != nil {
 			return fileDownloadRes{}, err
 		}
@@ -247,12 +242,7 @@ func viewCAEndpoint(svc certs.Service) endpoint.Endpoint {
 			return viewCertRes{}, err
 		}
 
-		session, ok := ctx.Value(api.SessionKey).(authn.Session)
-		if !ok {
-			return viewCertRes{}, svcerr.ErrAuthentication
-		}
-
-		cert, err := svc.GetChainCA(ctx, session)
+		cert, err := svc.RetrieveCAChain(ctx)
 		if err != nil {
 			return viewCertRes{}, err
 		}
@@ -279,7 +269,7 @@ func issueFromCSREndpoint(svc certs.Service) endpoint.Endpoint {
 			return issueFromCSRRes{}, svcerr.ErrAuthentication
 		}
 
-		cert, err := svc.IssueFromCSR(ctx, session, req.entityID, req.ttl, certs.CSR{CSR: []byte(req.CSR)})
+		cert, err := svc.IssueFromCSR(ctx, session, req.entityID, req.ttl, certs.CSR{CSR: req.CSR})
 		if err != nil {
 			return issueFromCSRRes{}, err
 		}

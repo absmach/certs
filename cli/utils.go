@@ -67,7 +67,10 @@ func logOKCmd(cmd cobra.Command) {
 func logSaveCertFiles(cmd cobra.Command, cert ctxsdk.Certificate) {
 	files := map[string][]byte{
 		"cert.pem": []byte(cert.Certificate),
-		"key.pem":  []byte(cert.Key),
+	}
+
+	if cert.Key != "" {
+		files["key.pem"] = []byte(cert.Key)
 	}
 
 	for filename, content := range files {

@@ -255,16 +255,16 @@ type SDK interface {
 	// ViewCA views the signing certificate
 	//
 	// example:
-	//  response, _ := sdk.ViewCA("domainID", "token")
+	//  response, _ := sdk.ViewCA()
 	//  fmt.Println(response)
-	ViewCA(domainID, token string) (Certificate, errors.SDKError)
+	ViewCA() (Certificate, errors.SDKError)
 
-	// DownloadCA downloads the signing certificate
+	// DownloadCA downloads the signing certificate (public endpoint)
 	//
 	// example:
-	//  response, _ := sdk.DownloadCA("domainID", "token")
+	//  response, _ := sdk.DownloadCA()
 	//  fmt.Println(response)
-	DownloadCA(domainID, token string) (CertificateBundle, errors.SDKError)
+	DownloadCA() (CertificateBundle, errors.SDKError)
 
 	// IssueFromCSR issues certificate from provided CSR
 	//
@@ -300,13 +300,6 @@ type SDK interface {
 	//	entityID, err := sdk.GetEntityID("serialNumber", "domainID", "token")
 	//	fmt.Println(entityID)
 	GetEntityID(serialNumber, domainID, token string) (string, errors.SDKError)
-
-	// GetCA gets the CA certificate
-	//
-	// example:
-	//	ca, err := sdk.GetCA("domainID", "token")
-	//	fmt.Println(ca)
-	GetCA(domainID, token string) (Certificate, errors.SDKError)
 }
 
 func (sdk mgSDK) IssueCert(entityID, ttl string, ipAddrs []string, opts Options, domainID, token string) (Certificate, errors.SDKError) {
@@ -471,10 +464,10 @@ func (sdk mgSDK) OCSP(serialNumber, cert string) (OCSPResponse, errors.SDKError)
 	return resp, nil
 }
 
-func (sdk mgSDK) ViewCA(domainID, token string) (Certificate, errors.SDKError) {
-	url := fmt.Sprintf("%s/%s/%s/view-ca", sdk.certsURL, domainID, certsEndpoint)
+func (sdk mgSDK) ViewCA() (Certificate, errors.SDKError) {
+	url := fmt.Sprintf("%s/%s/view-ca", sdk.certsURL, certsEndpoint)
 
-	_, body, sdkerr := sdk.processRequest(context.Background(), http.MethodGet, url, token, nil, nil, http.StatusOK)
+	_, body, sdkerr := sdk.processRequest(context.Background(), http.MethodGet, url, "", nil, nil, http.StatusOK)
 	if sdkerr != nil {
 		return Certificate{}, sdkerr
 	}
@@ -486,10 +479,10 @@ func (sdk mgSDK) ViewCA(domainID, token string) (Certificate, errors.SDKError) {
 	return cert, nil
 }
 
-func (sdk mgSDK) DownloadCA(domainID, token string) (CertificateBundle, errors.SDKError) {
-	url := fmt.Sprintf("%s/%s/%s/download-ca", sdk.certsURL, domainID, certsEndpoint)
+func (sdk mgSDK) DownloadCA() (CertificateBundle, errors.SDKError) {
+	url := fmt.Sprintf("%s/%s/download-ca", sdk.certsURL, certsEndpoint)
 
-	_, body, sdkerr := sdk.processRequest(context.Background(), http.MethodGet, url, token, nil, nil, http.StatusOK)
+	_, body, sdkerr := sdk.processRequest(context.Background(), http.MethodGet, url, "", nil, nil, http.StatusOK)
 	if sdkerr != nil {
 		return CertificateBundle{}, sdkerr
 	}
@@ -611,10 +604,6 @@ func (sdk mgSDK) GetEntityID(serialNumber, domainID, token string) (string, erro
 		return "", err
 	}
 	return cert.EntityID, nil
-}
-
-func (sdk mgSDK) GetCA(domainID, token string) (Certificate, errors.SDKError) {
-	return sdk.ViewCA(domainID, token)
 }
 
 func NewSDK(conf Config) SDK {

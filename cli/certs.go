@@ -166,15 +166,15 @@ var cmdCerts = []cobra.Command{
 		},
 	},
 	{
-		Use:   "view-ca <domain_id> <token>",
+		Use:   "view-ca",
 		Short: "View-ca certificate",
-		Long:  `Views ca certificate key with a given token.`,
+		Long:  `Views ca certificate.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 2 {
+			if len(args) != 0 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			cert, err := sdk.ViewCA(args[0], args[1])
+			cert, err := sdk.ViewCA()
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -183,15 +183,15 @@ var cmdCerts = []cobra.Command{
 		},
 	},
 	{
-		Use:   "download-ca <domain_id> <token>",
+		Use:   "download-ca",
 		Short: "Download signing CA",
-		Long:  `Download intermediate cert and ca with a given token.`,
+		Long:  `Download intermediate cert and ca.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 2 {
+			if len(args) != 0 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			bundle, err := sdk.DownloadCA(args[0], args[1])
+			bundle, err := sdk.DownloadCA()
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -252,6 +252,7 @@ var cmdCerts = []cobra.Command{
 				return
 			}
 			logJSONCmd(*cmd, cert)
+			logSaveCertFiles(*cmd, cert)
 		},
 	},
 	{
@@ -276,6 +277,7 @@ var cmdCerts = []cobra.Command{
 				return
 			}
 			logJSONCmd(*cmd, cert)
+			logSaveCertFiles(*cmd, cert)
 		},
 	},
 	{
@@ -313,30 +315,13 @@ var cmdCerts = []cobra.Command{
 			logJSONCmd(*cmd, map[string]string{"entity_id": entityID})
 		},
 	},
-	{
-		Use:   "ca <domain_id> <token>",
-		Short: "Get CA certificate",
-		Long:  `Gets the CA certificate.`,
-		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 2 {
-				logUsageCmd(*cmd, cmd.Use)
-				return
-			}
-			cert, err := sdk.GetCA(args[0], args[1])
-			if err != nil {
-				logErrorCmd(*cmd, err)
-				return
-			}
-			logJSONCmd(*cmd, cert)
-		},
-	},
 }
 
 // NewCertsCmd returns certificate command.
 func NewCertsCmd() *cobra.Command {
 	var ttl string
 	issueCmd := cobra.Command{
-		Use:   "issue <entity_id> <common_name> <ip_addrs_json> <domain_id> <token> [<options_json>] [--ttl=8760h]",
+		Use:   "issue <entity_id> <common_name> <ip_addrs_json> [<options_json>] <domain_id> <token> [--ttl=8760h]",
 		Short: "Issue certificate",
 		Long:  `Issues a certificate for a given entity ID.`,
 		Run: func(cmd *cobra.Command, args []string) {
@@ -353,14 +338,20 @@ func NewCertsCmd() *cobra.Command {
 			var option ctxsdk.Options
 			option.CommonName = args[1]
 
-			if len(args) == 6 {
-				if err := json.Unmarshal([]byte(args[5]), &option); err != nil {
+			var domainID, token string
+			if len(args) == 5 {
+				domainID = args[3]
+				token = args[4]
+			} else {
+				if err := json.Unmarshal([]byte(args[3]), &option); err != nil {
 					logErrorCmd(*cmd, err)
 					return
 				}
+				domainID = args[4]
+				token = args[5]
 			}
 
-			cert, err := sdk.IssueCert(args[0], ttl, ipAddrs, option, args[3], args[4])
+			cert, err := sdk.IssueCert(args[0], ttl, ipAddrs, option, domainID, token)
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -373,7 +364,7 @@ func NewCertsCmd() *cobra.Command {
 	issueCmd.Flags().StringVar(&ttl, "ttl", "8760h", "certificate time to live in duration")
 
 	cmd := cobra.Command{
-		Use:   "certs [issue | get | revoke | renew | ocsp | view | download-ca | view-ca | csr | issue-csr | issue-csr-internal | crl | entity-id | ca]",
+		Use:   "certs [issue | get | revoke | renew | ocsp | view | download-ca | view-ca | csr | issue-csr | issue-csr-internal | crl | entity-id]",
 		Short: "Certificates management",
 		Long:  `Certificates management: issue, get all, get by entity ID, revoke, renew, OCSP, view, CRL generation, entity ID lookup, agent CSR issuing, and CA operations.`,
 	}
@@ -414,17 +405,19 @@ func CreateCSR(metadata certs.CSRMetadata, privKey any) (certs.CSR, errors.SDKEr
 	var signer crypto.Signer
 	var err error
 
-	switch key := privKey.(type) {
+	actualKey := privKey
+	if keyBytes, ok := privKey.([]byte); ok {
+		actualKey, err = extractPrivateKey(keyBytes)
+		if err != nil {
+			return certs.CSR{}, errors.NewSDKError(errors.Wrap(certs.ErrCreateEntity, err))
+		}
+	}
+
+	switch key := actualKey.(type) {
 	case *rsa.PrivateKey, *ecdsa.PrivateKey:
 		signer = key.(crypto.Signer)
 	case ed25519.PrivateKey:
 		signer = key
-	case []byte:
-		parsedKey, err := extractPrivateKey(key)
-		if err != nil {
-			return certs.CSR{}, errors.NewSDKError(errors.Wrap(certs.ErrCreateEntity, err))
-		}
-		return CreateCSR(metadata, parsedKey)
 	default:
 		return certs.CSR{}, errors.NewSDKError(errors.Wrap(certs.ErrCreateEntity, certs.ErrPrivKeyType))
 	}

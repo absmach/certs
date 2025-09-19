@@ -57,7 +57,7 @@ type config struct {
 	JaegerURL  url.URL `env:"AM_JAEGER_URL"                 envDefault:"http://jaeger:4318"`
 	InstanceID string  `env:"AM_COMPUTATIONS_INSTANCE_ID"   envDefault:""`
 	TraceRatio float64 `env:"AM_JAEGER_TRACE_RATIO"         envDefault:"1.0"`
-	Token      string  `env:"AM_CERTS_TOKEN"                envDefault:""`
+	Secret     string  `env:"AM_CERTS_SECRET"               envDefault:""`
 
 	// OpenBao PKI settings
 	OpenBaoHost      string `env:"AM_CERTS_OPENBAO_HOST"         envDefault:"http://localhost:8200"`
@@ -180,7 +180,7 @@ func main() {
 	}
 	gs := grpcserver.NewServer(ctx, cancel, svcName, grpcServerConfig, registerCertsServiceServer, logger, nil, nil)
 
-	hs := httpserver.NewServer(ctx, cancel, svcName, httpServerConfig, httpapi.MakeHandler(svc, authn, logger, cfg.InstanceID, cfg.Token), logger)
+	hs := httpserver.NewServer(ctx, cancel, svcName, httpServerConfig, httpapi.MakeHandler(svc, authn, logger, cfg.InstanceID, cfg.Secret), logger)
 
 	g.Go(func() error {
 		return hs.Start()

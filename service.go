@@ -253,7 +253,7 @@ func (s *service) GenerateCRL(ctx context.Context) ([]byte, error) {
 	return crl, nil
 }
 
-func (s *service) GetChainCA(ctx context.Context, session authn.Session) (Certificate, error) {
+func (s *service) RetrieveCAChain(ctx context.Context) (Certificate, error) {
 	return s.getConcatCAs(ctx)
 }
 
@@ -307,13 +307,4 @@ func (s *service) getConcatCAs(_ context.Context) (Certificate, error) {
 		Certificate: caChain,
 		ExpiryTime:  cert.NotAfter,
 	}, nil
-}
-
-func (s *service) GetCA(ctx context.Context) (Certificate, error) {
-	cert, err := s.ViewCA(ctx)
-	if err != nil {
-		return Certificate{}, errors.Wrap(ErrViewEntity, err)
-	}
-
-	return cert, nil
 }

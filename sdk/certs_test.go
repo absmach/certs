@@ -638,7 +638,7 @@ func TestViewCert(t *testing.T) {
 }
 
 func TestDownloadCACert(t *testing.T) {
-	ts, svc, auth := setupCerts()
+	ts, svc, _ := setupCerts()
 	defer ts.Close()
 
 	sdkConfig := sdk.Config{
@@ -654,84 +654,48 @@ func TestDownloadCACert(t *testing.T) {
 	}
 
 	cases := []struct {
-		desc            string
-		token           string
-		svcresp         certs.Certificate
-		svcerr          error
-		authenticateErr error
-		err             errors.SDKError
-		sdkCert         sdk.Certificate
-		domain          string
-		authToken       string
-		session         smqauthn.Session
+		desc    string
+		svcresp certs.Certificate
+		svcerr  error
+		err     errors.SDKError
+		sdkCert sdk.Certificate
 	}{
 		{
-			desc:  "Download CA successfully",
-			token: token,
+			desc: "Download CA successfully",
 			svcresp: certs.Certificate{
 				SerialNumber: serialNum,
 				Certificate:  []byte("cert"),
 				Key:          []byte("key"),
 			},
-			sdkCert:         cert,
-			svcerr:          nil,
-			authenticateErr: nil,
-			err:             nil,
-			domain:          domainID,
-			authToken:       token,
-			session: smqauthn.Session{
-				DomainUserID: domainID + "_" + validID,
-				UserID:       validID,
-				DomainID:     domainID,
-			},
+			sdkCert: cert,
+			svcerr:  nil,
+			err:     nil,
 		},
 		{
-			desc:            "Download CA failure",
-			token:           token,
-			svcresp:         certs.Certificate{},
-			svcerr:          certs.ErrViewEntity,
-			authenticateErr: nil,
-			err:             errors.NewSDKErrorWithStatus(certs.ErrViewEntity, http.StatusUnprocessableEntity),
-			domain:          domainID,
-			authToken:       token,
-			session: smqauthn.Session{
-				DomainUserID: domainID + "_" + validID,
-				UserID:       validID,
-				DomainID:     domainID,
-			},
-		},
-		{
-			desc:            "Download CA with empty token",
-			token:           "",
-			svcresp:         certs.Certificate{},
-			svcerr:          certs.ErrMalformedEntity,
-			authenticateErr: certs.ErrMalformedEntity,
-			err:             errors.NewSDKErrorWithStatus(errors.New("missing or invalid bearer user token"), http.StatusUnauthorized),
-			domain:          domainID,
-			authToken:       "",
-			session:         smqauthn.Session{},
+			desc:    "Download CA failure",
+			svcresp: certs.Certificate{},
+			svcerr:  certs.ErrViewEntity,
+			err:     errors.NewSDKErrorWithStatus(certs.ErrViewEntity, http.StatusUnprocessableEntity),
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			authCall := auth.On("Authenticate", mock.Anything, tc.authToken).Return(tc.session, tc.authenticateErr)
-			svcCall := svc.On("GetChainCA", mock.Anything, tc.session).Return(tc.svcresp, tc.svcerr)
+			svcCall := svc.On("RetrieveCAChain", mock.Anything).Return(tc.svcresp, tc.svcerr)
 
-			_, err := ctsdk.DownloadCA(tc.domain, tc.authToken)
+			_, err := ctsdk.DownloadCA()
 			assert.Equal(t, tc.err, err)
 			if tc.err == nil {
-				ok := svcCall.Parent.AssertCalled(t, "GetChainCA", mock.Anything, tc.session)
+				ok := svcCall.Parent.AssertCalled(t, "RetrieveCAChain", mock.Anything)
 				assert.True(t, ok)
 			}
 			svcCall.Unset()
-			authCall.Unset()
 		})
 	}
 }
 
 func TestViewCA(t *testing.T) {
-	ts, svc, auth := setupCerts()
+	ts, svc, _ := setupCerts()
 	defer ts.Close()
 
 	sdkConfig := sdk.Config{
@@ -749,66 +713,41 @@ func TestViewCA(t *testing.T) {
 	}
 
 	cases := []struct {
-		desc            string
-		token           string
-		svcresp         certs.Certificate
-		svcerr          error
-		authenticateErr error
-		err             errors.SDKError
-		sdkCert         sdk.Certificate
-		domain          string
-		authToken       string
-		session         smqauthn.Session
+		desc    string
+		svcresp certs.Certificate
+		svcerr  error
+		err     errors.SDKError
+		sdkCert sdk.Certificate
 	}{
 		{
-			desc:  "ViewCA success",
-			token: token,
+			desc: "ViewCA success",
 			svcresp: certs.Certificate{
 				Certificate: []byte("cert"),
 			},
-			sdkCert:         cert,
-			svcerr:          nil,
-			authenticateErr: nil,
-			err:             nil,
-			domain:          domainID,
-			authToken:       token,
-			session: smqauthn.Session{
-				DomainUserID: domainID + "_" + validID,
-				UserID:       validID,
-				DomainID:     domainID,
-			},
+			sdkCert: cert,
+			svcerr:  nil,
+			err:     nil,
 		},
 		{
-			desc:            "ViewCA failure",
-			token:           token,
-			svcresp:         certs.Certificate{},
-			svcerr:          certs.ErrViewEntity,
-			authenticateErr: nil,
-			err:             errors.NewSDKErrorWithStatus(certs.ErrViewEntity, http.StatusUnprocessableEntity),
-			domain:          domainID,
-			authToken:       token,
-			session: smqauthn.Session{
-				DomainUserID: domainID + "_" + validID,
-				UserID:       validID,
-				DomainID:     domainID,
-			},
+			desc:    "ViewCA failure",
+			svcresp: certs.Certificate{},
+			svcerr:  certs.ErrViewEntity,
+			err:     errors.NewSDKErrorWithStatus(certs.ErrViewEntity, http.StatusUnprocessableEntity),
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			authCall := auth.On("Authenticate", mock.Anything, tc.authToken).Return(tc.session, tc.authenticateErr)
-			svcCall := svc.On("GetChainCA", mock.Anything, tc.session).Return(tc.svcresp, tc.svcerr)
+			svcCall := svc.On("RetrieveCAChain", mock.Anything).Return(tc.svcresp, tc.svcerr)
 
-			c, err := ctsdk.ViewCA(tc.domain, tc.authToken)
+			c, err := ctsdk.ViewCA()
 			assert.Equal(t, tc.err, err)
 			if tc.err == nil {
-				ok := svcCall.Parent.AssertCalled(t, "GetChainCA", mock.Anything, tc.session)
+				ok := svcCall.Parent.AssertCalled(t, "RetrieveCAChain", mock.Anything)
 				assert.True(t, ok)
 			}
 			assert.Equal(t, tc.sdkCert.Certificate, c.Certificate, fmt.Sprintf("expected: %v, got: %v", tc.sdkCert.Certificate, c.Certificate))
 			svcCall.Unset()
-			authCall.Unset()
 		})
 	}
 }
@@ -1016,79 +955,6 @@ func TestGetEntityID(t *testing.T) {
 				assert.True(t, ok)
 			}
 			svcCall.Unset()
-			authCall.Unset()
-		})
-	}
-}
-
-func TestGetCA(t *testing.T) {
-	ts, svc, auth := setupCerts()
-	defer ts.Close()
-
-	sdkConfig := sdk.Config{
-		CertsURL:        ts.URL,
-		MsgContentType:  contentType,
-		TLSVerification: false,
-	}
-
-	ctsdk := sdk.NewSDK(sdkConfig)
-
-	cases := []struct {
-		desc            string
-		caResp          certs.Certificate
-		caErr           error
-		expectedCert    sdk.Certificate
-		authenticateErr error
-		err             errors.SDKError
-		domain          string
-		token           string
-		session         smqauthn.Session
-	}{
-		{
-			desc: "GetCA success",
-			caResp: certs.Certificate{
-				SerialNumber: serialNum,
-				Certificate:  []byte("ca-cert"),
-			},
-			caErr: nil,
-			expectedCert: sdk.Certificate{
-				SerialNumber: serialNum,
-				Certificate:  "ca-cert",
-			},
-			err:    nil,
-			domain: domainID,
-			token:  token,
-		},
-		{
-			desc:         "GetCA view CA failure",
-			caResp:       certs.Certificate{},
-			caErr:        certs.ErrViewEntity,
-			expectedCert: sdk.Certificate{},
-			err:          errors.NewSDKErrorWithStatus(certs.ErrViewEntity, http.StatusUnprocessableEntity),
-			domain:       domainID,
-			token:        token,
-		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.desc, func(t *testing.T) {
-			if tc.token == token {
-				tc.session = smqauthn.Session{DomainUserID: id, UserID: id, DomainID: domainID}
-			}
-
-			authCall := auth.On("Authenticate", mock.Anything, tc.token).Return(tc.session, tc.authenticateErr)
-			caCall := svc.On("GetChainCA", mock.Anything, tc.session).Return(tc.caResp, tc.caErr)
-
-			resp, err := ctsdk.GetCA(tc.domain, tc.token)
-			assert.Equal(t, tc.err, err)
-			assert.Equal(t, tc.expectedCert, resp)
-
-			if tc.desc == "GetCA success" || tc.desc == "GetCA view CA failure" {
-				ok := caCall.Parent.AssertCalled(t, "GetChainCA", mock.Anything, tc.session)
-				assert.True(t, ok)
-			}
-
-			caCall.Unset()
 			authCall.Unset()
 		})
 	}

@@ -140,7 +140,7 @@ func extractSerialFromCertContent(certContent string) (string, error) {
 type IssueFromCSRReq struct {
 	entityID string
 	ttl      string
-	CSR      string `json:"csr"`
+	CSR      []byte `json:"csr"`
 }
 
 func (req IssueFromCSRReq) validate() error {

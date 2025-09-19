@@ -43,7 +43,7 @@ cd certs
 Execute the following commands from the project's root:
 
 ```bash
-docker compose -f docker/docker-compose.yml --env-file docker/.env -p absmach up
+docker compose -f docker/docker-compose.yaml --env-file docker/.env -p absmach up
 ```
 
 This will bring up the certs docker services and interconnect them. This command can also be executed using the project's included Makefile:

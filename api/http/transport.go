@@ -38,7 +38,7 @@ const (
 	defLimit        = 10
 )
 
-func authMiddleware(authn authn.Authentication, expectedToken string) func(http.Handler) http.Handler {
+func authMiddleware(expectedSecret string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			token := apiutil.ExtractBearerToken(r)
@@ -47,25 +47,18 @@ func authMiddleware(authn authn.Authentication, expectedToken string) func(http.
 				return
 			}
 
-			if token != expectedToken {
+			if token != expectedSecret {
 				EncodeError(r.Context(), errors.Wrap(certs.ErrMalformedEntity, errors.New("invalid authentication token")), w)
 				return
 			}
 
-			resp, err := authn.Authenticate(r.Context(), token)
-			if err != nil {
-				EncodeError(r.Context(), err, w)
-				return
-			}
-			ctx := context.WithValue(r.Context(), api.SessionKey, resp)
-
-			next.ServeHTTP(w, r.WithContext(ctx))
+			next.ServeHTTP(w, r)
 		})
 	}
 }
 
 // MakeHandler returns a HTTP handler for API endpoints.
-func MakeHandler(svc certs.Service, authn authn.Authentication, logger *slog.Logger, instanceID string, token string) http.Handler {
+func MakeHandler(svc certs.Service, authn authn.Authentication, logger *slog.Logger, instanceID string, secret string) http.Handler {
 	opts := []kithttp.ServerOption{
 		kithttp.ServerErrorEncoder(loggingErrorEncoder(logger, EncodeError)),
 	}
@@ -112,18 +105,6 @@ func MakeHandler(svc certs.Service, authn authn.Authentication, logger *slog.Log
 					api.EncodeResponse,
 					opts...,
 				), "view_cert").ServeHTTP)
-				r.Get("/view-ca", otelhttp.NewHandler(kithttp.NewServer(
-					viewCAEndpoint(svc),
-					decodeDownloadCA,
-					api.EncodeResponse,
-					opts...,
-				), "view_ca").ServeHTTP)
-				r.Get("/download-ca", otelhttp.NewHandler(kithttp.NewServer(
-					downloadCAEndpoint(svc),
-					decodeDownloadCA,
-					encodeCADownloadResponse,
-					opts...,
-				), "download_ca").ServeHTTP)
 				r.Route("/csrs", func(r chi.Router) {
 					r.Post("/{entityID}", otelhttp.NewHandler(kithttp.NewServer(
 						issueFromCSREndpoint(svc),
@@ -149,10 +130,22 @@ func MakeHandler(svc certs.Service, authn authn.Authentication, logger *slog.Log
 			api.EncodeResponse,
 			opts...,
 		), "generate_crl").ServeHTTP)
+		r.Get("/view-ca", otelhttp.NewHandler(kithttp.NewServer(
+			viewCAEndpoint(svc),
+			decodeViewCA,
+			api.EncodeResponse,
+			opts...,
+		), "view_ca").ServeHTTP)
+		r.Get("/download-ca", otelhttp.NewHandler(kithttp.NewServer(
+			downloadCAEndpoint(svc),
+			decodeDownloadCA,
+			encodeCADownloadResponse,
+			opts...,
+		), "download_ca").ServeHTTP)
 	})
 
 	mux.Group(func(r chi.Router) {
-		r.Use(authMiddleware(authn, token))
+		r.Use(authMiddleware(secret))
 		r.Post("/certs/csrs/{entityID}", otelhttp.NewHandler(kithttp.NewServer(
 			issueFromCSRInternalEndpoint(svc),
 			decodeIssueFromCSRInternal,
@@ -187,6 +180,11 @@ func decodeCRL(_ context.Context, r *http.Request) (any, error) {
 }
 
 func decodeDownloadCA(_ context.Context, r *http.Request) (any, error) {
+	req := downloadReq{}
+	return req, nil
+}
+
+func decodeViewCA(_ context.Context, r *http.Request) (any, error) {
 	req := downloadReq{}
 	return req, nil
 }

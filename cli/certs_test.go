@@ -98,9 +98,9 @@ func TestIssueCertCmd(t *testing.T) {
 				id,
 				commonName,
 				ipAddrs,
+				"{\"organization\":[\"organization_name\"]}",
 				domainID,
 				token,
-				"{\"organization\":[\"organization_name\"]}",
 			},
 			logType: entityLog,
 			cert:    sdk.Certificate{SerialNumber: serialNumber},
@@ -453,11 +453,8 @@ func TestDownloadCACmd(t *testing.T) {
 		certBundle    sdk.CertificateBundle
 	}{
 		{
-			desc: "download CA successfully",
-			args: []string{
-				domainID,
-				token,
-			},
+			desc:    "download CA successfully",
+			args:    []string{},
 			logType: entityLog,
 			certBundle: sdk.CertificateBundle{
 				Certificate: []byte("certificate"),
@@ -471,17 +468,6 @@ func TestDownloadCACmd(t *testing.T) {
 			},
 			logType: usageLog,
 		},
-		{
-			desc: "download cert failed",
-			args: []string{
-				domainID,
-				token,
-			},
-			sdkErr:        errors.NewSDKErrorWithStatus(certs.ErrUpdateEntity, http.StatusUnprocessableEntity),
-			errLogMessage: fmt.Sprintf("\nerror: %s\n\n", errors.NewSDKErrorWithStatus(certs.ErrUpdateEntity, http.StatusUnprocessableEntity)),
-			logType:       errLog,
-			certBundle:    sdk.CertificateBundle{},
-		},
 	}
 
 	for _, tc := range cases {
@@ -489,7 +475,7 @@ func TestDownloadCACmd(t *testing.T) {
 			defer func() {
 				cleanupFiles(t, []string{"ca.crt"})
 			}()
-			sdkCall := sdkMock.On("DownloadCA", mock.Anything, mock.Anything).Return(tc.certBundle, tc.sdkErr)
+			sdkCall := sdkMock.On("DownloadCA").Return(tc.certBundle, tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{downloadCACmd}, tc.args...)...)
 			switch tc.logType {
 			case entityLog:
@@ -520,11 +506,8 @@ func TestViewCACmd(t *testing.T) {
 		cert          sdk.Certificate
 	}{
 		{
-			desc: "view cert successfully",
-			args: []string{
-				domainID,
-				token,
-			},
+			desc:    "view cert successfully",
+			args:    []string{},
 			logType: entityLog,
 			cert: sdk.Certificate{
 				Certificate: "certificate",
@@ -532,28 +515,23 @@ func TestViewCACmd(t *testing.T) {
 			},
 		},
 		{
-			desc: "view cert with invalid args",
-			args: []string{
-				extraArg,
-			},
-			logType: usageLog,
-		},
-		{
-			desc: "view cert failed",
-			args: []string{
-				domainID,
-				token,
-			},
+			desc:          "view cert failed",
+			args:          []string{},
 			sdkErr:        errors.NewSDKErrorWithStatus(certs.ErrUpdateEntity, http.StatusUnprocessableEntity),
 			errLogMessage: fmt.Sprintf("\nerror: %s\n\n", errors.NewSDKErrorWithStatus(certs.ErrUpdateEntity, http.StatusUnprocessableEntity)),
 			logType:       errLog,
 			cert:          sdk.Certificate{},
 		},
+		{
+			desc:    "view cert with invalid args",
+			args:    []string{extraArg},
+			logType: usageLog,
+		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("ViewCA", mock.Anything, mock.Anything).Return(tc.cert, tc.sdkErr)
+			sdkCall := sdkMock.On("ViewCA").Return(tc.cert, tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{viewCACmd}, tc.args...)...)
 			switch tc.logType {
 			case entityLog:
@@ -681,63 +659,6 @@ func TestGetEntityIDCmd(t *testing.T) {
 	}
 }
 
-func TestGetCACmd(t *testing.T) {
-	certCmd := cli.NewCertsCmd()
-	rootCmd := setFlags(certCmd)
-
-	var cert sdk.Certificate
-	cases := []struct {
-		desc          string
-		args          []string
-		sdkErr        errors.SDKError
-		errLogMessage string
-		logType       outputLog
-		cert          sdk.Certificate
-	}{
-		{
-			desc:    "get CA successfully",
-			args:    []string{domainID, token},
-			logType: entityLog,
-			cert: sdk.Certificate{
-				SerialNumber: serialNumber,
-				Certificate:  "ca-cert",
-			},
-		},
-		{
-			desc:    "get CA with invalid args",
-			args:    []string{extraArg},
-			logType: usageLog,
-		},
-		{
-			desc:    "get CA failed",
-			args:    []string{domainID, token},
-			sdkErr:  errors.NewSDKErrorWithStatus(certs.ErrViewEntity, http.StatusUnprocessableEntity),
-			logType: usageLog,
-		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.desc, func(t *testing.T) {
-			sdkMock := new(sdkmocks.SDK)
-			cli.SetSDK(sdkMock)
-			sdkCall := sdkMock.On("GetCA", mock.Anything, mock.Anything).Return(tc.cert, tc.sdkErr)
-			out := executeCommand(t, rootCmd, append([]string{"ca"}, tc.args...)...)
-
-			switch tc.logType {
-			case entityLog:
-				err := json.Unmarshal([]byte(out), &cert)
-				assert.Nil(t, err)
-				assert.Equal(t, tc.cert, cert, fmt.Sprintf("%s unexpected response: expected: %v, got: %v", tc.desc, tc.cert, cert))
-			case usageLog:
-				assert.False(t, strings.Contains(out, rootCmd.Use), fmt.Sprintf("%s invalid usage: %s", tc.desc, out))
-			case errLog:
-				assert.Equal(t, tc.errLogMessage, out, fmt.Sprintf("%s unexpected error response: expected %s got errLogMessage:%s", tc.desc, tc.errLogMessage, out))
-			}
-			sdkCall.Unset()
-		})
-	}
-}
-
 func cleanupFiles(t *testing.T, filenames []string) {
 	for _, filename := range filenames {
 		err := os.Remove(filename)
@@ -817,6 +738,9 @@ func TestIssueFromCSRInternalCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
+			defer func() {
+				cleanupFiles(t, []string{"cert.pem", "key.pem"})
+			}()
 			sdkCall := sdkMock.On("IssueFromCSRInternal", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(tc.cert, tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{"issue-csr-internal"}, tc.args...)...)
 			switch tc.logType {
@@ -847,6 +771,127 @@ func TestIssueFromCSRInternalCmd(t *testing.T) {
 				err := json.Unmarshal([]byte(jsonPart), &cert)
 				assert.Nil(t, err)
 				assert.Equal(t, tc.cert, cert, fmt.Sprintf("%s unexpected response: expected: %v, got: %v", tc.desc, tc.cert, cert))
+				assert.True(t, strings.Contains(out, "All certificate files have been saved successfully"), fmt.Sprintf("%s should save files", tc.desc))
+			case errLog:
+				if tc.errLogMessage != "" {
+					assert.Equal(t, tc.errLogMessage, out, fmt.Sprintf("%s unexpected error response: expected %s got errLogMessage:%s", tc.desc, tc.errLogMessage, out))
+				} else {
+					assert.True(t, strings.Contains(out, "error"), fmt.Sprintf("%s should contain error message: %s", tc.desc, out))
+				}
+			case usageLog:
+				assert.False(t, strings.Contains(out, rootCmd.Use), fmt.Sprintf("%s invalid usage: %s", tc.desc, out))
+			}
+			sdkCall.Unset()
+		})
+	}
+}
+
+func TestIssueFromCSRCmd(t *testing.T) {
+	sdkMock := new(sdkmocks.SDK)
+	cli.SetSDK(sdkMock)
+	certCmd := cli.NewCertsCmd()
+	rootCmd := setFlags(certCmd)
+
+	csrPath := "test.csr"
+	bytes := []byte("-----BEGIN CERTIFICATE REQUEST-----\n-csr-content\n-----END CERTIFICATE REQUEST-----")
+
+	err := os.WriteFile(csrPath, bytes, filePermission)
+	if err != nil {
+		t.Fatalf("Failed to create test CSR file: %v", err)
+	}
+	defer os.Remove(csrPath)
+
+	var cert sdk.Certificate
+	cases := []struct {
+		desc          string
+		args          []string
+		sdkErr        errors.SDKError
+		errLogMessage string
+		logType       outputLog
+		cert          sdk.Certificate
+	}{
+		{
+			desc: "issue cert from CSR successfully",
+			args: []string{
+				id,
+				"10h",
+				csrPath,
+				domainID,
+				token,
+			},
+			logType: entityLog,
+			cert:    sdk.Certificate{SerialNumber: serialNumber},
+		},
+		{
+			desc: "issue cert from CSR with invalid args",
+			args: []string{
+				id,
+				extraArg,
+			},
+			logType: usageLog,
+		},
+		{
+			desc: "issue cert from CSR failed",
+			args: []string{
+				id,
+				"10h",
+				csrPath,
+				domainID,
+				token,
+			},
+			sdkErr:        errors.NewSDKErrorWithStatus(certs.ErrFailedCertCreation, http.StatusUnprocessableEntity),
+			errLogMessage: fmt.Sprintf("\nerror: %s\n\n", errors.NewSDKErrorWithStatus(certs.ErrFailedCertCreation, http.StatusUnprocessableEntity)),
+			logType:       errLog,
+		},
+		{
+			desc: "issue cert from CSR with non-existent file",
+			args: []string{
+				id,
+				"10h",
+				"non-existent.csr",
+				domainID,
+				token,
+			},
+			logType: errLog,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			defer func() {
+				cleanupFiles(t, []string{"cert.pem", "key.pem"})
+			}()
+			sdkCall := sdkMock.On("IssueFromCSR", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(tc.cert, tc.sdkErr)
+			out := executeCommand(t, rootCmd, append([]string{"issue-csr"}, tc.args...)...)
+			switch tc.logType {
+			case entityLog:
+				lines := strings.Split(out, "\n")
+				var jsonLines []string
+				var inJSON bool
+
+				for _, line := range lines {
+					line = strings.TrimSpace(line)
+					if strings.HasPrefix(line, "{") {
+						inJSON = true
+						jsonLines = append(jsonLines, line)
+					} else if inJSON && strings.HasSuffix(line, "}") {
+						jsonLines = append(jsonLines, line)
+						break
+					} else if inJSON {
+						jsonLines = append(jsonLines, line)
+					}
+				}
+
+				if len(jsonLines) == 0 {
+					t.Fatalf("No JSON found in output: %s", out)
+				}
+
+				jsonPart := strings.Join(jsonLines, "")
+
+				err := json.Unmarshal([]byte(jsonPart), &cert)
+				assert.Nil(t, err)
+				assert.Equal(t, tc.cert, cert, fmt.Sprintf("%s unexpected response: expected: %v, got: %v", tc.desc, tc.cert, cert))
+				assert.True(t, strings.Contains(out, "All certificate files have been saved successfully"), fmt.Sprintf("%s should save files", tc.desc))
 			case errLog:
 				if tc.errLogMessage != "" {
 					assert.Equal(t, tc.errLogMessage, out, fmt.Sprintf("%s unexpected error response: expected %s got errLogMessage:%s", tc.desc, tc.errLogMessage, out))
