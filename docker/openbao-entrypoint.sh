@@ -240,20 +240,15 @@ if [ ! -f /opt/openbao/data/configured ]; then
 
   echo "$INTERMEDIATE_CERT" > /opt/openbao/data/intermediate_ca.pem
 
-  PKI_BASE_URL="http://127.0.0.1:8200/v1"
-  
-  # Configure root PKI URLs
   bao write pki/config/urls \
-    issuing_certificates="${PKI_BASE_URL}/pki/ca" \
-    crl_distribution_points="${PKI_BASE_URL}/pki/crl" \
-    ocsp_servers="${PKI_BASE_URL}/pki/ocsp" > /dev/null
+    issuing_certificates='http://127.0.0.1:8200/v1/pki/ca' \
+    crl_distribution_points='http://127.0.0.1:8200/v1/pki/crl' \
+    ocsp_servers='http://127.0.0.1:8200/v1/pki/ocsp' > /dev/null
 
   bao write pki_int/config/urls \
-    issuing_certificates="${PKI_BASE_URL}/pki_int/ca,${PKI_BASE_URL}/pki/ca" \
-    crl_distribution_points="${PKI_BASE_URL}/pki_int/crl" \
-    ocsp_servers="${PKI_BASE_URL}/pki_int/ocsp" > /dev/null
-
-  echo "AIA URLs configured for both PKI mounts"
+    issuing_certificates='http://127.0.0.1:8200/v1/pki_int/ca' \
+    crl_distribution_points='http://127.0.0.1:8200/v1/pki_int/crl' \
+    ocsp_servers='http://127.0.0.1:8200/v1/pki_int/ocsp' > /dev/null
 
   ROLE_CMD="bao write pki_int/roles/${AM_OPENBAO_PKI_ROLE} \
     allow_any_name=true \
