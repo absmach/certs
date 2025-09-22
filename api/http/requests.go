@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"strings"
 
 	"github.com/absmach/certs"
 	"github.com/absmach/supermq/pkg/errors"
@@ -94,7 +95,7 @@ func (req *ocspReq) validate() error {
 		req.SerialNumber = serialNumber
 	}
 
-	req.SerialNumber = certs.NormalizeSerialNumber(req.SerialNumber)
+	req.SerialNumber = NormalizeSerialNumber(req.SerialNumber)
 
 	return nil
 }
@@ -113,7 +114,7 @@ func extractSerialFromCertContent(certContent string) (string, error) {
 	}
 
 	serialHex := cert.SerialNumber.Text(16)
-	return certs.NormalizeSerialNumber(serialHex), nil
+	return NormalizeSerialNumber(serialHex), nil
 }
 
 type IssueFromCSRReq struct {
@@ -148,4 +149,25 @@ func (req IssueFromCSRInternalReq) validate() error {
 	}
 
 	return nil
+}
+
+// NormalizeSerialNumber normalizes a serial number to use colon-separated hex format.
+func NormalizeSerialNumber(serial string) string {
+	cleaned := strings.ReplaceAll(strings.ReplaceAll(serial, ":", ""), " ", "")
+
+	cleaned = strings.ToLower(cleaned)
+
+	if len(cleaned)%2 != 0 {
+		cleaned = "0" + cleaned
+	}
+
+	var result strings.Builder
+	for i := 0; i < len(cleaned); i += 2 {
+		if i > 0 {
+			result.WriteString(":")
+		}
+		result.WriteString(cleaned[i : i+2])
+	}
+
+	return result.String()
 }
