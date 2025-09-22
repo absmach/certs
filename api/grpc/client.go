@@ -69,7 +69,7 @@ func (c *grpcClient) RevokeCerts(ctx context.Context, req *certs.RevokeReq, _ ..
 func encodeGetEntityIDRequest(_ context.Context, request any) (any, error) {
 	req := request.(*certs.EntityReq)
 	return &certs.EntityReq{
-		SerialNumber: req.GetSerialNumber(),
+		SerialNumber: certs.NormalizeSerialNumber(req.GetSerialNumber()),
 	}, nil
 }
 
