@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/absmach/certs"
-	"github.com/absmach/certs/api/http"
+	"github.com/absmach/certs/api"
 	"github.com/go-kit/kit/endpoint"
 	kitgrpc "github.com/go-kit/kit/transport/grpc"
 	"google.golang.org/grpc"
@@ -70,7 +70,7 @@ func (c *grpcClient) RevokeCerts(ctx context.Context, req *certs.RevokeReq, _ ..
 func encodeGetEntityIDRequest(_ context.Context, request any) (any, error) {
 	req := request.(*certs.EntityReq)
 	return &certs.EntityReq{
-		SerialNumber: http.NormalizeSerialNumber(req.GetSerialNumber()),
+		SerialNumber: api.NormalizeSerialNumber(req.GetSerialNumber()),
 	}, nil
 }
 
