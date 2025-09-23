@@ -7,9 +7,9 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"strings"
 
 	"github.com/absmach/certs"
+	"github.com/absmach/certs/api"
 	"github.com/absmach/supermq/pkg/errors"
 	"golang.org/x/crypto/ocsp"
 )
@@ -95,29 +95,9 @@ func (req *ocspReq) validate() error {
 		req.SerialNumber = serialNumber
 	}
 
-	req.SerialNumber = normalizeSerialNumber(req.SerialNumber)
+	req.SerialNumber = api.NormalizeSerialNumber(req.SerialNumber)
 
 	return nil
-}
-
-func normalizeSerialNumber(serial string) string {
-	cleaned := strings.ReplaceAll(strings.ReplaceAll(serial, ":", ""), " ", "")
-
-	cleaned = strings.ToLower(cleaned)
-
-	if len(cleaned)%2 != 0 {
-		cleaned = "0" + cleaned
-	}
-
-	var result strings.Builder
-	for i := 0; i < len(cleaned); i += 2 {
-		if i > 0 {
-			result.WriteString(":")
-		}
-		result.WriteString(cleaned[i : i+2])
-	}
-
-	return result.String()
 }
 
 func extractSerialFromCertContent(certContent string) (string, error) {
@@ -134,7 +114,7 @@ func extractSerialFromCertContent(certContent string) (string, error) {
 	}
 
 	serialHex := cert.SerialNumber.Text(16)
-	return normalizeSerialNumber(serialHex), nil
+	return api.NormalizeSerialNumber(serialHex), nil
 }
 
 type IssueFromCSRReq struct {
