@@ -28,17 +28,17 @@ EOF
 export BAO_ADDR=http://127.0.0.1:8200
 
 # Check if we have pre-configured unseal keys and root token
-if [ -n "$AM_OPENBAO_UNSEAL_KEY_1" ] && [ -n "$AM_OPENBAO_UNSEAL_KEY_2" ] && [ -n "$AM_OPENBAO_UNSEAL_KEY_3" ] && [ -n "$AM_OPENBAO_ROOT_TOKEN" ]; then
+if [ -n "$AM_CERTS_OPENBAO_UNSEAL_KEY_1" ] && [ -n "$AM_CERTS_OPENBAO_UNSEAL_KEY_2" ] && [ -n "$AM_CERTS_OPENBAO_UNSEAL_KEY_3" ] && [ -n "$AM_CERTS_OPENBAO_ROOT_TOKEN" ]; then
   echo "Using pre-configured unseal keys and root token..."
   bao server -config=/opt/openbao/config/config.hcl > /opt/openbao/logs/server.log 2>&1 &
   BAO_PID=$!
   sleep 5
   
-  bao operator unseal "$AM_OPENBAO_UNSEAL_KEY_1"
-  bao operator unseal "$AM_OPENBAO_UNSEAL_KEY_2"
-  bao operator unseal "$AM_OPENBAO_UNSEAL_KEY_3"
+  bao operator unseal "$AM_CERTS_OPENBAO_UNSEAL_KEY_1"
+  bao operator unseal "$AM_CERTS_OPENBAO_UNSEAL_KEY_2"
+  bao operator unseal "$AM_CERTS_OPENBAO_UNSEAL_KEY_3"
   
-  export BAO_TOKEN=$AM_OPENBAO_ROOT_TOKEN
+  export BAO_TOKEN=$AM_CERTS_OPENBAO_ROOT_TOKEN
 else
   # Initialize OpenBao if not already done
   if [ ! -f /opt/openbao/data/init.json ]; then
@@ -94,18 +94,18 @@ if [ ! -f /opt/openbao/data/configured ]; then
   echo "Configuring OpenBao PKI and AppRole..."
   
   # Create namespace if specified
-  if [ -n "$AM_OPENBAO_NAMESPACE" ]; then
-    if bao namespace create "$AM_OPENBAO_NAMESPACE" 2>/tmp/ns_error; then
-      export BAO_NAMESPACE="$AM_OPENBAO_NAMESPACE"
-      echo "$AM_OPENBAO_NAMESPACE" > /opt/openbao/data/namespace
-      echo "Created namespace: $AM_OPENBAO_NAMESPACE"
+  if [ -n "$AM_CERTS_OPENBAO_NAMESPACE" ]; then
+    if bao namespace create "$AM_CERTS_OPENBAO_NAMESPACE" 2>/tmp/ns_error; then
+      export BAO_NAMESPACE="$AM_CERTS_OPENBAO_NAMESPACE"
+      echo "$AM_CERTS_OPENBAO_NAMESPACE" > /opt/openbao/data/namespace
+      echo "Created namespace: $AM_CERTS_OPENBAO_NAMESPACE"
     else
       if grep -q "namespace already exists" /tmp/ns_error; then
-        export BAO_NAMESPACE="$AM_OPENBAO_NAMESPACE"
-        echo "$AM_OPENBAO_NAMESPACE" > /opt/openbao/data/namespace
-        echo "Using existing namespace: $AM_OPENBAO_NAMESPACE"
+        export BAO_NAMESPACE="$AM_CERTS_OPENBAO_NAMESPACE"
+        echo "$AM_CERTS_OPENBAO_NAMESPACE" > /opt/openbao/data/namespace
+        echo "Using existing namespace: $AM_CERTS_OPENBAO_NAMESPACE"
       else
-        echo "ERROR: Failed to create namespace $AM_OPENBAO_NAMESPACE:" >&2
+        echo "ERROR: Failed to create namespace $AM_CERTS_OPENBAO_NAMESPACE:" >&2
         cat /tmp/ns_error >&2
         exit 1
       fi
@@ -140,7 +140,7 @@ if [ ! -f /opt/openbao/data/configured ]; then
   bao secrets tune -max-lease-ttl=87600h pki > /dev/null
 
   # Validate required CA environment variables
-  for var in AM_OPENBAO_PKI_CA_CN AM_OPENBAO_PKI_CA_O AM_OPENBAO_PKI_CA_C; do
+  for var in AM_CERTS_OPENBAO_PKI_CA_CN AM_CERTS_OPENBAO_PKI_CA_O AM_CERTS_OPENBAO_PKI_CA_C; do
     eval "value=\$var"
     if [ -z "$value" ]; then
       echo "ERROR: Required environment variable $var is not set" >&2
@@ -149,23 +149,23 @@ if [ ! -f /opt/openbao/data/configured ]; then
   done
 
   PKI_CMD="bao write -field=certificate pki/root/generate/internal \
-    common_name=\"$AM_OPENBAO_PKI_CA_CN\" \
-    organization=\"$AM_OPENBAO_PKI_CA_O\" \
-    country=\"$AM_OPENBAO_PKI_CA_C\" \
+    common_name=\"$AM_CERTS_OPENBAO_PKI_CA_CN\" \
+    organization=\"$AM_CERTS_OPENBAO_PKI_CA_O\" \
+    country=\"$AM_CERTS_OPENBAO_PKI_CA_C\" \
     ttl=87600h \
     key_bits=2048 \
     exclude_cn_from_sans=false"
 
-  [ -n "$AM_OPENBAO_PKI_CA_OU" ] && PKI_CMD="$PKI_CMD ou=\"$AM_OPENBAO_PKI_CA_OU\""
-  [ -n "$AM_OPENBAO_PKI_CA_L" ] && PKI_CMD="$PKI_CMD locality=\"$AM_OPENBAO_PKI_CA_L\""
-  [ -n "$AM_OPENBAO_PKI_CA_ST" ] && PKI_CMD="$PKI_CMD province=\"$AM_OPENBAO_PKI_CA_ST\""
-  [ -n "$AM_OPENBAO_PKI_CA_ADDR" ] && PKI_CMD="$PKI_CMD street_address=\"$AM_OPENBAO_PKI_CA_ADDR\""
-  [ -n "$AM_OPENBAO_PKI_CA_PO" ] && PKI_CMD="$PKI_CMD postal_code=\"$AM_OPENBAO_PKI_CA_PO\""
+  [ -n "$AM_CERTS_OPENBAO_PKI_CA_OU" ] && PKI_CMD="$PKI_CMD ou=\"$AM_CERTS_OPENBAO_PKI_CA_OU\""
+  [ -n "$AM_CERTS_OPENBAO_PKI_CA_L" ] && PKI_CMD="$PKI_CMD locality=\"$AM_CERTS_OPENBAO_PKI_CA_L\""
+  [ -n "$AM_CERTS_OPENBAO_PKI_CA_ST" ] && PKI_CMD="$PKI_CMD province=\"$AM_CERTS_OPENBAO_PKI_CA_ST\""
+  [ -n "$AM_CERTS_OPENBAO_PKI_CA_ADDR" ] && PKI_CMD="$PKI_CMD street_address=\"$AM_CERTS_OPENBAO_PKI_CA_ADDR\""
+  [ -n "$AM_CERTS_OPENBAO_PKI_CA_PO" ] && PKI_CMD="$PKI_CMD postal_code=\"$AM_CERTS_OPENBAO_PKI_CA_PO\""
   
-  [ -n "$AM_OPENBAO_PKI_CA_DNS_NAMES" ] && PKI_CMD="$PKI_CMD alt_names=\"$AM_OPENBAO_PKI_CA_DNS_NAMES\""
-  [ -n "$AM_OPENBAO_PKI_CA_IP_ADDRESSES" ] && PKI_CMD="$PKI_CMD ip_sans=\"$AM_OPENBAO_PKI_CA_IP_ADDRESSES\""
-  [ -n "$AM_OPENBAO_PKI_CA_URI_SANS" ] && PKI_CMD="$PKI_CMD uri_sans=\"$AM_OPENBAO_PKI_CA_URI_SANS\""
-  [ -n "$AM_OPENBAO_PKI_CA_EMAIL_ADDRESSES" ] && PKI_CMD="$PKI_CMD email_sans=\"$AM_OPENBAO_PKI_CA_EMAIL_ADDRESSES\""
+  [ -n "$AM_CERTS_OPENBAO_PKI_CA_DNS_NAMES" ] && PKI_CMD="$PKI_CMD alt_names=\"$AM_CERTS_OPENBAO_PKI_CA_DNS_NAMES\""
+  [ -n "$AM_CERTS_OPENBAO_PKI_CA_IP_ADDRESSES" ] && PKI_CMD="$PKI_CMD ip_sans=\"$AM_CERTS_OPENBAO_PKI_CA_IP_ADDRESSES\""
+  [ -n "$AM_CERTS_OPENBAO_PKI_CA_URI_SANS" ] && PKI_CMD="$PKI_CMD uri_sans=\"$AM_CERTS_OPENBAO_PKI_CA_URI_SANS\""
+  [ -n "$AM_CERTS_OPENBAO_PKI_CA_EMAIL_ADDRESSES" ] && PKI_CMD="$PKI_CMD email_sans=\"$AM_CERTS_OPENBAO_PKI_CA_EMAIL_ADDRESSES\""
 
   eval $PKI_CMD > /dev/null
 
@@ -188,24 +188,24 @@ if [ ! -f /opt/openbao/data/configured ]; then
 
   bao secrets tune -max-lease-ttl=8760h pki_int > /dev/null
 
-  INTERMEDIATE_CN="${AM_OPENBAO_PKI_CA_CN} Intermediate"
+  INTERMEDIATE_CN="${AM_CERTS_OPENBAO_PKI_CA_CN} Intermediate"
   INTERMEDIATE_CSR_CMD="bao write -field=csr pki_int/intermediate/generate/internal \
     common_name=\"$INTERMEDIATE_CN\" \
-    organization=\"$AM_OPENBAO_PKI_CA_O\" \
-    country=\"$AM_OPENBAO_PKI_CA_C\" \
+    organization=\"$AM_CERTS_OPENBAO_PKI_CA_O\" \
+    country=\"$AM_CERTS_OPENBAO_PKI_CA_C\" \
     ttl=8760h \
     key_bits=2048"
 
-  [ -n "$AM_OPENBAO_PKI_CA_OU" ] && INTERMEDIATE_CSR_CMD="$INTERMEDIATE_CSR_CMD ou=\"$AM_OPENBAO_PKI_CA_OU\""
-  [ -n "$AM_OPENBAO_PKI_CA_L" ] && INTERMEDIATE_CSR_CMD="$INTERMEDIATE_CSR_CMD locality=\"$AM_OPENBAO_PKI_CA_L\""
-  [ -n "$AM_OPENBAO_PKI_CA_ST" ] && INTERMEDIATE_CSR_CMD="$INTERMEDIATE_CSR_CMD province=\"$AM_OPENBAO_PKI_CA_ST\""
-  [ -n "$AM_OPENBAO_PKI_CA_ADDR" ] && INTERMEDIATE_CSR_CMD="$INTERMEDIATE_CSR_CMD street_address=\"$AM_OPENBAO_PKI_CA_ADDR\""
-  [ -n "$AM_OPENBAO_PKI_CA_PO" ] && INTERMEDIATE_CSR_CMD="$INTERMEDIATE_CSR_CMD postal_code=\"$AM_OPENBAO_PKI_CA_PO\""
+  [ -n "$AM_CERTS_OPENBAO_PKI_CA_OU" ] && INTERMEDIATE_CSR_CMD="$INTERMEDIATE_CSR_CMD ou=\"$AM_CERTS_OPENBAO_PKI_CA_OU\""
+  [ -n "$AM_CERTS_OPENBAO_PKI_CA_L" ] && INTERMEDIATE_CSR_CMD="$INTERMEDIATE_CSR_CMD locality=\"$AM_CERTS_OPENBAO_PKI_CA_L\""
+  [ -n "$AM_CERTS_OPENBAO_PKI_CA_ST" ] && INTERMEDIATE_CSR_CMD="$INTERMEDIATE_CSR_CMD province=\"$AM_CERTS_OPENBAO_PKI_CA_ST\""
+  [ -n "$AM_CERTS_OPENBAO_PKI_CA_ADDR" ] && INTERMEDIATE_CSR_CMD="$INTERMEDIATE_CSR_CMD street_address=\"$AM_CERTS_OPENBAO_PKI_CA_ADDR\""
+  [ -n "$AM_CERTS_OPENBAO_PKI_CA_PO" ] && INTERMEDIATE_CSR_CMD="$INTERMEDIATE_CSR_CMD postal_code=\"$AM_CERTS_OPENBAO_PKI_CA_PO\""
   
-  [ -n "$AM_OPENBAO_PKI_CA_DNS_NAMES" ] && INTERMEDIATE_CSR_CMD="$INTERMEDIATE_CSR_CMD alt_names=\"$AM_OPENBAO_PKI_CA_DNS_NAMES\""
-  [ -n "$AM_OPENBAO_PKI_CA_IP_ADDRESSES" ] && INTERMEDIATE_CSR_CMD="$INTERMEDIATE_CSR_CMD ip_sans=\"$AM_OPENBAO_PKI_CA_IP_ADDRESSES\""
-  [ -n "$AM_OPENBAO_PKI_CA_URI_SANS" ] && INTERMEDIATE_CSR_CMD="$INTERMEDIATE_CSR_CMD uri_sans=\"$AM_OPENBAO_PKI_CA_URI_SANS\""
-  [ -n "$AM_OPENBAO_PKI_CA_EMAIL_ADDRESSES" ] && INTERMEDIATE_CSR_CMD="$INTERMEDIATE_CSR_CMD email_sans=\"$AM_OPENBAO_PKI_CA_EMAIL_ADDRESSES\""
+  [ -n "$AM_CERTS_OPENBAO_PKI_CA_DNS_NAMES" ] && INTERMEDIATE_CSR_CMD="$INTERMEDIATE_CSR_CMD alt_names=\"$AM_CERTS_OPENBAO_PKI_CA_DNS_NAMES\""
+  [ -n "$AM_CERTS_OPENBAO_PKI_CA_IP_ADDRESSES" ] && INTERMEDIATE_CSR_CMD="$INTERMEDIATE_CSR_CMD ip_sans=\"$AM_CERTS_OPENBAO_PKI_CA_IP_ADDRESSES\""
+  [ -n "$AM_CERTS_OPENBAO_PKI_CA_URI_SANS" ] && INTERMEDIATE_CSR_CMD="$INTERMEDIATE_CSR_CMD uri_sans=\"$AM_CERTS_OPENBAO_PKI_CA_URI_SANS\""
+  [ -n "$AM_CERTS_OPENBAO_PKI_CA_EMAIL_ADDRESSES" ] && INTERMEDIATE_CSR_CMD="$INTERMEDIATE_CSR_CMD email_sans=\"$AM_CERTS_OPENBAO_PKI_CA_EMAIL_ADDRESSES\""
 
   INTERMEDIATE_CSR=$(eval $INTERMEDIATE_CSR_CMD)
 
@@ -250,7 +250,7 @@ if [ ! -f /opt/openbao/data/configured ]; then
     crl_distribution_points='http://127.0.0.1:8200/v1/pki_int/crl' \
     ocsp_servers='http://127.0.0.1:8200/v1/pki_int/ocsp' > /dev/null
 
-  ROLE_CMD="bao write pki_int/roles/${AM_OPENBAO_PKI_ROLE} \
+  ROLE_CMD="bao write pki_int/roles/${AM_CERTS_OPENBAO_PKI_ROLE} \
     allow_any_name=true \
     enforce_hostnames=false \
     allow_ip_sans=true \
@@ -278,10 +278,10 @@ if [ ! -f /opt/openbao/data/configured ]; then
 
   # Create PKI policy
   cat > /opt/openbao/config/pki-policy.hcl << EOF
-path "pki_int/issue/${AM_OPENBAO_PKI_ROLE}" {
+path "pki_int/issue/${AM_CERTS_OPENBAO_PKI_ROLE}" {
   capabilities = ["create", "update"]
 }
-path "pki_int/sign/${AM_OPENBAO_PKI_ROLE}" {
+path "pki_int/sign/${AM_CERTS_OPENBAO_PKI_ROLE}" {
   capabilities = ["create", "update"]
 }
 path "pki_int/certs" {
@@ -327,21 +327,22 @@ EOF
   bao policy write pki-policy /opt/openbao/config/pki-policy.hcl > /dev/null
 
   # Create AppRole
-  bao write auth/approle/role/"${AM_OPENBAO_PKI_ROLE}" \
+  SECRET_ID_TTL="${AM_CERTS_OPENBAO_SECRET_ID_TTL}"
+  bao write auth/approle/role/"${AM_CERTS_OPENBAO_PKI_ROLE}" \
     token_policies=pki-policy \
     token_ttl=1h \
     token_max_ttl=4h \
     bind_secret_id=true \
-    secret_id_ttl=24h > /dev/null
+    secret_id_ttl="$SECRET_ID_TTL" > /dev/null
 
   # Set custom role ID if provided
-  if [ -n "$AM_OPENBAO_APP_ROLE" ]; then
-    bao write auth/approle/role/"${AM_OPENBAO_PKI_ROLE}"/role-id role_id="$AM_OPENBAO_APP_ROLE" > /dev/null
+  if [ -n "$AM_CERTS_OPENBAO_APP_ROLE" ]; then
+    bao write auth/approle/role/"${AM_CERTS_OPENBAO_PKI_ROLE}"/role-id role_id="$AM_CERTS_OPENBAO_APP_ROLE" > /dev/null
   fi
 
   # Set custom secret ID if provided
-  if [ -n "$AM_OPENBAO_APP_SECRET" ]; then
-    bao write auth/approle/role/"${AM_OPENBAO_PKI_ROLE}"/custom-secret-id secret_id="$AM_OPENBAO_APP_SECRET" > /dev/null
+  if [ -n "$AM_CERTS_OPENBAO_APP_SECRET" ]; then
+    bao write auth/approle/role/"${AM_CERTS_OPENBAO_PKI_ROLE}"/custom-secret-id secret_id="$AM_CERTS_OPENBAO_APP_SECRET" > /dev/null
   fi
 
   # Generate service token for additional access
@@ -360,10 +361,23 @@ else
   echo "OpenBao already configured, skipping setup..."
   
   # Restore namespace if it exists
-  if [ -f /opt/openbao/data/namespace ] && [ -n "$AM_OPENBAO_NAMESPACE" ]; then
+  if [ -f /opt/openbao/data/namespace ] && [ -n "$AM_CERTS_OPENBAO_NAMESPACE" ]; then
     SAVED_NAMESPACE=$(cat /opt/openbao/data/namespace)
-    if [ "$SAVED_NAMESPACE" = "$AM_OPENBAO_NAMESPACE" ]; then
-      export BAO_NAMESPACE="$AM_OPENBAO_NAMESPACE"
+    if [ "$SAVED_NAMESPACE" = "$AM_CERTS_OPENBAO_NAMESPACE" ]; then
+      export BAO_NAMESPACE="$AM_CERTS_OPENBAO_NAMESPACE"
+    fi
+  fi
+  
+  if [ -n "$AM_CERTS_OPENBAO_APP_SECRET" ]; then
+    echo "Verifying existing secret ID validity..."
+    if ! bao write -field=client_token auth/approle/login role_id="$AM_CERTS_OPENBAO_APP_ROLE" secret_id="$AM_CERTS_OPENBAO_APP_SECRET" > /dev/null 2>&1; then
+      echo "================================"
+      echo "ERROR: Secret ID has expired!"
+      echo "Please regenerate AM_CERTS_OPENBAO_APP_SECRET"
+      echo "and update your environment configuration"
+      echo "================================"
+    else
+      echo "Existing secret ID is valid"
     fi
   fi
 fi
