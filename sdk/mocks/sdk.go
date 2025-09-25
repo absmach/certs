@@ -7,6 +7,7 @@
 package mocks
 
 import (
+	"github.com/absmach/certs"
 	"github.com/absmach/certs/sdk"
 	"github.com/absmach/supermq/pkg/errors"
 	mock "github.com/stretchr/testify/mock"
@@ -37,6 +38,74 @@ type SDK_Expecter struct {
 
 func (_m *SDK) EXPECT() *SDK_Expecter {
 	return &SDK_Expecter{mock: &_m.Mock}
+}
+
+// CreateCSR provides a mock function for the type SDK
+func (_mock *SDK) CreateCSR(metadata certs.CSRMetadata, privKey any) (certs.CSR, errors.SDKError) {
+	ret := _mock.Called(metadata, privKey)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateCSR")
+	}
+
+	var r0 certs.CSR
+	var r1 errors.SDKError
+	if returnFunc, ok := ret.Get(0).(func(certs.CSRMetadata, any) (certs.CSR, errors.SDKError)); ok {
+		return returnFunc(metadata, privKey)
+	}
+	if returnFunc, ok := ret.Get(0).(func(certs.CSRMetadata, any) certs.CSR); ok {
+		r0 = returnFunc(metadata, privKey)
+	} else {
+		r0 = ret.Get(0).(certs.CSR)
+	}
+	if returnFunc, ok := ret.Get(1).(func(certs.CSRMetadata, any) errors.SDKError); ok {
+		r1 = returnFunc(metadata, privKey)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(errors.SDKError)
+		}
+	}
+	return r0, r1
+}
+
+// SDK_CreateCSR_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateCSR'
+type SDK_CreateCSR_Call struct {
+	*mock.Call
+}
+
+// CreateCSR is a helper method to define mock.On call
+//   - metadata certs.CSRMetadata
+//   - privKey any
+func (_e *SDK_Expecter) CreateCSR(metadata interface{}, privKey interface{}) *SDK_CreateCSR_Call {
+	return &SDK_CreateCSR_Call{Call: _e.mock.On("CreateCSR", metadata, privKey)}
+}
+
+func (_c *SDK_CreateCSR_Call) Run(run func(metadata certs.CSRMetadata, privKey any)) *SDK_CreateCSR_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 certs.CSRMetadata
+		if args[0] != nil {
+			arg0 = args[0].(certs.CSRMetadata)
+		}
+		var arg1 any
+		if args[1] != nil {
+			arg1 = args[1].(any)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *SDK_CreateCSR_Call) Return(cSR certs.CSR, sDKError errors.SDKError) *SDK_CreateCSR_Call {
+	_c.Call.Return(cSR, sDKError)
+	return _c
+}
+
+func (_c *SDK_CreateCSR_Call) RunAndReturn(run func(metadata certs.CSRMetadata, privKey any) (certs.CSR, errors.SDKError)) *SDK_CreateCSR_Call {
+	_c.Call.Return(run)
+	return _c
 }
 
 // DeleteCert provides a mock function for the type SDK

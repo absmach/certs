@@ -34,10 +34,9 @@ import (
 )
 
 const (
-	certsEndpoint     = "certs"
-	csrEndpoint       = "csrs"
-	issueCertEndpoint = "certs/issue"
-	crlEndpoint       = "crl"
+	certsEndpoint = "certs"
+	csrEndpoint   = "csrs"
+	crlEndpoint   = "crl"
 )
 
 const (
@@ -261,6 +260,13 @@ type SDK interface {
 	//  response, _ := sdk.OCSP("serialNumber", "")
 	//  fmt.Println(response)
 	OCSP(serialNumber, cert string) (OCSPResponse, errors.SDKError)
+
+	// CreateCSR creates a Certificate Signing Request from metadata and private key.
+	//
+	// example:
+	//  csr, _ := sdk.CreateCSR(metadata, privateKey)
+	//  fmt.Println(csr)
+	CreateCSR(metadata certs.CSRMetadata, privKey any) (certs.CSR, errors.SDKError)
 
 	// ViewCA views the signing certificate
 	//
@@ -736,7 +742,7 @@ type csrReq struct {
 	CSR []byte `json:"csr,omitempty"`
 }
 
-func CreateCSR(metadata certs.CSRMetadata, privKey any) (certs.CSR, errors.SDKError) {
+func (sdk mgSDK) CreateCSR(metadata certs.CSRMetadata, privKey any) (certs.CSR, errors.SDKError) {
 	template := &x509.CertificateRequest{
 		Subject: pkix.Name{
 			CommonName:         metadata.CommonName,

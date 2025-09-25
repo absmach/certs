@@ -211,7 +211,7 @@ var cmdCerts = []cobra.Command{
 				return
 			}
 
-			csr, err := sdk.CreateCSR(pm, data)
+			csr, err := certsSdk.CreateCSR(pm, data)
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
