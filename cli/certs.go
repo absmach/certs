@@ -8,15 +8,15 @@ import (
 	"os"
 
 	"github.com/absmach/certs"
-	ctxsdk "github.com/absmach/certs/sdk"
+	"github.com/absmach/certs/sdk"
 	"github.com/spf13/cobra"
 )
 
 // Keep SDK handle in global var.
-var sdk ctxsdk.SDK
+var certsSdk sdk.SDK
 
-func SetSDK(s ctxsdk.SDK) {
-	sdk = s
+func SetSDK(s sdk.SDK) {
+	certsSdk = s
 }
 
 var cmdCerts = []cobra.Command{
@@ -31,11 +31,11 @@ var cmdCerts = []cobra.Command{
 			}
 
 			if args[0] == "all" {
-				pm := ctxsdk.PageMetadata{
+				pm := sdk.PageMetadata{
 					Limit:  Limit,
 					Offset: Offset,
 				}
-				page, err := sdk.ListCerts(pm, args[1], args[2])
+				page, err := certsSdk.ListCerts(pm, args[1], args[2])
 				if err != nil {
 					logErrorCmd(*cmd, err)
 					return
@@ -43,12 +43,12 @@ var cmdCerts = []cobra.Command{
 				logJSONCmd(*cmd, page)
 				return
 			}
-			pm := ctxsdk.PageMetadata{
+			pm := sdk.PageMetadata{
 				EntityID: args[0],
 				Limit:    Limit,
 				Offset:   Offset,
 			}
-			page, err := sdk.ListCerts(pm, args[1], args[2])
+			page, err := certsSdk.ListCerts(pm, args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -65,7 +65,7 @@ var cmdCerts = []cobra.Command{
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			err := sdk.RevokeCert(args[0], args[1], args[2])
+			err := certsSdk.RevokeCert(args[0], args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -82,7 +82,7 @@ var cmdCerts = []cobra.Command{
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			err := sdk.DeleteCert(args[0], args[1], args[2])
+			err := certsSdk.DeleteCert(args[0], args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -99,7 +99,7 @@ var cmdCerts = []cobra.Command{
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			_, err := sdk.RenewCert(args[0], args[1], args[2])
+			_, err := certsSdk.RenewCert(args[0], args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -130,7 +130,7 @@ var cmdCerts = []cobra.Command{
 				serialNumber = args[0]
 			}
 
-			response, err := sdk.OCSP(serialNumber, certContent)
+			response, err := certsSdk.OCSP(serialNumber, certContent)
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -147,7 +147,7 @@ var cmdCerts = []cobra.Command{
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			cert, err := sdk.ViewCert(args[0], args[1], args[2])
+			cert, err := certsSdk.ViewCert(args[0], args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -164,7 +164,7 @@ var cmdCerts = []cobra.Command{
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			cert, err := sdk.ViewCA()
+			cert, err := certsSdk.ViewCA()
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -181,7 +181,7 @@ var cmdCerts = []cobra.Command{
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			bundle, err := sdk.DownloadCA()
+			bundle, err := certsSdk.DownloadCA()
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -211,7 +211,7 @@ var cmdCerts = []cobra.Command{
 				return
 			}
 
-			csr, err := ctxsdk.CreateCSR(pm, data)
+			csr, err := sdk.CreateCSR(pm, data)
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -236,7 +236,7 @@ var cmdCerts = []cobra.Command{
 				return
 			}
 
-			cert, err := sdk.IssueFromCSR(args[0], args[1], string(csrData), args[3], args[4])
+			cert, err := certsSdk.IssueFromCSR(args[0], args[1], string(csrData), args[3], args[4])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -261,7 +261,7 @@ var cmdCerts = []cobra.Command{
 				return
 			}
 
-			cert, err := sdk.IssueFromCSRInternal(args[0], args[1], string(csrData), args[3])
+			cert, err := certsSdk.IssueFromCSRInternal(args[0], args[1], string(csrData), args[3])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -280,7 +280,7 @@ var cmdCerts = []cobra.Command{
 				return
 			}
 
-			crlBytes, err := sdk.GenerateCRL()
+			crlBytes, err := certsSdk.GenerateCRL()
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -297,7 +297,7 @@ var cmdCerts = []cobra.Command{
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			entityID, err := sdk.GetEntityID(args[0], args[1], args[2])
+			entityID, err := certsSdk.GetEntityID(args[0], args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -325,7 +325,7 @@ func NewCertsCmd() *cobra.Command {
 				return
 			}
 
-			var option ctxsdk.Options
+			var option sdk.Options
 			option.CommonName = args[1]
 
 			var domainID, token string
@@ -341,7 +341,7 @@ func NewCertsCmd() *cobra.Command {
 				token = args[5]
 			}
 
-			cert, err := sdk.IssueCert(args[0], ttl, ipAddrs, option, domainID, token)
+			cert, err := certsSdk.IssueCert(args[0], ttl, ipAddrs, option, domainID, token)
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
