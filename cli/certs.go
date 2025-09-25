@@ -4,21 +4,11 @@
 package cli
 
 import (
-	"crypto"
-	"crypto/ecdsa"
-	"crypto/ed25519"
-	"crypto/rand"
-	"crypto/rsa"
-	"crypto/x509"
-	"crypto/x509/pkix"
 	"encoding/json"
-	"encoding/pem"
-	"net"
 	"os"
 
 	"github.com/absmach/certs"
 	ctxsdk "github.com/absmach/certs/sdk"
-	"github.com/absmach/supermq/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -221,7 +211,7 @@ var cmdCerts = []cobra.Command{
 				return
 			}
 
-			csr, err := CreateCSR(pm, data)
+			csr, err := ctxsdk.CreateCSR(pm, data)
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -376,93 +366,4 @@ func NewCertsCmd() *cobra.Command {
 	}
 
 	return &cmd
-}
-
-func CreateCSR(metadata certs.CSRMetadata, privKey any) (certs.CSR, errors.SDKError) {
-	template := &x509.CertificateRequest{
-		Subject: pkix.Name{
-			CommonName:         metadata.CommonName,
-			Organization:       metadata.Organization,
-			OrganizationalUnit: metadata.OrganizationalUnit,
-			Country:            metadata.Country,
-			Province:           metadata.Province,
-			Locality:           metadata.Locality,
-			StreetAddress:      metadata.StreetAddress,
-			PostalCode:         metadata.PostalCode,
-		},
-		EmailAddresses:  metadata.EmailAddresses,
-		DNSNames:        metadata.DNSNames,
-		ExtraExtensions: metadata.ExtraExtensions,
-	}
-
-	for _, ip := range metadata.IPAddresses {
-		parsedIP := net.ParseIP(ip)
-		if parsedIP != nil {
-			template.IPAddresses = append(template.IPAddresses, parsedIP)
-		}
-	}
-
-	var signer crypto.Signer
-	var err error
-
-	actualKey := privKey
-	if keyBytes, ok := privKey.([]byte); ok {
-		actualKey, err = extractPrivateKey(keyBytes)
-		if err != nil {
-			return certs.CSR{}, errors.NewSDKError(errors.Wrap(certs.ErrCreateEntity, err))
-		}
-	}
-
-	switch key := actualKey.(type) {
-	case *rsa.PrivateKey, *ecdsa.PrivateKey:
-		signer = key.(crypto.Signer)
-	case ed25519.PrivateKey:
-		signer = key
-	default:
-		return certs.CSR{}, errors.NewSDKError(errors.Wrap(certs.ErrCreateEntity, certs.ErrPrivKeyType))
-	}
-
-	csrBytes, err := x509.CreateCertificateRequest(rand.Reader, template, signer)
-	if err != nil {
-		return certs.CSR{}, errors.NewSDKError(errors.Wrap(certs.ErrCreateEntity, err))
-	}
-
-	csrPEM := pem.EncodeToMemory(&pem.Block{
-		Type:  "CERTIFICATE REQUEST",
-		Bytes: csrBytes,
-	})
-
-	csr := certs.CSR{
-		CSR: csrPEM,
-	}
-
-	return csr, nil
-}
-
-func extractPrivateKey(pemKey []byte) (any, error) {
-	block, _ := pem.Decode(pemKey)
-	if block == nil {
-		return nil, errors.New("failed to parse private key PEM")
-	}
-
-	var (
-		privateKey any
-		err        error
-	)
-
-	switch block.Type {
-	case certs.RSAPrivateKey:
-		privateKey, err = x509.ParsePKCS1PrivateKey(block.Bytes)
-	case certs.ECPrivateKey:
-		privateKey, err = x509.ParseECPrivateKey(block.Bytes)
-	case certs.PrivateKey, certs.PKCS8PrivateKey, certs.EDPrivateKey:
-		privateKey, err = x509.ParsePKCS8PrivateKey(block.Bytes)
-	default:
-		err = certs.ErrPrivKeyType
-	}
-	if err != nil {
-		return nil, certs.ErrFailedParse
-	}
-
-	return privateKey, nil
 }
