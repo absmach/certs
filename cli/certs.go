@@ -4,29 +4,19 @@
 package cli
 
 import (
-	"crypto"
-	"crypto/ecdsa"
-	"crypto/ed25519"
-	"crypto/rand"
-	"crypto/rsa"
-	"crypto/x509"
-	"crypto/x509/pkix"
 	"encoding/json"
-	"encoding/pem"
-	"net"
 	"os"
 
 	"github.com/absmach/certs"
-	ctxsdk "github.com/absmach/certs/sdk"
-	"github.com/absmach/supermq/pkg/errors"
+	"github.com/absmach/certs/sdk"
 	"github.com/spf13/cobra"
 )
 
 // Keep SDK handle in global var.
-var sdk ctxsdk.SDK
+var certsSdk sdk.SDK
 
-func SetSDK(s ctxsdk.SDK) {
-	sdk = s
+func SetSDK(s sdk.SDK) {
+	certsSdk = s
 }
 
 var cmdCerts = []cobra.Command{
@@ -41,11 +31,11 @@ var cmdCerts = []cobra.Command{
 			}
 
 			if args[0] == "all" {
-				pm := ctxsdk.PageMetadata{
+				pm := sdk.PageMetadata{
 					Limit:  Limit,
 					Offset: Offset,
 				}
-				page, err := sdk.ListCerts(pm, args[1], args[2])
+				page, err := certsSdk.ListCerts(pm, args[1], args[2])
 				if err != nil {
 					logErrorCmd(*cmd, err)
 					return
@@ -53,12 +43,12 @@ var cmdCerts = []cobra.Command{
 				logJSONCmd(*cmd, page)
 				return
 			}
-			pm := ctxsdk.PageMetadata{
+			pm := sdk.PageMetadata{
 				EntityID: args[0],
 				Limit:    Limit,
 				Offset:   Offset,
 			}
-			page, err := sdk.ListCerts(pm, args[1], args[2])
+			page, err := certsSdk.ListCerts(pm, args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -75,7 +65,7 @@ var cmdCerts = []cobra.Command{
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			err := sdk.RevokeCert(args[0], args[1], args[2])
+			err := certsSdk.RevokeCert(args[0], args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -92,7 +82,7 @@ var cmdCerts = []cobra.Command{
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			err := sdk.DeleteCert(args[0], args[1], args[2])
+			err := certsSdk.DeleteCert(args[0], args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -109,7 +99,7 @@ var cmdCerts = []cobra.Command{
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			_, err := sdk.RenewCert(args[0], args[1], args[2])
+			_, err := certsSdk.RenewCert(args[0], args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -140,7 +130,7 @@ var cmdCerts = []cobra.Command{
 				serialNumber = args[0]
 			}
 
-			response, err := sdk.OCSP(serialNumber, certContent)
+			response, err := certsSdk.OCSP(serialNumber, certContent)
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -157,7 +147,7 @@ var cmdCerts = []cobra.Command{
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			cert, err := sdk.ViewCert(args[0], args[1], args[2])
+			cert, err := certsSdk.ViewCert(args[0], args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -174,7 +164,7 @@ var cmdCerts = []cobra.Command{
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			cert, err := sdk.ViewCA()
+			cert, err := certsSdk.ViewCA()
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -191,7 +181,7 @@ var cmdCerts = []cobra.Command{
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			bundle, err := sdk.DownloadCA()
+			bundle, err := certsSdk.DownloadCA()
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -221,7 +211,7 @@ var cmdCerts = []cobra.Command{
 				return
 			}
 
-			csr, err := CreateCSR(pm, data)
+			csr, err := certsSdk.CreateCSR(pm, data)
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -246,7 +236,7 @@ var cmdCerts = []cobra.Command{
 				return
 			}
 
-			cert, err := sdk.IssueFromCSR(args[0], args[1], string(csrData), args[3], args[4])
+			cert, err := certsSdk.IssueFromCSR(args[0], args[1], string(csrData), args[3], args[4])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -271,7 +261,7 @@ var cmdCerts = []cobra.Command{
 				return
 			}
 
-			cert, err := sdk.IssueFromCSRInternal(args[0], args[1], string(csrData), args[3])
+			cert, err := certsSdk.IssueFromCSRInternal(args[0], args[1], string(csrData), args[3])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -290,7 +280,7 @@ var cmdCerts = []cobra.Command{
 				return
 			}
 
-			crlBytes, err := sdk.GenerateCRL()
+			crlBytes, err := certsSdk.GenerateCRL()
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -307,7 +297,7 @@ var cmdCerts = []cobra.Command{
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			entityID, err := sdk.GetEntityID(args[0], args[1], args[2])
+			entityID, err := certsSdk.GetEntityID(args[0], args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -335,7 +325,7 @@ func NewCertsCmd() *cobra.Command {
 				return
 			}
 
-			var option ctxsdk.Options
+			var option sdk.Options
 			option.CommonName = args[1]
 
 			var domainID, token string
@@ -351,7 +341,7 @@ func NewCertsCmd() *cobra.Command {
 				token = args[5]
 			}
 
-			cert, err := sdk.IssueCert(args[0], ttl, ipAddrs, option, domainID, token)
+			cert, err := certsSdk.IssueCert(args[0], ttl, ipAddrs, option, domainID, token)
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -376,93 +366,4 @@ func NewCertsCmd() *cobra.Command {
 	}
 
 	return &cmd
-}
-
-func CreateCSR(metadata certs.CSRMetadata, privKey any) (certs.CSR, errors.SDKError) {
-	template := &x509.CertificateRequest{
-		Subject: pkix.Name{
-			CommonName:         metadata.CommonName,
-			Organization:       metadata.Organization,
-			OrganizationalUnit: metadata.OrganizationalUnit,
-			Country:            metadata.Country,
-			Province:           metadata.Province,
-			Locality:           metadata.Locality,
-			StreetAddress:      metadata.StreetAddress,
-			PostalCode:         metadata.PostalCode,
-		},
-		EmailAddresses:  metadata.EmailAddresses,
-		DNSNames:        metadata.DNSNames,
-		ExtraExtensions: metadata.ExtraExtensions,
-	}
-
-	for _, ip := range metadata.IPAddresses {
-		parsedIP := net.ParseIP(ip)
-		if parsedIP != nil {
-			template.IPAddresses = append(template.IPAddresses, parsedIP)
-		}
-	}
-
-	var signer crypto.Signer
-	var err error
-
-	actualKey := privKey
-	if keyBytes, ok := privKey.([]byte); ok {
-		actualKey, err = extractPrivateKey(keyBytes)
-		if err != nil {
-			return certs.CSR{}, errors.NewSDKError(errors.Wrap(certs.ErrCreateEntity, err))
-		}
-	}
-
-	switch key := actualKey.(type) {
-	case *rsa.PrivateKey, *ecdsa.PrivateKey:
-		signer = key.(crypto.Signer)
-	case ed25519.PrivateKey:
-		signer = key
-	default:
-		return certs.CSR{}, errors.NewSDKError(errors.Wrap(certs.ErrCreateEntity, certs.ErrPrivKeyType))
-	}
-
-	csrBytes, err := x509.CreateCertificateRequest(rand.Reader, template, signer)
-	if err != nil {
-		return certs.CSR{}, errors.NewSDKError(errors.Wrap(certs.ErrCreateEntity, err))
-	}
-
-	csrPEM := pem.EncodeToMemory(&pem.Block{
-		Type:  "CERTIFICATE REQUEST",
-		Bytes: csrBytes,
-	})
-
-	csr := certs.CSR{
-		CSR: csrPEM,
-	}
-
-	return csr, nil
-}
-
-func extractPrivateKey(pemKey []byte) (any, error) {
-	block, _ := pem.Decode(pemKey)
-	if block == nil {
-		return nil, errors.New("failed to parse private key PEM")
-	}
-
-	var (
-		privateKey any
-		err        error
-	)
-
-	switch block.Type {
-	case certs.RSAPrivateKey:
-		privateKey, err = x509.ParsePKCS1PrivateKey(block.Bytes)
-	case certs.ECPrivateKey:
-		privateKey, err = x509.ParseECPrivateKey(block.Bytes)
-	case certs.PrivateKey, certs.PKCS8PrivateKey, certs.EDPrivateKey:
-		privateKey, err = x509.ParsePKCS8PrivateKey(block.Bytes)
-	default:
-		err = certs.ErrPrivKeyType
-	}
-	if err != nil {
-		return nil, certs.ErrFailedParse
-	}
-
-	return privateKey, nil
 }
