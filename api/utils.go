@@ -17,9 +17,17 @@ func NormalizeSerialNumber(serial string) string {
 		cleaned = "0" + cleaned
 	}
 
-	n := len(cleaned) + (len(cleaned)/2 - 1)
+	// Calculate capacity: hex chars + colons between pairs
+	// For n hex chars, we need (n/2 - 1) colons, but ensure non-negative
+	var capacity int
+	if len(cleaned) >= 2 {
+		capacity = len(cleaned) + (len(cleaned)/2 - 1)
+	} else {
+		capacity = len(cleaned)
+	}
+
 	var result strings.Builder
-	result.Grow(n)
+	result.Grow(capacity)
 	for i := 0; i < len(cleaned); i += 2 {
 		if i > 0 {
 			result.WriteString(":")
