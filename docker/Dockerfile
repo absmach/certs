@@ -22,7 +22,7 @@ RUN apk update \
 
 FROM scratch
 
-# Required for billing service
+# Required for certs service
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=builder /exe /
 ENTRYPOINT ["/exe"]
