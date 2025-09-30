@@ -18,7 +18,7 @@ services:
     depends_on:
       - openbao
       - certs-db
-    restart: always
+    restart: on-failure
     networks:
       - certs-base-net
     environment:
