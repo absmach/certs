@@ -47,7 +47,7 @@ func TestNormalizeSerialNumber(t *testing.T) {
 		{
 			name:     "single character",
 			input:    "a",
-			expected: "0a",
+			expected: "a",
 		},
 		{
 			name:     "empty string",

@@ -9,21 +9,16 @@ var serialReplacer = strings.NewReplacer(":", "", " ", "")
 
 // NormalizeSerialNumber normalizes a serial number to use colon-separated hex format.
 func NormalizeSerialNumber(serial string) string {
+	if len(serial) < 2 {
+		return serialReplacer.Replace(serial)
+	}
 	cleaned := serialReplacer.Replace(serial)
-
 	cleaned = strings.ToLower(cleaned)
-
 	if len(cleaned)%2 != 0 {
 		cleaned = "0" + cleaned
 	}
 
-	var capacity int
-	if len(cleaned) >= 2 {
-		capacity = len(cleaned) + (len(cleaned)/2 - 1)
-	} else {
-		capacity = len(cleaned)
-	}
-
+	capacity := len(cleaned) + (len(cleaned)/2 - 1)
 	var result strings.Builder
 	result.Grow(capacity)
 	for i := 0; i < len(cleaned); i += 2 {
