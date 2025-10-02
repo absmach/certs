@@ -90,7 +90,7 @@ func main() {
 	if cfg.InstanceID == "" {
 		cfg.InstanceID, err = uuid.New().ID()
 		if err != nil {
-			log.Fatalf("failed to generate instance ID: %v", err)
+			logger.Error(fmt.Sprintf("failed to generate instance ID: %v", err))
 			exitCode = 1
 			return
 		}
