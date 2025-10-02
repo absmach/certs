@@ -649,8 +649,9 @@ func (agent *openbaoPKIAgent) SignCSR(csr []byte, ttl string) (certs.Certificate
 	}
 
 	secretValues := map[string]any{
-		"csr": string(csr),
-		"ttl": ttl,
+		"csr":            string(csr),
+		"ttl":            ttl,
+		"use_csr_values": true,
 	}
 
 	if len(allDNSNames) > 0 {
