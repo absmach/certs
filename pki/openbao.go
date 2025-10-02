@@ -604,14 +604,6 @@ func (agent *openbaoPKIAgent) SignCSR(csr []byte, ttl string) (certs.Certificate
 		return certs.Certificate{}, fmt.Errorf("failed to parse CSR: %w", err)
 	}
 
-	// Extract extensions from CSR for logging/debugging
-	if len(csrData.Extensions) > 0 {
-		agent.logger.Info("CSR contains extensions", "count", len(csrData.Extensions))
-		for i, ext := range csrData.Extensions {
-			agent.logger.Debug("CSR extension", "index", i, "oid", ext.Id.String(), "critical", ext.Critical)
-		}
-	}
-
 	existingDNSNames := csrData.DNSNames
 	var existingIPs []string
 	for _, ip := range csrData.IPAddresses {
@@ -675,16 +667,6 @@ func (agent *openbaoPKIAgent) SignCSR(csr []byte, ttl string) (certs.Certificate
 
 	if certData, ok := secret.Data["certificate"].(string); ok {
 		cert.Certificate = []byte(certData)
-		
-		// Log if extensions were preserved
-		if block, _ := pem.Decode([]byte(certData)); block != nil {
-			if x509Cert, err := x509.ParseCertificate(block.Bytes); err == nil {
-				agent.logger.Info("Issued certificate extensions", "count", len(x509Cert.Extensions))
-				for i, ext := range x509Cert.Extensions {
-					agent.logger.Debug("Certificate extension", "index", i, "oid", ext.Id.String(), "critical", ext.Critical)
-				}
-			}
-		}
 	}
 
 	if serialNumber, ok := secret.Data["serial_number"].(string); ok {
