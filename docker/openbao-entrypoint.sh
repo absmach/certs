@@ -270,7 +270,8 @@ if [ ! -f /opt/openbao/data/configured ]; then
     key_usage=\"DigitalSignature,KeyEncipherment,KeyAgreement\" \
     ext_key_usage=\"ServerAuth,ClientAuth,OCSPSigning\" \
     use_csr_common_name=true \
-    use_csr_sans=false \
+    use_csr_sans=true \
+    copy_extensions=true \
     max_ttl=720h \
     ttl=720h"
 
