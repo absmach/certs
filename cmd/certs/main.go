@@ -24,6 +24,7 @@ import (
 	"github.com/absmach/certs/pki"
 	"github.com/absmach/certs/postgres"
 	"github.com/absmach/certs/tracing"
+	smqlog "github.com/absmach/supermq/logger"
 	smqauthn "github.com/absmach/supermq/pkg/authn"
 	authsvcAuthn "github.com/absmach/supermq/pkg/authn/authsvc"
 	smqauthz "github.com/absmach/supermq/pkg/authz"
@@ -83,37 +84,48 @@ func main() {
 		log.Fatalf("failed to initialize logger: %v", err)
 	}
 
+	var exitCode int
+	defer smqlog.ExitWithError(&exitCode)
+
 	if cfg.InstanceID == "" {
 		cfg.InstanceID, err = uuid.New().ID()
 		if err != nil {
 			log.Fatalf("failed to generate instance ID: %v", err)
+			exitCode = 1
+			return
 		}
 	}
 
 	if cfg.OpenBaoHost == "" {
 		logger.Error("No host specified for OpenBao PKI engine")
+		exitCode = 1
 		return
 	}
 
 	if cfg.OpenBaoAppRole == "" || cfg.OpenBaoAppSecret == "" {
 		logger.Error("OpenBao AppRole credentials not specified")
+		exitCode = 1
 		return
 	}
 
 	pkiAgent, err := pki.NewAgent(cfg.OpenBaoAppRole, cfg.OpenBaoAppSecret, cfg.OpenBaoHost, cfg.OpenBaoNamespace, cfg.OpenBaoPKIPath, cfg.OpenBaoRole, logger)
 	if err != nil {
 		logger.Error("failed to configure client for OpenBao PKI engine")
+		exitCode = 1
 		return
 	}
 
 	dbConfig := pgclient.Config{Name: defDB}
 	if err := env.ParseWithOptions(&dbConfig, env.Options{Prefix: envPrefixDB}); err != nil {
 		logger.Error(err.Error())
+		exitCode = 1
+		return
 	}
 	migrations := postgres.Migration()
 	db, err := pgclient.Setup(dbConfig, *migrations)
 	if err != nil {
 		logger.Error(err.Error())
+		exitCode = 1
 		return
 	}
 	defer db.Close()
@@ -121,6 +133,8 @@ func main() {
 	tp, err := jaegerClient.NewProvider(ctx, svcName, cfg.JaegerURL, cfg.InstanceID, cfg.TraceRatio)
 	if err != nil {
 		logger.Error(fmt.Sprintf("Failed to init Jaeger: %s", err))
+		exitCode = 1
+		return
 	}
 	defer func() {
 		if err := tp.Shutdown(ctx); err != nil {
@@ -132,11 +146,13 @@ func main() {
 	domsGrpcCfg := grpcclient.Config{}
 	if err := env.ParseWithOptions(&domsGrpcCfg, env.Options{Prefix: envPrefixDomains}); err != nil {
 		logger.Error(fmt.Sprintf("failed to load domains gRPC client configuration : %s", err))
+		exitCode = 1
 		return
 	}
 	domAuthz, _, domainsHandler, err := domainsAuthz.NewAuthorization(ctx, domsGrpcCfg)
 	if err != nil {
 		logger.Error(err.Error())
+		exitCode = 1
 		return
 	}
 	defer domainsHandler.Close()
@@ -144,12 +160,14 @@ func main() {
 	authClientConfig := grpcclient.Config{}
 	if err := env.ParseWithOptions(&authClientConfig, env.Options{Prefix: envPrefixAuth}); err != nil {
 		logger.Error(fmt.Sprintf("failed to load %s auth configuration : %s", svcName, err))
+		exitCode = 1
 		return
 	}
 
 	authn, authnHandler, err := authsvcAuthn.NewAuthentication(ctx, authClientConfig)
 	if err != nil {
 		logger.Error("failed to create authn " + err.Error())
+		exitCode = 1
 		return
 	}
 	defer authnHandler.Close()
@@ -158,6 +176,7 @@ func main() {
 	authz, authzHandler, err := authsvcAuthz.NewAuthorization(ctx, authClientConfig, domAuthz)
 	if err != nil {
 		logger.Error("failed to create authz " + err.Error())
+		exitCode = 1
 		return
 	}
 	defer authzHandler.Close()
@@ -165,6 +184,8 @@ func main() {
 	httpServerConfig := smq.Config{Port: defSvcHTTPPort}
 	if err := env.ParseWithOptions(&httpServerConfig, env.Options{Prefix: envPrefixHTTP}); err != nil {
 		logger.Error(fmt.Sprintf("failed to load %s gRPC server configuration : %s", svcName, err))
+		exitCode = 1
+		return
 	}
 
 	svc := newService(ctx, db, dbConfig, tracer, logger, pkiAgent, authz)
@@ -172,6 +193,7 @@ func main() {
 	grpcServerConfig := smq.Config{Port: defSvcGRPCPort}
 	if err := env.ParseWithOptions(&grpcServerConfig, env.Options{Prefix: envPrefixGRPC}); err != nil {
 		log.Printf("failed to load %s gRPC server configuration : %s", svcName, err.Error())
+		exitCode = 1
 		return
 	}
 
