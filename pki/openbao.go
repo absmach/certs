@@ -604,31 +604,99 @@ func (agent *openbaoPKIAgent) SignCSR(csr []byte, ttl string) (certs.Certificate
 		return certs.Certificate{}, fmt.Errorf("failed to parse CSR: %w", err)
 	}
 
-	agent.logger.Info("Processing CSR", "has_extensions", len(csrData.Extensions) > 0, "extension_count", len(csrData.Extensions))
-
-	options := certs.SubjectOptions{
-		CommonName:         csrData.Subject.CommonName,
-		Organization:       csrData.Subject.Organization,
-		OrganizationalUnit: csrData.Subject.OrganizationalUnit,
-		Country:            csrData.Subject.Country,
-		Province:           csrData.Subject.Province,
-		Locality:           csrData.Subject.Locality,
-		StreetAddress:      csrData.Subject.StreetAddress,
-		PostalCode:         csrData.Subject.PostalCode,
-		DnsNames:           csrData.DNSNames,
-		IpAddresses:        csrData.IPAddresses,
-	}
-
-	var ipAddrs []string
+	existingDNSNames := csrData.DNSNames
+	var existingIPs []string
 	for _, ip := range csrData.IPAddresses {
-		ipAddrs = append(ipAddrs, ip.String())
+		existingIPs = append(existingIPs, ip.String())
 	}
 
-	agent.logger.Info("Using Issue endpoint to preserve CSR data and potentially extensions")
-	
-	// Use the Issue endpoint instead of SignCSR endpoint
-	// This approach extracts all data from CSR and issues a new certificate
-	return agent.Issue(ttl, ipAddrs, options)
+	defaultDNSNames, defaultIPSANs, err := agent.getIntermediateCADefaultSANs()
+	if err != nil {
+		defaultDNSNames = []string{}
+		defaultIPSANs = []string{}
+	}
+
+	allDNSNames := make([]string, 0)
+	allDNSNames = append(allDNSNames, existingDNSNames...)
+
+	for _, defaultDNS := range defaultDNSNames {
+		found := false
+		for _, existing := range allDNSNames {
+			if existing == defaultDNS {
+				found = true
+				break
+			}
+		}
+		if !found {
+			allDNSNames = append(allDNSNames, defaultDNS)
+		}
+	}
+
+	allIPs := make([]string, 0)
+	allIPs = append(allIPs, existingIPs...)
+
+	for _, defaultIP := range defaultIPSANs {
+		found := false
+		for _, existing := range allIPs {
+			if existing == defaultIP {
+				found = true
+				break
+			}
+		}
+		if !found {
+			allIPs = append(allIPs, defaultIP)
+		}
+	}
+
+	secretValues := map[string]any{
+		"csr":            string(csr),
+		"ttl":            ttl,
+		"use_csr_values": true,
+	}
+
+	if len(allDNSNames) > 0 {
+		altNamesValue := strings.Join(allDNSNames, ",")
+		secretValues["alt_names"] = altNamesValue
+	}
+
+	if len(allIPs) > 0 {
+		ipSansValue := strings.Join(allIPs, ",")
+		secretValues["ip_sans"] = ipSansValue
+	}
+
+	secret, err := agent.client.Logical().Write(agent.signURL, secretValues)
+	if err != nil {
+		return certs.Certificate{}, err
+	}
+
+	if secret == nil || secret.Data == nil {
+		return certs.Certificate{}, fmt.Errorf("no certificate data returned from OpenBao")
+	}
+
+	cert := certs.Certificate{}
+
+	if certData, ok := secret.Data["certificate"].(string); ok {
+		cert.Certificate = []byte(certData)
+	}
+
+	if serialNumber, ok := secret.Data["serial_number"].(string); ok {
+		cert.SerialNumber = serialNumber
+	}
+
+	if expirationInterface, ok := secret.Data["expiration"]; ok {
+		switch exp := expirationInterface.(type) {
+		case int64:
+			cert.ExpiryTime = time.Unix(exp, 0)
+		case float64:
+			cert.ExpiryTime = time.Unix(int64(exp), 0)
+		case json.Number:
+			if expInt, err := exp.Int64(); err == nil {
+				cert.ExpiryTime = time.Unix(expInt, 0)
+			}
+		}
+	}
+
+	return cert, nil
 }
 
 func (agent *openbaoPKIAgent) OCSP(serialNumber string, ocspRequestDER []byte) ([]byte, error) {
