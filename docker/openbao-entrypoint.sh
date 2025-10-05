@@ -287,6 +287,9 @@ path "pki_int/issue/${AM_CERTS_OPENBAO_PKI_ROLE}" {
 path "pki_int/sign/${AM_CERTS_OPENBAO_PKI_ROLE}" {
   capabilities = ["create", "update"]
 }
+path "pki_int/sign-verbatim/${AM_CERTS_OPENBAO_PKI_ROLE}" {
+  capabilities = ["create", "update"]
+}
 path "pki_int/certs" {
   capabilities = ["list"]
 }

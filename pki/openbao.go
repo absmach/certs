@@ -24,15 +24,16 @@ import (
 )
 
 const (
-	issue     = "issue"
-	sign      = "sign"
-	cert      = "cert"
-	revoke    = "revoke"
-	ca        = "ca"
-	caChain   = "ca_chain"
-	crl       = "crl"
-	ocspPath  = "ocsp"
-	certsList = "certs"
+	issue        = "issue"
+	sign         = "sign"
+	cert         = "cert"
+	revoke       = "revoke"
+	ca           = "ca"
+	caChain      = "ca_chain"
+	crl          = "crl"
+	ocspPath     = "ocsp"
+	certsList    = "certs"
+	signVerbatim = "sign-verbatim"
 )
 
 var (
@@ -51,6 +52,7 @@ type openbaoPKIAgent struct {
 	host             string
 	issueURL         string
 	signURL          string
+	signVerbatimURL  string
 	readURL          string
 	revokeURL        string
 	caURL            string
@@ -92,6 +94,7 @@ func NewAgent(appRole, appSecret, host, namespace, path, role string, logger *sl
 		logger:           logger,
 		issueURL:         fmt.Sprintf("%s/%s/%s", intermediatePath, issue, role),
 		signURL:          fmt.Sprintf("%s/%s/%s", intermediatePath, sign, role),
+		signVerbatimURL:  fmt.Sprintf("%s/%s/%s", intermediatePath, signVerbatim, role),
 		readURL:          fmt.Sprintf("%s/%s/", intermediatePath, cert),
 		revokeURL:        fmt.Sprintf("%s/%s", intermediatePath, revoke),
 		caURL:            fmt.Sprintf("%s/%s", intermediatePath, ca),
@@ -604,67 +607,76 @@ func (agent *openbaoPKIAgent) SignCSR(csr []byte, ttl string) (certs.Certificate
 		return certs.Certificate{}, fmt.Errorf("failed to parse CSR: %w", err)
 	}
 
-	existingDNSNames := csrData.DNSNames
-	var existingIPs []string
-	for _, ip := range csrData.IPAddresses {
-		existingIPs = append(existingIPs, ip.String())
-	}
-
-	defaultDNSNames, defaultIPSANs, err := agent.getIntermediateCADefaultSANs()
-	if err != nil {
-		defaultDNSNames = []string{}
-		defaultIPSANs = []string{}
-	}
-
-	allDNSNames := make([]string, 0)
-	allDNSNames = append(allDNSNames, existingDNSNames...)
-
-	for _, defaultDNS := range defaultDNSNames {
-		found := false
-		for _, existing := range allDNSNames {
-			if existing == defaultDNS {
-				found = true
-				break
-			}
-		}
-		if !found {
-			allDNSNames = append(allDNSNames, defaultDNS)
-		}
-	}
-
-	allIPs := make([]string, 0)
-	allIPs = append(allIPs, existingIPs...)
-
-	for _, defaultIP := range defaultIPSANs {
-		found := false
-		for _, existing := range allIPs {
-			if existing == defaultIP {
-				found = true
-				break
-			}
-		}
-		if !found {
-			allIPs = append(allIPs, defaultIP)
-		}
-	}
-
 	secretValues := map[string]any{
 		"csr":            string(csr),
 		"ttl":            ttl,
 		"use_csr_values": true,
 	}
 
-	if len(allDNSNames) > 0 {
-		altNamesValue := strings.Join(allDNSNames, ",")
-		secretValues["alt_names"] = altNamesValue
+	useVerbatim := len(csrData.Extensions) > 0
+
+	if !useVerbatim {
+		existingDNSNames := csrData.DNSNames
+		var existingIPs []string
+		for _, ip := range csrData.IPAddresses {
+			existingIPs = append(existingIPs, ip.String())
+		}
+
+		defaultDNSNames, defaultIPSANs, err := agent.getIntermediateCADefaultSANs()
+		if err != nil {
+			defaultDNSNames = []string{}
+			defaultIPSANs = []string{}
+		}
+
+		allDNSNames := make([]string, 0)
+		allDNSNames = append(allDNSNames, existingDNSNames...)
+
+		for _, defaultDNS := range defaultDNSNames {
+			found := false
+			for _, existing := range allDNSNames {
+				if existing == defaultDNS {
+					found = true
+					break
+				}
+			}
+			if !found {
+				allDNSNames = append(allDNSNames, defaultDNS)
+			}
+		}
+
+		allIPs := make([]string, 0)
+		allIPs = append(allIPs, existingIPs...)
+
+		for _, defaultIP := range defaultIPSANs {
+			found := false
+			for _, existing := range allIPs {
+				if existing == defaultIP {
+					found = true
+					break
+				}
+			}
+			if !found {
+				allIPs = append(allIPs, defaultIP)
+			}
+		}
+
+		if len(allDNSNames) > 0 {
+			altNamesValue := strings.Join(allDNSNames, ",")
+			secretValues["alt_names"] = altNamesValue
+		}
+
+		if len(allIPs) > 0 {
+			ipSansValue := strings.Join(allIPs, ",")
+			secretValues["ip_sans"] = ipSansValue
+		}
 	}
 
-	if len(allIPs) > 0 {
-		ipSansValue := strings.Join(allIPs, ",")
-		secretValues["ip_sans"] = ipSansValue
+	path := agent.signURL
+	if useVerbatim {
+		path = agent.signVerbatimURL
 	}
 
-	secret, err := agent.client.Logical().Write(agent.signURL, secretValues)
+	secret, err := agent.client.Logical().Write(path, secretValues)
 	if err != nil {
 		return certs.Certificate{}, err
 	}
