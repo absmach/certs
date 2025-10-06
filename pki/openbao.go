@@ -613,68 +613,61 @@ func (agent *openbaoPKIAgent) SignCSR(csr []byte, ttl string) (certs.Certificate
 		"use_csr_values": true,
 	}
 
-	useVerbatim := len(csrData.Extensions) > 0
+	existingDNSNames := csrData.DNSNames
+	var existingIPs []string
+	for _, ip := range csrData.IPAddresses {
+		existingIPs = append(existingIPs, ip.String())
+	}
 
-	if !useVerbatim {
-		existingDNSNames := csrData.DNSNames
-		var existingIPs []string
-		for _, ip := range csrData.IPAddresses {
-			existingIPs = append(existingIPs, ip.String())
-		}
+	defaultDNSNames, defaultIPSANs, err := agent.getIntermediateCADefaultSANs()
+	if err != nil {
+		defaultDNSNames = []string{}
+		defaultIPSANs = []string{}
+	}
 
-		defaultDNSNames, defaultIPSANs, err := agent.getIntermediateCADefaultSANs()
-		if err != nil {
-			defaultDNSNames = []string{}
-			defaultIPSANs = []string{}
-		}
+	allDNSNames := make([]string, 0)
+	allDNSNames = append(allDNSNames, existingDNSNames...)
 
-		allDNSNames := make([]string, 0)
-		allDNSNames = append(allDNSNames, existingDNSNames...)
-
-		for _, defaultDNS := range defaultDNSNames {
-			found := false
-			for _, existing := range allDNSNames {
-				if existing == defaultDNS {
-					found = true
-					break
-				}
-			}
-			if !found {
-				allDNSNames = append(allDNSNames, defaultDNS)
+	for _, defaultDNS := range defaultDNSNames {
+		found := false
+		for _, existing := range allDNSNames {
+			if existing == defaultDNS {
+				found = true
+				break
 			}
 		}
-
-		allIPs := make([]string, 0)
-		allIPs = append(allIPs, existingIPs...)
-
-		for _, defaultIP := range defaultIPSANs {
-			found := false
-			for _, existing := range allIPs {
-				if existing == defaultIP {
-					found = true
-					break
-				}
-			}
-			if !found {
-				allIPs = append(allIPs, defaultIP)
-			}
-		}
-
-		if len(allDNSNames) > 0 {
-			altNamesValue := strings.Join(allDNSNames, ",")
-			secretValues["alt_names"] = altNamesValue
-		}
-
-		if len(allIPs) > 0 {
-			ipSansValue := strings.Join(allIPs, ",")
-			secretValues["ip_sans"] = ipSansValue
+		if !found {
+			allDNSNames = append(allDNSNames, defaultDNS)
 		}
 	}
 
-	path := agent.signURL
-	if useVerbatim {
-		path = agent.signVerbatimURL
+	allIPs := make([]string, 0)
+	allIPs = append(allIPs, existingIPs...)
+
+	for _, defaultIP := range defaultIPSANs {
+		found := false
+		for _, existing := range allIPs {
+			if existing == defaultIP {
+				found = true
+				break
+			}
+		}
+		if !found {
+			allIPs = append(allIPs, defaultIP)
+		}
 	}
+
+	if len(allDNSNames) > 0 {
+		altNamesValue := strings.Join(allDNSNames, ",")
+		secretValues["alt_names"] = altNamesValue
+	}
+
+	if len(allIPs) > 0 {
+		ipSansValue := strings.Join(allIPs, ",")
+		secretValues["ip_sans"] = ipSansValue
+	}
+
+	path := agent.signVerbatimURL
 
 	secret, err := agent.client.Logical().Write(path, secretValues)
 	if err != nil {
