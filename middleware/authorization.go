@@ -5,7 +5,6 @@ package middleware
 
 import (
 	"context"
-	"fmt"
 
 	crt "github.com/absmach/certs"
 	"github.com/absmach/supermq/pkg/authn"
@@ -95,28 +94,7 @@ func (am *authorizationMiddleware) IssueFromCSRInternal(ctx context.Context, ent
 	return am.svc.IssueFromCSRInternal(ctx, entityID, ttl, csr)
 }
 
-func (am *authorizationMiddleware) checkSuperAdmin(ctx context.Context, adminID string) error {
-	if err := am.authz.Authorize(ctx, authz.PolicyReq{
-		SubjectType: policies.UserType,
-		Subject:     adminID,
-		Permission:  policies.AdminPermission,
-		ObjectType:  policies.PlatformType,
-		Object:      policies.SuperMQObject,
-	}); err != nil {
-		return err
-	}
-	return nil
-}
-
 func (am *authorizationMiddleware) checkUserDomainPermission(ctx context.Context, session authn.Session, permission string) error {
-	if err := am.checkAdmin(ctx, session.UserID); err != nil {
-		return err
-	}
-
-	if err := am.checkDomainAdmin(ctx, session.UserID, session.DomainID); err != nil {
-		return err
-	}
-
 	req := authz.PolicyReq{
 		Domain:      session.DomainID,
 		SubjectType: policies.UserType,
@@ -129,41 +107,5 @@ func (am *authorizationMiddleware) checkUserDomainPermission(ctx context.Context
 	if err := am.authz.Authorize(ctx, req); err != nil {
 		return errors.Wrap(svcerr.ErrAuthorization, err)
 	}
-	return nil
-}
-
-func (am *authorizationMiddleware) checkAdmin(ctx context.Context, adminID string) error {
-	if err := am.checkSuperAdmin(ctx, adminID); err == nil {
-		return nil
-	}
-
-	if err := am.authz.Authorize(ctx, authz.PolicyReq{
-		SubjectType: policies.UserType,
-		SubjectKind: policies.UsersKind,
-		Subject:     adminID,
-		Relation:    policies.AdministratorRelation,
-		Permission:  policies.AdminPermission,
-		ObjectType:  policies.PlatformType,
-		Object:      policies.SuperMQObject,
-	}); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (am *authorizationMiddleware) checkDomainAdmin(ctx context.Context, usrID, domainID string) error {
-	if err := am.authz.Authorize(ctx, authz.PolicyReq{
-		Domain:      domainID,
-		SubjectType: policies.UserType,
-		SubjectKind: policies.UsersKind,
-		Subject:     fmt.Sprintf("%s_%s", domainID, usrID),
-		Permission:  policies.AdminPermission,
-		ObjectType:  policies.DomainType,
-		Object:      domainID,
-	}); err != nil {
-		return errors.Wrap(svcerr.ErrAuthorization, err)
-	}
-
 	return nil
 }
