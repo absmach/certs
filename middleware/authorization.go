@@ -109,14 +109,6 @@ func (am *authorizationMiddleware) checkSuperAdmin(ctx context.Context, adminID 
 }
 
 func (am *authorizationMiddleware) checkUserDomainPermission(ctx context.Context, session authn.Session, permission string) error {
-	if err := am.checkAdmin(ctx, session.UserID); err != nil {
-		return err
-	}
-
-	if err := am.checkDomainAdmin(ctx, session.UserID, session.DomainID); err != nil {
-		return err
-	}
-
 	req := authz.PolicyReq{
 		Domain:      session.DomainID,
 		SubjectType: policies.UserType,
