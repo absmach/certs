@@ -166,9 +166,7 @@ type Config struct {
 }
 
 type sdk struct {
-	certsURL string
-	HostURL  string
-
+	certsURL       string
 	msgContentType ContentType
 	client         *http.Client
 	curlFlag       bool
@@ -625,7 +623,6 @@ func (s sdk) EntityID(ctx context.Context, serialNumber, domainID, token string)
 func NewSDK(conf Config) SDK {
 	return &sdk{
 		certsURL: conf.CertsURL,
-		HostURL:  conf.HostURL,
 
 		msgContentType: conf.MsgContentType,
 		client: &http.Client{
