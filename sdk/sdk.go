@@ -165,7 +165,7 @@ type Config struct {
 	CurlFlag        bool
 }
 
-type mgSDK struct {
+type sdk struct {
 	certsURL string
 	HostURL  string
 
@@ -318,7 +318,7 @@ type SDK interface {
 	EntityID(ctx context.Context, serialNumber, domainID, token string) (string, errors.SDKError)
 }
 
-func (sdk mgSDK) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, opts Options, domainID, token string) (Certificate, errors.SDKError) {
+func (s sdk) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, opts Options, domainID, token string) (Certificate, errors.SDKError) {
 	r := certReq{
 		IpAddrs: ipAddrs,
 		TTL:     ttl,
@@ -328,8 +328,8 @@ func (sdk mgSDK) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []
 	if err != nil {
 		return Certificate{}, errors.NewSDKError(err)
 	}
-	url := fmt.Sprintf("%s/%s/%s/issue/%s", sdk.certsURL, domainID, certsEndpoint, entityID)
-	_, body, sdkerr := sdk.processRequest(ctx, http.MethodPost, url, token, d, nil, http.StatusCreated)
+	url := fmt.Sprintf("%s/%s/%s/issue/%s", s.certsURL, domainID, certsEndpoint, entityID)
+	_, body, sdkerr := s.processRequest(ctx, http.MethodPost, url, token, d, nil, http.StatusCreated)
 	if sdkerr != nil {
 		return Certificate{}, sdkerr
 	}
@@ -341,10 +341,10 @@ func (sdk mgSDK) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []
 	return cert, nil
 }
 
-func (sdk mgSDK) ViewCert(ctx context.Context, serialNumber, domainID, token string) (Certificate, errors.SDKError) {
-	url := fmt.Sprintf("%s/%s/%s/%s", sdk.certsURL, domainID, certsEndpoint, serialNumber)
+func (s sdk) ViewCert(ctx context.Context, serialNumber, domainID, token string) (Certificate, errors.SDKError) {
+	url := fmt.Sprintf("%s/%s/%s/%s", s.certsURL, domainID, certsEndpoint, serialNumber)
 
-	_, body, sdkerr := sdk.processRequest(ctx, http.MethodGet, url, token, nil, nil, http.StatusOK)
+	_, body, sdkerr := s.processRequest(ctx, http.MethodGet, url, token, nil, nil, http.StatusOK)
 	if sdkerr != nil {
 		return Certificate{}, sdkerr
 	}
@@ -356,17 +356,17 @@ func (sdk mgSDK) ViewCert(ctx context.Context, serialNumber, domainID, token str
 	return cert, nil
 }
 
-func (sdk mgSDK) RevokeCert(ctx context.Context, serialNumber, domainID, token string) errors.SDKError {
-	url := fmt.Sprintf("%s/%s/%s/%s/revoke", sdk.certsURL, domainID, certsEndpoint, serialNumber)
+func (s sdk) RevokeCert(ctx context.Context, serialNumber, domainID, token string) errors.SDKError {
+	url := fmt.Sprintf("%s/%s/%s/%s/revoke", s.certsURL, domainID, certsEndpoint, serialNumber)
 
-	_, _, sdkerr := sdk.processRequest(ctx, http.MethodPatch, url, token, nil, nil, http.StatusNoContent)
+	_, _, sdkerr := s.processRequest(ctx, http.MethodPatch, url, token, nil, nil, http.StatusNoContent)
 	return sdkerr
 }
 
-func (sdk mgSDK) RenewCert(ctx context.Context, serialNumber, domainID, token string) (Certificate, errors.SDKError) {
-	url := fmt.Sprintf("%s/%s/%s/%s/renew", sdk.certsURL, domainID, certsEndpoint, serialNumber)
+func (s sdk) RenewCert(ctx context.Context, serialNumber, domainID, token string) (Certificate, errors.SDKError) {
+	url := fmt.Sprintf("%s/%s/%s/%s/renew", s.certsURL, domainID, certsEndpoint, serialNumber)
 
-	_, body, sdkerr := sdk.processRequest(ctx, http.MethodPatch, url, token, nil, nil, http.StatusOK)
+	_, body, sdkerr := s.processRequest(ctx, http.MethodPatch, url, token, nil, nil, http.StatusOK)
 	if sdkerr != nil {
 		return Certificate{}, sdkerr
 	}
@@ -382,13 +382,13 @@ func (sdk mgSDK) RenewCert(ctx context.Context, serialNumber, domainID, token st
 	return renewRes.Certificate, nil
 }
 
-func (sdk mgSDK) ListCerts(ctx context.Context, pm PageMetadata, domainID, token string) (CertificatePage, errors.SDKError) {
-	url, err := sdk.withQueryParams(fmt.Sprintf("%s/%s/%s", sdk.certsURL, domainID, certsEndpoint), "", pm)
+func (s sdk) ListCerts(ctx context.Context, pm PageMetadata, domainID, token string) (CertificatePage, errors.SDKError) {
+	url, err := s.withQueryParams(fmt.Sprintf("%s/%s/%s", s.certsURL, domainID, certsEndpoint), "", pm)
 	if err != nil {
 		return CertificatePage{}, errors.NewSDKError(err)
 	}
 
-	_, body, sdkerr := sdk.processRequest(ctx, http.MethodGet, url, token, nil, nil, http.StatusOK)
+	_, body, sdkerr := s.processRequest(ctx, http.MethodGet, url, token, nil, nil, http.StatusOK)
 	if sdkerr != nil {
 		return CertificatePage{}, sdkerr
 	}
@@ -399,14 +399,14 @@ func (sdk mgSDK) ListCerts(ctx context.Context, pm PageMetadata, domainID, token
 	return cp, nil
 }
 
-func (sdk mgSDK) DeleteCert(ctx context.Context, entityID, domainID, token string) errors.SDKError {
-	url := fmt.Sprintf("%s/%s/%s/%s/delete", sdk.certsURL, domainID, certsEndpoint, entityID)
+func (s sdk) DeleteCert(ctx context.Context, entityID, domainID, token string) errors.SDKError {
+	url := fmt.Sprintf("%s/%s/%s/%s/delete", s.certsURL, domainID, certsEndpoint, entityID)
 
-	_, _, sdkerr := sdk.processRequest(ctx, http.MethodDelete, url, token, nil, nil, http.StatusNoContent)
+	_, _, sdkerr := s.processRequest(ctx, http.MethodDelete, url, token, nil, nil, http.StatusNoContent)
 	return sdkerr
 }
 
-func (sdk mgSDK) OCSP(ctx context.Context, serialNumber, cert string) (OCSPResponse, errors.SDKError) {
+func (s sdk) OCSP(ctx context.Context, serialNumber, cert string) (OCSPResponse, errors.SDKError) {
 	if serialNumber == "" && cert == "" {
 		return OCSPResponse{}, errors.NewSDKError(errors.New("either serial number or certificate must be provided"))
 	}
@@ -429,9 +429,9 @@ func (sdk mgSDK) OCSP(ctx context.Context, serialNumber, cert string) (OCSPRespo
 		return OCSPResponse{}, errors.NewSDKError(err)
 	}
 
-	url := fmt.Sprintf("%s/certs/ocsp", sdk.certsURL)
+	url := fmt.Sprintf("%s/certs/ocsp", s.certsURL)
 
-	_, body, sdkerr := sdk.processRequest(ctx, http.MethodPost, url, "", requestBody, nil, http.StatusOK)
+	_, body, sdkerr := s.processRequest(ctx, http.MethodPost, url, "", requestBody, nil, http.StatusOK)
 	if sdkerr != nil {
 		return OCSPResponse{}, sdkerr
 	}
@@ -480,10 +480,10 @@ func (sdk mgSDK) OCSP(ctx context.Context, serialNumber, cert string) (OCSPRespo
 	return resp, nil
 }
 
-func (sdk mgSDK) ViewCA(ctx context.Context) (Certificate, errors.SDKError) {
-	url := fmt.Sprintf("%s/%s/view-ca", sdk.certsURL, certsEndpoint)
+func (s sdk) ViewCA(ctx context.Context) (Certificate, errors.SDKError) {
+	url := fmt.Sprintf("%s/%s/view-ca", s.certsURL, certsEndpoint)
 
-	_, body, sdkerr := sdk.processRequest(ctx, http.MethodGet, url, "", nil, nil, http.StatusOK)
+	_, body, sdkerr := s.processRequest(ctx, http.MethodGet, url, "", nil, nil, http.StatusOK)
 	if sdkerr != nil {
 		return Certificate{}, sdkerr
 	}
@@ -495,10 +495,10 @@ func (sdk mgSDK) ViewCA(ctx context.Context) (Certificate, errors.SDKError) {
 	return cert, nil
 }
 
-func (sdk mgSDK) DownloadCA(ctx context.Context) (CertificateBundle, errors.SDKError) {
-	url := fmt.Sprintf("%s/%s/download-ca", sdk.certsURL, certsEndpoint)
+func (s sdk) DownloadCA(ctx context.Context) (CertificateBundle, errors.SDKError) {
+	url := fmt.Sprintf("%s/%s/download-ca", s.certsURL, certsEndpoint)
 
-	_, body, sdkerr := sdk.processRequest(ctx, http.MethodGet, url, "", nil, nil, http.StatusOK)
+	_, body, sdkerr := s.processRequest(ctx, http.MethodGet, url, "", nil, nil, http.StatusOK)
 	if sdkerr != nil {
 		return CertificateBundle{}, sdkerr
 	}
@@ -523,7 +523,7 @@ func (sdk mgSDK) DownloadCA(ctx context.Context) (CertificateBundle, errors.SDKE
 	return bundle, nil
 }
 
-func (sdk mgSDK) IssueFromCSR(ctx context.Context, entityID, ttl, csr, domainID, token string) (Certificate, errors.SDKError) {
+func (s sdk) IssueFromCSR(ctx context.Context, entityID, ttl, csr, domainID, token string) (Certificate, errors.SDKError) {
 	pm := PageMetadata{
 		TTL: ttl,
 	}
@@ -537,12 +537,12 @@ func (sdk mgSDK) IssueFromCSR(ctx context.Context, entityID, ttl, csr, domainID,
 		return Certificate{}, errors.NewSDKError(err)
 	}
 
-	url, err := sdk.withQueryParams(fmt.Sprintf("%s/%s/%s/%s/%s", sdk.certsURL, domainID, certsEndpoint, csrEndpoint, entityID), "", pm)
+	url, err := s.withQueryParams(fmt.Sprintf("%s/%s/%s/%s/%s", s.certsURL, domainID, certsEndpoint, csrEndpoint, entityID), "", pm)
 	if err != nil {
 		return Certificate{}, errors.NewSDKError(err)
 	}
 
-	_, body, sdkerr := sdk.processRequest(ctx, http.MethodPost, url, token, d, nil, http.StatusOK)
+	_, body, sdkerr := s.processRequest(ctx, http.MethodPost, url, token, d, nil, http.StatusOK)
 	if sdkerr != nil {
 		return Certificate{}, sdkerr
 	}
@@ -554,7 +554,7 @@ func (sdk mgSDK) IssueFromCSR(ctx context.Context, entityID, ttl, csr, domainID,
 	return cert, nil
 }
 
-func (sdk mgSDK) IssueFromCSRInternal(ctx context.Context, entityID, ttl, csr, token string) (Certificate, errors.SDKError) {
+func (s sdk) IssueFromCSRInternal(ctx context.Context, entityID, ttl, csr, token string) (Certificate, errors.SDKError) {
 	r := csrReq{
 		CSR: []byte(csr),
 	}
@@ -568,12 +568,12 @@ func (sdk mgSDK) IssueFromCSRInternal(ctx context.Context, entityID, ttl, csr, t
 		TTL: ttl,
 	}
 
-	url, err := sdk.withQueryParams(fmt.Sprintf("%s/certs/csrs/%s", sdk.certsURL, entityID), "", pm)
+	url, err := s.withQueryParams(fmt.Sprintf("%s/certs/csrs/%s", s.certsURL, entityID), "", pm)
 	if err != nil {
 		return Certificate{}, errors.NewSDKError(err)
 	}
 
-	_, body, sdkerr := sdk.processRequest(ctx, http.MethodPost, url, token, d, nil, http.StatusOK)
+	_, body, sdkerr := s.processRequest(ctx, http.MethodPost, url, token, d, nil, http.StatusOK)
 	if sdkerr != nil {
 		return Certificate{}, sdkerr
 	}
@@ -585,9 +585,9 @@ func (sdk mgSDK) IssueFromCSRInternal(ctx context.Context, entityID, ttl, csr, t
 	return cert, nil
 }
 
-func (sdk mgSDK) GenerateCRL(ctx context.Context) ([]byte, errors.SDKError) {
-	url := fmt.Sprintf("%s/certs/%s", sdk.certsURL, crlEndpoint)
-	_, body, sdkerr := sdk.processRequest(ctx, http.MethodGet, url, "", nil, nil, http.StatusOK)
+func (s sdk) GenerateCRL(ctx context.Context) ([]byte, errors.SDKError) {
+	url := fmt.Sprintf("%s/certs/%s", s.certsURL, crlEndpoint)
+	_, body, sdkerr := s.processRequest(ctx, http.MethodGet, url, "", nil, nil, http.StatusOK)
 	if sdkerr != nil {
 		return nil, sdkerr
 	}
@@ -608,14 +608,14 @@ func (sdk mgSDK) GenerateCRL(ctx context.Context) ([]byte, errors.SDKError) {
 	return crlData, nil
 }
 
-func (sdk mgSDK) RevokeAll(ctx context.Context, entityID, domainID, token string) errors.SDKError {
-	url := fmt.Sprintf("%s/%s/%s/%s/delete", sdk.certsURL, domainID, certsEndpoint, entityID)
-	_, _, sdkerr := sdk.processRequest(ctx, http.MethodDelete, url, token, nil, nil, http.StatusNoContent)
+func (s sdk) RevokeAll(ctx context.Context, entityID, domainID, token string) errors.SDKError {
+	url := fmt.Sprintf("%s/%s/%s/%s/delete", s.certsURL, domainID, certsEndpoint, entityID)
+	_, _, sdkerr := s.processRequest(ctx, http.MethodDelete, url, token, nil, nil, http.StatusNoContent)
 	return sdkerr
 }
 
-func (sdk mgSDK) EntityID(ctx context.Context, serialNumber, domainID, token string) (string, errors.SDKError) {
-	cert, err := sdk.ViewCert(ctx, serialNumber, domainID, token)
+func (s sdk) EntityID(ctx context.Context, serialNumber, domainID, token string) (string, errors.SDKError) {
+	cert, err := s.ViewCert(ctx, serialNumber, domainID, token)
 	if err != nil {
 		return "", err
 	}
@@ -623,7 +623,7 @@ func (sdk mgSDK) EntityID(ctx context.Context, serialNumber, domainID, token str
 }
 
 func NewSDK(conf Config) SDK {
-	return &mgSDK{
+	return &sdk{
 		certsURL: conf.CertsURL,
 		HostURL:  conf.HostURL,
 
@@ -641,7 +641,7 @@ func NewSDK(conf Config) SDK {
 
 // processRequest creates and send a new HTTP request, and checks for errors in the HTTP response.
 // It then returns the response headers, the response body, and the associated error(s) (if any).
-func (sdk mgSDK) processRequest(ctx context.Context, method, reqUrl, token string, data []byte, headers map[string]string, expectedRespCodes ...int) (http.Header, []byte, errors.SDKError) {
+func (s sdk) processRequest(ctx context.Context, method, reqUrl, token string, data []byte, headers map[string]string, expectedRespCodes ...int) (http.Header, []byte, errors.SDKError) {
 	req, err := http.NewRequestWithContext(ctx, method, reqUrl, bytes.NewReader(data))
 	if err != nil {
 		return make(http.Header), []byte{}, errors.NewSDKError(err)
@@ -660,7 +660,7 @@ func (sdk mgSDK) processRequest(ctx context.Context, method, reqUrl, token strin
 		req.Header.Set("Authorization", token)
 	}
 
-	if sdk.curlFlag {
+	if s.curlFlag {
 		curlCommand, err := http2curl.GetCurlCommand(req)
 		if err != nil {
 			return nil, nil, errors.NewSDKError(err)
@@ -668,7 +668,7 @@ func (sdk mgSDK) processRequest(ctx context.Context, method, reqUrl, token strin
 		log.Println(curlCommand.String())
 	}
 
-	resp, err := sdk.client.Do(req)
+	resp, err := s.client.Do(req)
 	if err != nil {
 		return make(http.Header), []byte{}, errors.NewSDKError(err)
 	}
@@ -687,7 +687,7 @@ func (sdk mgSDK) processRequest(ctx context.Context, method, reqUrl, token strin
 	return resp.Header, body, nil
 }
 
-func (sdk mgSDK) withQueryParams(baseURL, endpoint string, pm PageMetadata) (string, error) {
+func (s sdk) withQueryParams(baseURL, endpoint string, pm PageMetadata) (string, error) {
 	q, err := pm.query()
 	if err != nil {
 		return "", err
@@ -742,7 +742,7 @@ type csrReq struct {
 	CSR []byte `json:"csr,omitempty"`
 }
 
-func (sdk mgSDK) CreateCSR(ctx context.Context, metadata certs.CSRMetadata, privKey any) (certs.CSR, errors.SDKError) {
+func (s sdk) CreateCSR(ctx context.Context, metadata certs.CSRMetadata, privKey any) (certs.CSR, errors.SDKError) {
 	template := &x509.CertificateRequest{
 		Subject: pkix.Name{
 			CommonName:         metadata.CommonName,
