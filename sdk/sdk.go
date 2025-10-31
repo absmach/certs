@@ -214,111 +214,111 @@ type SDK interface {
 	// IssueCert issues a certificate for a thing required for mTLS.
 	//
 	// example:
-	// cert , _ := sdk.IssueCert("entityID", "10h", []string{"ipAddr1", "ipAddr2"}, sdk.Options{CommonName: "commonName"}, "domainID", "token")
+	// cert , _ := sdk.IssueCert(context.Background(), "entityID", "10h", []string{"ipAddr1", "ipAddr2"}, sdk.Options{CommonName: "commonName"}, "domainID", "token")
 	//  fmt.Println(cert)
-	IssueCert(entityID, ttl string, ipAddrs []string, opts Options, domainID, token string) (Certificate, errors.SDKError)
+	IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, opts Options, domainID, token string) (Certificate, errors.SDKError)
 
 	// RevokeCert revokes certificate for thing with thingID
 	//
 	// example:
-	//  err := sdk.RevokeCert("serialNumber", "domainID", "token")
+	//  err := sdk.RevokeCert(context.Background(), "serialNumber", "domainID", "token")
 	//  fmt.Println(err) // nil if successful
-	RevokeCert(serialNumber, domainID, token string) errors.SDKError
+	RevokeCert(ctx context.Context, serialNumber, domainID, token string) errors.SDKError
 
 	// RenewCert renews certificate for entity with entityID and returns the new certificate
 	//
 	// example:
-	//  newCert, err := sdk.RenewCert("serialNumber", "domainID", "token")
+	//  newCert, err := sdk.RenewCert(context.Background(), "serialNumber", "domainID", "token")
 	//  fmt.Println(newCert.SerialNumber)
-	RenewCert(serialNumber, domainID, token string) (Certificate, errors.SDKError)
+	RenewCert(ctx context.Context, serialNumber, domainID, token string) (Certificate, errors.SDKError)
 
 	// ListCerts lists all certificates for a client
 	//
 	// example:
-	//  page, _ := sdk.ListCerts(PageMetadata{Limit: 10, Offset: 0}, "domainID", "token")
+	//  page, _ := sdk.ListCerts(context.Background(), PageMetadata{Limit: 10, Offset: 0}, "domainID", "token")
 	//  fmt.Println(page)
-	ListCerts(pm PageMetadata, domainID, token string) (CertificatePage, errors.SDKError)
+	ListCerts(ctx context.Context, pm PageMetadata, domainID, token string) (CertificatePage, errors.SDKError)
 
 	// DeleteCert deletes certificates for a given entityID.
 	//
 	// example:
-	//  err := sdk.DeleteCert("entityID", "domainID", "token")
+	//  err := sdk.DeleteCert(context.Background(), "entityID", "domainID", "token")
 	//  fmt.Println(err)
-	DeleteCert(entityID, domainID, token string) errors.SDKError
+	DeleteCert(ctx context.Context, entityID, domainID, token string) errors.SDKError
 
 	// ViewCert retrieves a certificate record from the database.
 	//
 	// example:
-	//  cert, _ := sdk.ViewCert("serialNumber", "domainID", "token")
+	//  cert, _ := sdk.ViewCert(context.Background(), "serialNumber", "domainID", "token")
 	//  fmt.Println(cert)
-	ViewCert(serialNumber, domainID, token string) (Certificate, errors.SDKError)
+	ViewCert(ctx context.Context, serialNumber, domainID, token string) (Certificate, errors.SDKError)
 
 	// OCSP checks the revocation status of a certificate using OpenBao's OCSP endpoint.
 	// Returns a binary OCSP response (RFC 6960) with detailed status information.
 	//
 	// example:
-	//  response, _ := sdk.OCSP("serialNumber", "")
+	//  response, _ := sdk.OCSP(context.Background(), "serialNumber", "")
 	//  fmt.Println(response)
-	OCSP(serialNumber, cert string) (OCSPResponse, errors.SDKError)
+	OCSP(ctx context.Context, serialNumber, cert string) (OCSPResponse, errors.SDKError)
 
 	// CreateCSR creates a Certificate Signing Request from metadata and private key.
 	//
 	// example:
-	//  csr, _ := sdk.CreateCSR(metadata, privateKey)
+	//  csr, _ := sdk.CreateCSR(context.Background(), metadata, privateKey)
 	//  fmt.Println(csr)
-	CreateCSR(metadata certs.CSRMetadata, privKey any) (certs.CSR, errors.SDKError)
+	CreateCSR(ctx context.Context, metadata certs.CSRMetadata, privKey any) (certs.CSR, errors.SDKError)
 
 	// ViewCA views the signing certificate
 	//
 	// example:
-	//  response, _ := sdk.ViewCA()
+	//  response, _ := sdk.ViewCA(context.Background(), )
 	//  fmt.Println(response)
-	ViewCA() (Certificate, errors.SDKError)
+	ViewCA(ctx context.Context) (Certificate, errors.SDKError)
 
 	// DownloadCA downloads the signing certificate (public endpoint)
 	//
 	// example:
-	//  response, _ := sdk.DownloadCA()
+	//  response, _ := sdk.DownloadCA(context.Background(), )
 	//  fmt.Println(response)
-	DownloadCA() (CertificateBundle, errors.SDKError)
+	DownloadCA(ctx context.Context) (CertificateBundle, errors.SDKError)
 
 	// IssueFromCSR issues certificate from provided CSR
 	//
 	// example:
-	//	certs, err := sdk.IssueFromCSR("entityID", "ttl", "csrFile", "domainID", "token")
+	//	certs, err := sdk.IssueFromCSR(context.Background(), "entityID", "ttl", "csrFile", "domainID", "token")
 	//	fmt.Println(err)
-	IssueFromCSR(entityID, ttl, csr, domainID, token string) (Certificate, errors.SDKError)
+	IssueFromCSR(ctx context.Context, entityID, ttl, csr, domainID, token string) (Certificate, errors.SDKError)
 
 	// IssueFromCSRInternal issues certificate from provided CSR using agent authentication
 	//
 	// example:
 	//	certs, err := sdk.IssueFromCSRInternal("entityID", "ttl", "csrFile", "agentToken")
 	//	fmt.Println(err)
-	IssueFromCSRInternal(entityID, ttl, csr, token string) (Certificate, errors.SDKError)
+	IssueFromCSRInternal(ctx context.Context, entityID, ttl, csr, token string) (Certificate, errors.SDKError)
 
 	// GenerateCRL generates a Certificate Revocation List
 	//
 	// example:
-	//	crlBytes, err := sdk.GenerateCRL()
+	//	crlBytes, err := sdk.GenerateCRL(context.Background(), )
 	//	fmt.Println(err)
-	GenerateCRL() ([]byte, errors.SDKError)
+	GenerateCRL(ctx context.Context) ([]byte, errors.SDKError)
 
 	// RevokeAll revokes all certificates for an entity ID
 	//
 	// example:
-	//	err := sdk.RevokeAll("entityID", "domainID", "token")
+	//	err := sdk.RevokeAll(context.Background(), "entityID", "domainID", "token")
 	//	fmt.Println(err)
-	RevokeAll(entityID, domainID, token string) errors.SDKError
+	RevokeAll(ctx context.Context, entityID, domainID, token string) errors.SDKError
 
-	// GetEntityID gets the entity ID for a certificate by serial number
+	// EntityID gets the entity ID for a certificate by serial number
 	//
 	// example:
-	//	entityID, err := sdk.GetEntityID("serialNumber", "domainID", "token")
+	//	entityID, err := sdk.EntityID(context.Background(), "serialNumber", "domainID", "token")
 	//	fmt.Println(entityID)
-	GetEntityID(serialNumber, domainID, token string) (string, errors.SDKError)
+	EntityID(ctx context.Context, serialNumber, domainID, token string) (string, errors.SDKError)
 }
 
-func (sdk mgSDK) IssueCert(entityID, ttl string, ipAddrs []string, opts Options, domainID, token string) (Certificate, errors.SDKError) {
+func (sdk mgSDK) IssueCert(ctx context.Context, entityID, ttl string, ipAddrs []string, opts Options, domainID, token string) (Certificate, errors.SDKError) {
 	r := certReq{
 		IpAddrs: ipAddrs,
 		TTL:     ttl,
@@ -329,7 +329,7 @@ func (sdk mgSDK) IssueCert(entityID, ttl string, ipAddrs []string, opts Options,
 		return Certificate{}, errors.NewSDKError(err)
 	}
 	url := fmt.Sprintf("%s/%s/%s/issue/%s", sdk.certsURL, domainID, certsEndpoint, entityID)
-	_, body, sdkerr := sdk.processRequest(context.Background(), http.MethodPost, url, token, d, nil, http.StatusCreated)
+	_, body, sdkerr := sdk.processRequest(ctx, http.MethodPost, url, token, d, nil, http.StatusCreated)
 	if sdkerr != nil {
 		return Certificate{}, sdkerr
 	}
@@ -341,10 +341,10 @@ func (sdk mgSDK) IssueCert(entityID, ttl string, ipAddrs []string, opts Options,
 	return cert, nil
 }
 
-func (sdk mgSDK) ViewCert(serialNumber, domainID, token string) (Certificate, errors.SDKError) {
+func (sdk mgSDK) ViewCert(ctx context.Context, serialNumber, domainID, token string) (Certificate, errors.SDKError) {
 	url := fmt.Sprintf("%s/%s/%s/%s", sdk.certsURL, domainID, certsEndpoint, serialNumber)
 
-	_, body, sdkerr := sdk.processRequest(context.Background(), http.MethodGet, url, token, nil, nil, http.StatusOK)
+	_, body, sdkerr := sdk.processRequest(ctx, http.MethodGet, url, token, nil, nil, http.StatusOK)
 	if sdkerr != nil {
 		return Certificate{}, sdkerr
 	}
@@ -356,17 +356,17 @@ func (sdk mgSDK) ViewCert(serialNumber, domainID, token string) (Certificate, er
 	return cert, nil
 }
 
-func (sdk mgSDK) RevokeCert(serialNumber, domainID, token string) errors.SDKError {
+func (sdk mgSDK) RevokeCert(ctx context.Context, serialNumber, domainID, token string) errors.SDKError {
 	url := fmt.Sprintf("%s/%s/%s/%s/revoke", sdk.certsURL, domainID, certsEndpoint, serialNumber)
 
-	_, _, sdkerr := sdk.processRequest(context.Background(), http.MethodPatch, url, token, nil, nil, http.StatusNoContent)
+	_, _, sdkerr := sdk.processRequest(ctx, http.MethodPatch, url, token, nil, nil, http.StatusNoContent)
 	return sdkerr
 }
 
-func (sdk mgSDK) RenewCert(serialNumber, domainID, token string) (Certificate, errors.SDKError) {
+func (sdk mgSDK) RenewCert(ctx context.Context, serialNumber, domainID, token string) (Certificate, errors.SDKError) {
 	url := fmt.Sprintf("%s/%s/%s/%s/renew", sdk.certsURL, domainID, certsEndpoint, serialNumber)
 
-	_, body, sdkerr := sdk.processRequest(context.Background(), http.MethodPatch, url, token, nil, nil, http.StatusOK)
+	_, body, sdkerr := sdk.processRequest(ctx, http.MethodPatch, url, token, nil, nil, http.StatusOK)
 	if sdkerr != nil {
 		return Certificate{}, sdkerr
 	}
@@ -382,13 +382,13 @@ func (sdk mgSDK) RenewCert(serialNumber, domainID, token string) (Certificate, e
 	return renewRes.Certificate, nil
 }
 
-func (sdk mgSDK) ListCerts(pm PageMetadata, domainID, token string) (CertificatePage, errors.SDKError) {
+func (sdk mgSDK) ListCerts(ctx context.Context, pm PageMetadata, domainID, token string) (CertificatePage, errors.SDKError) {
 	url, err := sdk.withQueryParams(fmt.Sprintf("%s/%s/%s", sdk.certsURL, domainID, certsEndpoint), "", pm)
 	if err != nil {
 		return CertificatePage{}, errors.NewSDKError(err)
 	}
 
-	_, body, sdkerr := sdk.processRequest(context.Background(), http.MethodGet, url, token, nil, nil, http.StatusOK)
+	_, body, sdkerr := sdk.processRequest(ctx, http.MethodGet, url, token, nil, nil, http.StatusOK)
 	if sdkerr != nil {
 		return CertificatePage{}, sdkerr
 	}
@@ -399,14 +399,14 @@ func (sdk mgSDK) ListCerts(pm PageMetadata, domainID, token string) (Certificate
 	return cp, nil
 }
 
-func (sdk mgSDK) DeleteCert(entityID, domainID, token string) errors.SDKError {
+func (sdk mgSDK) DeleteCert(ctx context.Context, entityID, domainID, token string) errors.SDKError {
 	url := fmt.Sprintf("%s/%s/%s/%s/delete", sdk.certsURL, domainID, certsEndpoint, entityID)
 
-	_, _, sdkerr := sdk.processRequest(context.Background(), http.MethodDelete, url, token, nil, nil, http.StatusNoContent)
+	_, _, sdkerr := sdk.processRequest(ctx, http.MethodDelete, url, token, nil, nil, http.StatusNoContent)
 	return sdkerr
 }
 
-func (sdk mgSDK) OCSP(serialNumber, cert string) (OCSPResponse, errors.SDKError) {
+func (sdk mgSDK) OCSP(ctx context.Context, serialNumber, cert string) (OCSPResponse, errors.SDKError) {
 	if serialNumber == "" && cert == "" {
 		return OCSPResponse{}, errors.NewSDKError(errors.New("either serial number or certificate must be provided"))
 	}
@@ -431,7 +431,7 @@ func (sdk mgSDK) OCSP(serialNumber, cert string) (OCSPResponse, errors.SDKError)
 
 	url := fmt.Sprintf("%s/certs/ocsp", sdk.certsURL)
 
-	_, body, sdkerr := sdk.processRequest(context.Background(), http.MethodPost, url, "", requestBody, nil, http.StatusOK)
+	_, body, sdkerr := sdk.processRequest(ctx, http.MethodPost, url, "", requestBody, nil, http.StatusOK)
 	if sdkerr != nil {
 		return OCSPResponse{}, sdkerr
 	}
@@ -480,10 +480,10 @@ func (sdk mgSDK) OCSP(serialNumber, cert string) (OCSPResponse, errors.SDKError)
 	return resp, nil
 }
 
-func (sdk mgSDK) ViewCA() (Certificate, errors.SDKError) {
+func (sdk mgSDK) ViewCA(ctx context.Context) (Certificate, errors.SDKError) {
 	url := fmt.Sprintf("%s/%s/view-ca", sdk.certsURL, certsEndpoint)
 
-	_, body, sdkerr := sdk.processRequest(context.Background(), http.MethodGet, url, "", nil, nil, http.StatusOK)
+	_, body, sdkerr := sdk.processRequest(ctx, http.MethodGet, url, "", nil, nil, http.StatusOK)
 	if sdkerr != nil {
 		return Certificate{}, sdkerr
 	}
@@ -495,10 +495,10 @@ func (sdk mgSDK) ViewCA() (Certificate, errors.SDKError) {
 	return cert, nil
 }
 
-func (sdk mgSDK) DownloadCA() (CertificateBundle, errors.SDKError) {
+func (sdk mgSDK) DownloadCA(ctx context.Context) (CertificateBundle, errors.SDKError) {
 	url := fmt.Sprintf("%s/%s/download-ca", sdk.certsURL, certsEndpoint)
 
-	_, body, sdkerr := sdk.processRequest(context.Background(), http.MethodGet, url, "", nil, nil, http.StatusOK)
+	_, body, sdkerr := sdk.processRequest(ctx, http.MethodGet, url, "", nil, nil, http.StatusOK)
 	if sdkerr != nil {
 		return CertificateBundle{}, sdkerr
 	}
@@ -523,7 +523,7 @@ func (sdk mgSDK) DownloadCA() (CertificateBundle, errors.SDKError) {
 	return bundle, nil
 }
 
-func (sdk mgSDK) IssueFromCSR(entityID, ttl, csr, domainID, token string) (Certificate, errors.SDKError) {
+func (sdk mgSDK) IssueFromCSR(ctx context.Context, entityID, ttl, csr, domainID, token string) (Certificate, errors.SDKError) {
 	pm := PageMetadata{
 		TTL: ttl,
 	}
@@ -542,7 +542,7 @@ func (sdk mgSDK) IssueFromCSR(entityID, ttl, csr, domainID, token string) (Certi
 		return Certificate{}, errors.NewSDKError(err)
 	}
 
-	_, body, sdkerr := sdk.processRequest(context.Background(), http.MethodPost, url, token, d, nil, http.StatusOK)
+	_, body, sdkerr := sdk.processRequest(ctx, http.MethodPost, url, token, d, nil, http.StatusOK)
 	if sdkerr != nil {
 		return Certificate{}, sdkerr
 	}
@@ -554,7 +554,7 @@ func (sdk mgSDK) IssueFromCSR(entityID, ttl, csr, domainID, token string) (Certi
 	return cert, nil
 }
 
-func (sdk mgSDK) IssueFromCSRInternal(entityID, ttl, csr, token string) (Certificate, errors.SDKError) {
+func (sdk mgSDK) IssueFromCSRInternal(ctx context.Context, entityID, ttl, csr, token string) (Certificate, errors.SDKError) {
 	r := csrReq{
 		CSR: []byte(csr),
 	}
@@ -573,7 +573,7 @@ func (sdk mgSDK) IssueFromCSRInternal(entityID, ttl, csr, token string) (Certifi
 		return Certificate{}, errors.NewSDKError(err)
 	}
 
-	_, body, sdkerr := sdk.processRequest(context.Background(), http.MethodPost, url, token, d, nil, http.StatusOK)
+	_, body, sdkerr := sdk.processRequest(ctx, http.MethodPost, url, token, d, nil, http.StatusOK)
 	if sdkerr != nil {
 		return Certificate{}, sdkerr
 	}
@@ -585,9 +585,9 @@ func (sdk mgSDK) IssueFromCSRInternal(entityID, ttl, csr, token string) (Certifi
 	return cert, nil
 }
 
-func (sdk mgSDK) GenerateCRL() ([]byte, errors.SDKError) {
+func (sdk mgSDK) GenerateCRL(ctx context.Context) ([]byte, errors.SDKError) {
 	url := fmt.Sprintf("%s/certs/%s", sdk.certsURL, crlEndpoint)
-	_, body, sdkerr := sdk.processRequest(context.Background(), http.MethodGet, url, "", nil, nil, http.StatusOK)
+	_, body, sdkerr := sdk.processRequest(ctx, http.MethodGet, url, "", nil, nil, http.StatusOK)
 	if sdkerr != nil {
 		return nil, sdkerr
 	}
@@ -608,14 +608,14 @@ func (sdk mgSDK) GenerateCRL() ([]byte, errors.SDKError) {
 	return crlData, nil
 }
 
-func (sdk mgSDK) RevokeAll(entityID, domainID, token string) errors.SDKError {
+func (sdk mgSDK) RevokeAll(ctx context.Context, entityID, domainID, token string) errors.SDKError {
 	url := fmt.Sprintf("%s/%s/%s/%s/delete", sdk.certsURL, domainID, certsEndpoint, entityID)
-	_, _, sdkerr := sdk.processRequest(context.Background(), http.MethodDelete, url, token, nil, nil, http.StatusNoContent)
+	_, _, sdkerr := sdk.processRequest(ctx, http.MethodDelete, url, token, nil, nil, http.StatusNoContent)
 	return sdkerr
 }
 
-func (sdk mgSDK) GetEntityID(serialNumber, domainID, token string) (string, errors.SDKError) {
-	cert, err := sdk.ViewCert(serialNumber, domainID, token)
+func (sdk mgSDK) EntityID(ctx context.Context, serialNumber, domainID, token string) (string, errors.SDKError) {
+	cert, err := sdk.ViewCert(ctx, serialNumber, domainID, token)
 	if err != nil {
 		return "", err
 	}
@@ -742,7 +742,7 @@ type csrReq struct {
 	CSR []byte `json:"csr,omitempty"`
 }
 
-func (sdk mgSDK) CreateCSR(metadata certs.CSRMetadata, privKey any) (certs.CSR, errors.SDKError) {
+func (sdk mgSDK) CreateCSR(ctx context.Context, metadata certs.CSRMetadata, privKey any) (certs.CSR, errors.SDKError) {
 	template := &x509.CertificateRequest{
 		Subject: pkix.Name{
 			CommonName:         metadata.CommonName,

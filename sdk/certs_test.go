@@ -4,6 +4,7 @@
 package sdk_test
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -188,7 +189,7 @@ func TestIssueCert(t *testing.T) {
 
 			authCall := auth.On("Authenticate", mock.Anything, tc.token).Return(tc.session, tc.authenticateErr)
 			svcCall := svc.On("IssueCert", mock.Anything, tc.session, tc.entityID, tc.ttl, tc.ipAddrs, certs.SubjectOptions{CommonName: tc.commonName}).Return(tc.svcresp, tc.svcerr)
-			resp, err := ctsdk.IssueCert(tc.entityID, tc.ttl, tc.ipAddrs, sdk.Options{CommonName: tc.commonName}, tc.domain, tc.token)
+			resp, err := ctsdk.IssueCert(context.Background(), tc.entityID, tc.ttl, tc.ipAddrs, sdk.Options{CommonName: tc.commonName}, tc.domain, tc.token)
 			assert.Equal(t, tc.err, err)
 			if tc.err == nil {
 				assert.Equal(t, tc.sdkCert.SerialNumber, resp.SerialNumber)
@@ -275,7 +276,7 @@ func TestRevokeCert(t *testing.T) {
 			authCall := auth.On("Authenticate", mock.Anything, tc.token).Return(tc.session, tc.authenticateErr)
 			svcCall := svc.On("RevokeBySerial", mock.Anything, tc.session, tc.serial).Return(tc.svcerr)
 
-			err := ctsdk.RevokeCert(tc.serial, tc.domain, tc.token)
+			err := ctsdk.RevokeCert(context.Background(), tc.serial, tc.domain, tc.token)
 			assert.Equal(t, tc.err, err)
 			if tc.desc != "RevokeCert with empty serial" && tc.desc != "RevokeCert with empty token" && tc.desc != "RevokeCert with empty domain" {
 				ok := svcCall.Parent.AssertCalled(t, "RevokeBySerial", mock.Anything, tc.session, tc.serial)
@@ -361,7 +362,7 @@ func TestDeleteCert(t *testing.T) {
 			authCall := auth.On("Authenticate", mock.Anything, tc.token).Return(tc.session, tc.authenticateErr)
 			svcCall := svc.On("RevokeAll", mock.Anything, tc.session, tc.entityID).Return(tc.svcerr)
 
-			err := ctsdk.DeleteCert(tc.entityID, tc.domain, tc.token)
+			err := ctsdk.DeleteCert(context.Background(), tc.entityID, tc.domain, tc.token)
 			assert.Equal(t, tc.err, err)
 			if tc.desc != "DeleteCert with empty entity id" && tc.desc != "DeleteCert with empty token" && tc.desc != "DeleteCert with empty domain" {
 				ok := svcCall.Parent.AssertCalled(t, "RevokeAll", mock.Anything, tc.session, tc.entityID)
@@ -444,7 +445,7 @@ func TestRenewCert(t *testing.T) {
 			authCall := auth.On("Authenticate", mock.Anything, tc.token).Return(tc.session, tc.authenticateErr)
 			svcCall := svc.On("RenewCert", mock.Anything, tc.session, tc.serial).Return(tc.svcresp, tc.svcerr)
 
-			cert, err := ctsdk.RenewCert(tc.serial, tc.domain, tc.token)
+			cert, err := ctsdk.RenewCert(context.Background(), tc.serial, tc.domain, tc.token)
 			assert.Equal(t, tc.err, err)
 			if tc.err == nil {
 				assert.Equal(t, tc.expected, cert)
@@ -550,7 +551,7 @@ func TestListCerts(t *testing.T) {
 			authCall := auth.On("Authenticate", mock.Anything, tc.token).Return(tc.session, tc.authenticateErr)
 			svcCall := svc.On("ListCerts", mock.Anything, tc.session, mock.Anything).Return(tc.svcResp, tc.svcerr)
 
-			resp, err := ctsdk.ListCerts(tc.sdkPm, tc.domain, tc.token)
+			resp, err := ctsdk.ListCerts(context.Background(), tc.sdkPm, tc.domain, tc.token)
 			assert.Equal(t, tc.err, err)
 			if tc.err == nil {
 				assert.Equal(t, tc.svcResp.Total, resp.Total)
@@ -625,7 +626,7 @@ func TestViewCert(t *testing.T) {
 			authCall := auth.On("Authenticate", mock.Anything, tc.token).Return(tc.session, tc.authenticateErr)
 			svcCall := svc.On("ViewCert", mock.Anything, tc.session, tc.serial).Return(tc.svcresp, tc.svcerr)
 
-			c, err := ctsdk.ViewCert(tc.serial, tc.domain, tc.token)
+			c, err := ctsdk.ViewCert(context.Background(), tc.serial, tc.domain, tc.token)
 			assert.Equal(t, tc.err, err)
 			if tc.err == nil {
 				ok := svcCall.Parent.AssertCalled(t, "ViewCert", mock.Anything, tc.session, tc.serial)
@@ -684,7 +685,7 @@ func TestDownloadCACert(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			svcCall := svc.On("RetrieveCAChain", mock.Anything).Return(tc.svcresp, tc.svcerr)
 
-			_, err := ctsdk.DownloadCA()
+			_, err := ctsdk.DownloadCA(context.Background())
 			assert.Equal(t, tc.err, err)
 			if tc.err == nil {
 				ok := svcCall.Parent.AssertCalled(t, "RetrieveCAChain", mock.Anything)
@@ -741,7 +742,7 @@ func TestViewCA(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			svcCall := svc.On("RetrieveCAChain", mock.Anything).Return(tc.svcresp, tc.svcerr)
 
-			c, err := ctsdk.ViewCA()
+			c, err := ctsdk.ViewCA(context.Background())
 			assert.Equal(t, tc.err, err)
 			if tc.err == nil {
 				ok := svcCall.Parent.AssertCalled(t, "RetrieveCAChain", mock.Anything)
@@ -791,7 +792,7 @@ func TestGenerateCRL(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			svcCall := svc.On("GenerateCRL", mock.Anything).Return(tc.svcresp, tc.svcerr)
 
-			resp, err := ctsdk.GenerateCRL()
+			resp, err := ctsdk.GenerateCRL(context.Background())
 			assert.Equal(t, tc.err, err)
 			if tc.err == nil {
 				assert.Equal(t, tc.svcresp, resp)
@@ -860,7 +861,7 @@ func TestRevokeAll(t *testing.T) {
 			authCall := auth.On("Authenticate", mock.Anything, tc.token).Return(tc.session, tc.authenticateErr)
 			svcCall := svc.On("RevokeAll", mock.Anything, tc.session, tc.entityID).Return(tc.svcerr)
 
-			err := ctsdk.RevokeAll(tc.entityID, tc.domain, tc.token)
+			err := ctsdk.RevokeAll(context.Background(), tc.entityID, tc.domain, tc.token)
 			assert.Equal(t, tc.err, err)
 			if tc.desc != "RevokeAll with empty entityID" {
 				ok := svcCall.Parent.AssertCalled(t, "RevokeAll", mock.Anything, tc.session, tc.entityID)
@@ -948,7 +949,7 @@ func TestGetEntityID(t *testing.T) {
 				svcCall = svc.On("ViewCert", mock.Anything, tc.session, tc.serial).Return(tc.svcresp, tc.svcerr)
 			}
 
-			resp, err := ctsdk.GetEntityID(tc.serial, tc.domain, tc.token)
+			resp, err := ctsdk.EntityID(context.Background(), tc.serial, tc.domain, tc.token)
 			assert.Equal(t, tc.err, err)
 			assert.Equal(t, tc.expected, resp)
 			if tc.desc != "GetEntityID with empty serial" {
@@ -1018,7 +1019,7 @@ func TestIssueFromCSRInternal(t *testing.T) {
 			authCall := auth.On("Authenticate", mock.Anything, agentToken).Return(agentSession, nil)
 			svcCall := svc.On("IssueFromCSRInternal", mock.Anything, tc.entityID, tc.ttl, mock.Anything).Return(tc.svcresp, tc.svcerr)
 
-			c, err := ctsdk.IssueFromCSRInternal(tc.entityID, tc.ttl, tc.csr, agentToken)
+			c, err := ctsdk.IssueFromCSRInternal(context.Background(), tc.entityID, tc.ttl, tc.csr, agentToken)
 			assert.Equal(t, tc.err, err)
 			if tc.err == nil {
 				assert.Equal(t, tc.sdkCert.SerialNumber, c.SerialNumber)
