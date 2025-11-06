@@ -12,24 +12,50 @@ Abstract Machines Certicate Manager is an open source, lightweight, scalable, an
 - Certificate Listing: List certificates based on various filters, such as entity ID, expiry time, and revocation status.
 - Certificate Authority (CA) Management: Retrieve the chain of CA certificates (root and intermediate) and generate Certificate Revocation Lists (CRLs).
 
+## Architecture
+
+The certs service has transitioned from a custom PKI implementation to using [OpenBao](https://openbao.org/) (an open-source fork of HashiCorp Vault) for production-grade PKI management. This provides enterprise-level security features including:
+
+- **Automated CA Management**: Root and intermediate CA certificate generation and rotation
+- **Secure Key Storage**: Private keys are stored securely within OpenBao's encrypted backend
+- **OCSP & CRL Support**: Built-in support for certificate revocation checking
+- **AppRole Authentication**: Service-to-service authentication using OpenBao's AppRole auth method
+- **Namespace Support**: Multi-tenancy support through OpenBao namespaces
+
+### PKI Configuration
+
+The PKI infrastructure is automatically configured during service startup via the [`docker/openbao-entrypoint.sh`](docker/openbao-entrypoint.sh) script. This entrypoint script handles:
+
+1. **OpenBao Initialization**: Sets up OpenBao server and generates encryption keys (uses Shamir's Secret Sharing to split the master key into 5 pieces, requiring any 3 to unlock)
+2. **Root CA Generation**: Creates the root CA certificate with configurable subject fields (organization, country, etc.)
+3. **Intermediate CA Setup**: Generates an intermediate CA certificate signed by the root CA for day-to-day certificate operations
+4. **Role Configuration**: Defines PKI roles with specific permissions and constraints for certificate issuance
+5. **AppRole Setup**: Configures secure authentication so the certs service can communicate with OpenBao
+6. **Policy Management**: Creates access control policies that define what operations are allowed (issue, revoke, sign certificates)
+
+The entrypoint script is configurable via environment variables (see `docker/.env`) and ensures that the PKI is properly initialized before the certs service starts.
+
 ## Features
 
-- PKI (Certicate renewal)
-- Active revocation (CRL, OSCP)
-- API (For management of PKI)
-- SDK
-- CLI
+- **OpenBao-Backed PKI**: Enterprise-grade PKI infrastructure powered by OpenBao
+- **Certificate Lifecycle Management**: Automated certificate renewal and revocation
+- **Active Revocation**: Real-time certificate status checking via CRL and OCSP
+- **RESTful API**: Comprehensive API for certificate management operations
+- **Go SDK**: Easy-to-use SDK for Go applications
+- **CLI Tool**: Command-line interface for certificate operations
+- **Multi-Tenancy**: Support for domain-based isolation via SuperMQ integration
 
 ## Prerequisites
 
 The following are needed to run absmach certs:
 
-- [Docker](https://docs.docker.com/install/) (version 26.0.0)
+- [Docker](https://docs.docker.com/install/) (version 28.5.1 or higher)
+- [SuperMQ](https://github.com/absmach/supermq) (version 0.18.2 or higher) running instance (required for authorization, domains, users management)
 
 Developing absmach certs will also require:
 
-- [Go](https://golang.org/doc/install) (version 1.21)
-- [Protobuf](https://github.com/protocolbuffers/protobuf#protocol-compiler-installation) (version 25.1)
+- [Go](https://golang.org/doc/install) (version 1.25.3 or higher)
+- [Protobuf](https://github.com/protocolbuffers/protobuf#protocol-compiler-installation) (version 32.0 or higher)
 
 ## Install
 
@@ -39,6 +65,11 @@ Once the prerequisites are installed, clone the repo
 git clone https://github.com/absmach/certs.git
 cd certs
 ```
+
+> **Note:**
+> Ensure SuperMQ is running before starting the certs service, as it depends on SuperMQ for authorization, domain management, and user management.
+
+### Running with Docker Compose
 
 Execute the following commands from the project's root:
 
@@ -51,6 +82,19 @@ This will bring up the certs docker services and interconnect them. This command
 ```bash
 make run
 ```
+
+### Running in Development Mode
+
+To run the service in development mode with all dependencies:
+
+```bash
+make all && make docker_dev && make run args="-d"
+```
+
+This command will:
+1. Build the service binaries
+2. Start the required Docker services (PostgreSQL, OpenBao, etc.)
+3. Run the certs service in detached mode (runs in the background, freeing up your terminal)
 
 ## Usage
 
