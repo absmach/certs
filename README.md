@@ -49,13 +49,13 @@ The entrypoint script is configurable via environment variables (see `docker/.en
 
 The following are needed to run absmach certs:
 
-- [Docker](https://docs.docker.com/install/) (version 26.0.0)
-- [SuperMQ](https://github.com/absmach/supermq) running instance (required for authorization, domains, users management)
+- [Docker](https://docs.docker.com/install/) (version 28.5.1 or higher)
+- [SuperMQ](https://github.com/absmach/supermq) (version 0.18.2 or higher) running instance (required for authorization, domains, users management)
 
 Developing absmach certs will also require:
 
-- [Go](https://golang.org/doc/install) (version 1.21)
-- [Protobuf](https://github.com/protocolbuffers/protobuf#protocol-compiler-installation) (version 25.1)
+- [Go](https://golang.org/doc/install) (version 1.25.3 or higher)
+- [Protobuf](https://github.com/protocolbuffers/protobuf#protocol-compiler-installation) (version 32.0 or higher)
 
 ## Install
 
