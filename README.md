@@ -66,8 +66,10 @@ git clone https://github.com/absmach/certs.git
 cd certs
 ```
 
+### Running with Docker Compose
+
 > **Note:**
-> Ensure SuperMQ is running before starting the certs service, as it depends on SuperMQ for authorization, domain management, and user management.
+> Ensure SuperMQ is running since Certs depends on SuperMQ for authorization, domain management, and user management.
 
 ### Running with Docker Compose
 
