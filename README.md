@@ -66,6 +66,9 @@ git clone https://github.com/absmach/certs.git
 cd certs
 ```
 
+> **Note:**
+> Ensure SuperMQ is running before starting the certs service, as it depends on SuperMQ for authorization, domain management, and user management.
+
 ### Running with Docker Compose
 
 Execute the following commands from the project's root:
@@ -82,8 +85,6 @@ make run
 
 ### Running in Development Mode
 
-**Important:** Ensure SuperMQ is running before starting the certs service, as it depends on SuperMQ for authorization, domain management, and user management.
-
 To run the service in development mode with all dependencies:
 
 ```bash
@@ -92,8 +93,8 @@ make all && make docker_dev && make run args="-d"
 
 This command will:
 1. Build the service binaries
-2. Start the required Docker services (PostgreSQL, OpenBao/Vault, etc.)
-3. Run the certs service in detached mode
+2. Start the required Docker services (PostgreSQL, OpenBao, etc.)
+3. Run the certs service in detached mode (runs in the background, freeing up your terminal)
 
 ## Usage
 
