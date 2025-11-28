@@ -14,7 +14,7 @@ Abstract Machines Certicate Manager is an open source, lightweight, scalable, an
 
 ## Features
 
-- PKI (Certicate renewal)
+- PKI (Certificate renewal)
 - Active revocation (CRL, OSCP)
 - API (For management of PKI)
 - SDK
