@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/absmach/certs"
@@ -52,6 +53,7 @@ const (
 	defSvcHTTPPort   = "9010"
 	defSvcGRPCPort   = "7012"
 	defDB            = "certs"
+	serviceTokenKey  = "SERVICE_TOKEN="
 )
 
 type config struct {
@@ -62,12 +64,17 @@ type config struct {
 	Secret     string  `env:"AM_CERTS_SECRET"               envDefault:""`
 
 	// OpenBao PKI settings
-	OpenBaoHost      string `env:"AM_CERTS_OPENBAO_HOST"         envDefault:"http://localhost:8200"`
-	OpenBaoAppRole   string `env:"AM_CERTS_OPENBAO_APP_ROLE"     envDefault:""`
-	OpenBaoAppSecret string `env:"AM_CERTS_OPENBAO_APP_SECRET"   envDefault:""`
-	OpenBaoNamespace string `env:"AM_CERTS_OPENBAO_NAMESPACE"    envDefault:""`
-	OpenBaoPKIPath   string `env:"AM_CERTS_OPENBAO_PKI_PATH"     envDefault:"pki"`
-	OpenBaoRole      string `env:"AM_CERTS_OPENBAO_ROLE"         envDefault:"certs"`
+	OpenBaoHost         string `env:"AM_CERTS_OPENBAO_HOST"           envDefault:"http://localhost:8200"`
+	OpenBaoAppRole      string `env:"AM_CERTS_OPENBAO_APP_ROLE"       envDefault:""`
+	OpenBaoAppSecret    string `env:"AM_CERTS_OPENBAO_APP_SECRET"     envDefault:""`
+	OpenBaoNamespace    string `env:"AM_CERTS_OPENBAO_NAMESPACE"      envDefault:""`
+	OpenBaoPKIPath      string `env:"AM_CERTS_OPENBAO_PKI_PATH"       envDefault:"pki"`
+	OpenBaoRole         string `env:"AM_CERTS_OPENBAO_ROLE"           envDefault:"certs"`
+	OpenBaoServiceToken string `env:"AM_CERTS_SERVICE_TOKEN"          envDefault:""`
+	ServiceTokenPath    string `env:"AM_CERTS_SERVICE_TOKEN_PATH"     envDefault:""`
+	SecretRefreshBuffer string `env:"AM_CERTS_SECRET_REFRESH_BUFFER"  envDefault:"24h"`
+	SecretIDTTL         string `env:"AM_CERTS_OPENBAO_SECRET_ID_TTL"  envDefault:"72h"`
+	SecretCheckInterval string `env:"AM_CERTS_SECRET_CHECK_INTERVAL"  envDefault:"30s"`
 }
 
 func main() {
@@ -108,11 +115,28 @@ func main() {
 		return
 	}
 
-	pkiAgent, err := pki.NewAgent(cfg.OpenBaoAppRole, cfg.OpenBaoAppSecret, cfg.OpenBaoHost, cfg.OpenBaoNamespace, cfg.OpenBaoPKIPath, cfg.OpenBaoRole, logger)
+	serviceToken := cfg.OpenBaoServiceToken
+	if serviceToken == "" && cfg.ServiceTokenPath != "" {
+		tokenData, err := os.ReadFile(cfg.ServiceTokenPath)
+		if err != nil {
+			logger.Warn("Failed to read service token from file, secret renewal will be disabled", "path", cfg.ServiceTokenPath, "error", err)
+		} else {
+			tokenLine := string(tokenData)
+			if strings.HasPrefix(tokenLine, serviceTokenKey) {
+				serviceToken = strings.TrimSpace(strings.TrimPrefix(tokenLine, serviceTokenKey))
+			}
+		}
+	}
+
+	pkiAgent, err := pki.NewAgent(cfg.OpenBaoAppRole, cfg.OpenBaoAppSecret, cfg.OpenBaoHost, cfg.OpenBaoNamespace, cfg.OpenBaoPKIPath, cfg.OpenBaoRole, serviceToken, cfg.SecretRefreshBuffer, cfg.SecretIDTTL, cfg.SecretCheckInterval, logger)
 	if err != nil {
 		logger.Error("failed to configure client for OpenBao PKI engine")
 		exitCode = 1
 		return
+	}
+
+	if err := pkiAgent.StartSecretRenewal(ctx); err != nil {
+		logger.Warn("Failed to start secret renewal, service may lose access when secret expires", "error", err)
 	}
 
 	dbConfig := pgclient.Config{Name: defDB}
