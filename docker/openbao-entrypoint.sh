@@ -353,9 +353,13 @@ if [ ! -f /opt/openbao/data/configured ]; then
     bao write auth/approle/role/"${AM_CERTS_OPENBAO_PKI_ROLE}"/role-id role_id="$AM_CERTS_OPENBAO_APP_ROLE" > /dev/null
   fi
 
-  # Set custom secret ID if provided
+  # Set custom secret ID if provided, otherwise generate one
   if [ -n "$AM_CERTS_OPENBAO_APP_SECRET" ]; then
     bao write auth/approle/role/"${AM_CERTS_OPENBAO_PKI_ROLE}"/custom-secret-id secret_id="$AM_CERTS_OPENBAO_APP_SECRET" > /dev/null
+    echo "$AM_CERTS_OPENBAO_APP_SECRET" > /opt/openbao/data/secret_id
+  else
+    GENERATED_SECRET_ID=$(bao write -field=secret_id -force auth/approle/role/"${AM_CERTS_OPENBAO_PKI_ROLE}"/secret-id)
+    echo "$GENERATED_SECRET_ID" > /opt/openbao/data/secret_id
   fi
 
   # Generate service token for additional access
@@ -411,6 +415,15 @@ else
   if [ -n "$AM_CERTS_OPENBAO_APP_SECRET" ]; then
     if bao write -field=client_token auth/approle/login role_id="$AM_CERTS_OPENBAO_APP_ROLE" secret_id="$AM_CERTS_OPENBAO_APP_SECRET" > /dev/null 2>&1; then
       SECRET_ID_VALID=true
+      echo "$AM_CERTS_OPENBAO_APP_SECRET" > /opt/openbao/data/secret_id
+    fi
+  elif [ -f /opt/openbao/data/secret_id ]; then
+    STORED_SECRET_ID=$(cat /opt/openbao/data/secret_id)
+    if [ -n "$STORED_SECRET_ID" ]; then
+      ROLE_ID=$(bao read -field=role_id auth/approle/role/"${AM_CERTS_OPENBAO_PKI_ROLE}"/role-id)
+      if bao write -field=client_token auth/approle/login role_id="$ROLE_ID" secret_id="$STORED_SECRET_ID" > /dev/null 2>&1; then
+        SECRET_ID_VALID=true
+      fi
     fi
   fi
   
@@ -419,6 +432,9 @@ else
     
     if [ -z "$NEW_SECRET_ID" ]; then
       echo "ERROR: Failed to generate new secret ID" >&2
+    else
+      echo "$NEW_SECRET_ID" > /opt/openbao/data/secret_id
+      echo "Generated new secret ID for certs service"
     fi
   fi
   

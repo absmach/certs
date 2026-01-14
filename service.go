@@ -16,9 +16,9 @@ import (
 
 const (
 	PrivateKeyBytes              = 2048
-	RootCAValidityPeriod         = time.Hour * 24 * 365 // 365 days
-	IntermediateCAValidityPeriod = time.Hour * 24 * 90  // 90 days
-	certValidityPeriod           = time.Hour * 24 * 30  // 30 days
+	RootCAValidityPeriod         = time.Hour * 24 * 365
+	IntermediateCAValidityPeriod = time.Hour * 24 * 90
+	certValidityPeriod           = time.Hour * 24 * 30
 	PrivateKey                   = "PRIVATE KEY"
 	RSAPrivateKey                = "RSA PRIVATE KEY"
 	ECPrivateKey                 = "EC PRIVATE KEY"
