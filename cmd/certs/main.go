@@ -72,6 +72,7 @@ type config struct {
 	OpenBaoRole         string `env:"AM_CERTS_OPENBAO_ROLE"           envDefault:"certs"`
 	OpenBaoServiceToken string `env:"AM_CERTS_SERVICE_TOKEN"          envDefault:""`
 	ServiceTokenPath    string `env:"AM_CERTS_SERVICE_TOKEN_PATH"     envDefault:""`
+	SecretIDPath        string `env:"AM_CERTS_SECRET_ID_PATH"         envDefault:""`
 	SecretRefreshBuffer string `env:"AM_CERTS_SECRET_REFRESH_BUFFER"  envDefault:"24h"`
 	SecretIDTTL         string `env:"AM_CERTS_OPENBAO_SECRET_ID_TTL"  envDefault:"72h"`
 	SecretCheckInterval string `env:"AM_CERTS_SECRET_CHECK_INTERVAL"  envDefault:"30s"`
@@ -109,8 +110,25 @@ func main() {
 		return
 	}
 
-	if cfg.OpenBaoAppRole == "" || cfg.OpenBaoAppSecret == "" {
-		logger.Error("OpenBao AppRole credentials not specified")
+	if cfg.OpenBaoAppRole == "" {
+		logger.Error("OpenBao AppRole not specified")
+		exitCode = 1
+		return
+	}
+
+	secretID := cfg.OpenBaoAppSecret
+	if secretID == "" && cfg.SecretIDPath != "" {
+		secretData, err := os.ReadFile(cfg.SecretIDPath)
+		if err != nil {
+			logger.Error("Failed to read secret ID from file", "path", cfg.SecretIDPath, "error", err)
+			exitCode = 1
+			return
+		}
+		secretID = strings.TrimSpace(string(secretData))
+	}
+
+	if secretID == "" {
+		logger.Error("OpenBao secret ID not specified (provide via AM_CERTS_OPENBAO_APP_SECRET or AM_CERTS_SECRET_ID_PATH)")
 		exitCode = 1
 		return
 	}
@@ -128,7 +146,7 @@ func main() {
 		}
 	}
 
-	pkiAgent, err := pki.NewAgent(cfg.OpenBaoAppRole, cfg.OpenBaoAppSecret, cfg.OpenBaoHost, cfg.OpenBaoNamespace, cfg.OpenBaoPKIPath, cfg.OpenBaoRole, serviceToken, cfg.SecretRefreshBuffer, cfg.SecretIDTTL, cfg.SecretCheckInterval, logger)
+	pkiAgent, err := pki.NewAgent(cfg.OpenBaoAppRole, secretID, cfg.OpenBaoHost, cfg.OpenBaoNamespace, cfg.OpenBaoPKIPath, cfg.OpenBaoRole, serviceToken, cfg.SecretRefreshBuffer, cfg.SecretIDTTL, cfg.SecretCheckInterval, logger)
 	if err != nil {
 		logger.Error("failed to configure client for OpenBao PKI engine")
 		exitCode = 1
