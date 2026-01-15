@@ -71,11 +71,11 @@ type config struct {
 	OpenBaoPKIPath      string `env:"AM_CERTS_OPENBAO_PKI_PATH"       envDefault:"pki"`
 	OpenBaoRole         string `env:"AM_CERTS_OPENBAO_ROLE"           envDefault:"certs"`
 	OpenBaoServiceToken string `env:"AM_CERTS_SERVICE_TOKEN"          envDefault:""`
-	ServiceTokenPath    string `env:"AM_CERTS_SERVICE_TOKEN_PATH"     envDefault:""`
-	SecretIDPath        string `env:"AM_CERTS_SECRET_ID_PATH"         envDefault:""`
-	SecretRefreshBuffer string `env:"AM_CERTS_SECRET_REFRESH_BUFFER"  envDefault:"24h"`
-	SecretIDTTL         string `env:"AM_CERTS_OPENBAO_SECRET_ID_TTL"  envDefault:"72h"`
-	SecretCheckInterval string `env:"AM_CERTS_SECRET_CHECK_INTERVAL"  envDefault:"30s"`
+	ServiceTokenPath     string `env:"AM_CERTS_SERVICE_TOKEN_PATH"      envDefault:""`
+	SecretIDPath         string `env:"AM_CERTS_SECRET_ID_PATH"          envDefault:""`
+	SecretRenewThreshold string `env:"AM_CERTS_SECRET_RENEW_THRESHOLD"  envDefault:"24h"`
+	SecretIDTTL          string `env:"AM_CERTS_OPENBAO_SECRET_ID_TTL"   envDefault:"72h"`
+	SecretCheckInterval  string `env:"AM_CERTS_SECRET_CHECK_INTERVAL"   envDefault:"30s"`
 }
 
 func main() {
@@ -146,7 +146,7 @@ func main() {
 		}
 	}
 
-	pkiAgent, err := pki.NewAgent(cfg.OpenBaoAppRole, secretID, cfg.OpenBaoHost, cfg.OpenBaoNamespace, cfg.OpenBaoPKIPath, cfg.OpenBaoRole, serviceToken, cfg.SecretRefreshBuffer, cfg.SecretIDTTL, cfg.SecretCheckInterval, logger)
+	pkiAgent, err := pki.NewAgent(cfg.OpenBaoAppRole, secretID, cfg.OpenBaoHost, cfg.OpenBaoNamespace, cfg.OpenBaoPKIPath, cfg.OpenBaoRole, serviceToken, cfg.SecretRenewThreshold, cfg.SecretIDTTL, cfg.SecretCheckInterval, logger)
 	if err != nil {
 		logger.Error("failed to configure client for OpenBao PKI engine")
 		exitCode = 1

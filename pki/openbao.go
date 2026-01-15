@@ -37,7 +37,7 @@ const (
 	certsList    = "certs"
 	signVerbatim = "sign-verbatim"
 
-	defaultRefreshBuffer       = 24 * time.Hour
+	defaultRenewThreshold      = 24 * time.Hour
 	defaultSecretIDTTL         = 72 * time.Hour
 	defaultSecretCheckInterval = 30 * time.Second
 )
@@ -73,7 +73,7 @@ type openbaoPKIAgent struct {
 	secret              *api.Secret
 	logger              *slog.Logger
 	serviceToken        string
-	refreshBuffer       time.Duration
+	renewThreshold      time.Duration
 	secretCheckInterval time.Duration
 	mu                  sync.RWMutex
 	secretAccessor      string
@@ -82,7 +82,7 @@ type openbaoPKIAgent struct {
 }
 
 // NewAgent instantiates an OpenBao PKI client that implements certs.Agent.
-func NewAgent(appRole, appSecret, host, namespace, path, role, serviceToken, refreshBuffer, secretIDTTL, secretCheckInterval string, logger *slog.Logger) (certs.Agent, error) {
+func NewAgent(appRole, appSecret, host, namespace, path, role, serviceToken, renewThreshold, secretIDTTL, secretCheckInterval string, logger *slog.Logger) (certs.Agent, error) {
 	conf := api.DefaultConfig()
 	conf.Address = host
 
@@ -96,10 +96,10 @@ func NewAgent(appRole, appSecret, host, namespace, path, role, serviceToken, ref
 
 	intermediatePath := path + "_int"
 
-	refreshDuration, err := time.ParseDuration(refreshBuffer)
+	renewDuration, err := time.ParseDuration(renewThreshold)
 	if err != nil {
-		logger.Warn("Invalid refresh buffer duration, using default 24h", "error", err, "provided", refreshBuffer)
-		refreshDuration = defaultRefreshBuffer
+		logger.Warn("Invalid renew threshold duration, using default 24h", "error", err, "provided", renewThreshold)
+		renewDuration = defaultRenewThreshold
 	}
 
 	ttlDuration, err := time.ParseDuration(secretIDTTL)
@@ -125,7 +125,7 @@ func NewAgent(appRole, appSecret, host, namespace, path, role, serviceToken, ref
 		client:              client,
 		logger:              logger,
 		serviceToken:        serviceToken,
-		refreshBuffer:       refreshDuration,
+		renewThreshold:      renewDuration,
 		secretCheckInterval: checkInterval,
 		secretTTL:           ttlDuration,
 		issueURL:            fmt.Sprintf("%s/%s/%s", intermediatePath, issue, role),
@@ -906,10 +906,11 @@ func (agent *openbaoPKIAgent) monitorSecretExpiration(ctx context.Context) {
 				continue
 			}
 
-			timeUntilExpiry := time.Until(createdAt.Add(ttl))
+			expiryTime := createdAt.Add(ttl)
+			timeUntilExpiry := time.Until(expiryTime)
 
-			if timeUntilExpiry <= agent.refreshBuffer {
-				agent.logger.Warn("Secret ID approaching expiration", "time_until_expiry", timeUntilExpiry, "refresh_buffer", agent.refreshBuffer, "expiry_time", createdAt.Add(ttl))
+			if timeUntilExpiry <= agent.renewThreshold {
+				agent.logger.Warn("Secret ID approaching expiration and will be renewed", "time_until_expiry", timeUntilExpiry, "renew_threshold", agent.renewThreshold, "expiry_time", expiryTime)
 
 				if err := agent.renewSecretID(); err != nil {
 					agent.logger.Error("Failed to renew secret ID", "error", err)
@@ -918,7 +919,7 @@ func (agent *openbaoPKIAgent) monitorSecretExpiration(ctx context.Context) {
 
 				agent.logger.Info("Successfully renewed secret ID")
 			} else {
-				agent.logger.Debug("Secret ID still valid", "time_until_expiry", timeUntilExpiry, "expiry_time", createdAt.Add(ttl))
+				agent.logger.Debug("Secret ID still valid", "time_until_expiry", timeUntilExpiry, "expiry_time", expiryTime)
 			}
 		}
 	}
