@@ -64,13 +64,13 @@ type config struct {
 	Secret     string  `env:"AM_CERTS_SECRET"               envDefault:""`
 
 	// OpenBao PKI settings
-	OpenBaoHost         string `env:"AM_CERTS_OPENBAO_HOST"           envDefault:"http://localhost:8200"`
-	OpenBaoAppRole      string `env:"AM_CERTS_OPENBAO_APP_ROLE"       envDefault:""`
-	OpenBaoAppSecret    string `env:"AM_CERTS_OPENBAO_APP_SECRET"     envDefault:""`
-	OpenBaoNamespace    string `env:"AM_CERTS_OPENBAO_NAMESPACE"      envDefault:""`
-	OpenBaoPKIPath      string `env:"AM_CERTS_OPENBAO_PKI_PATH"       envDefault:"pki"`
-	OpenBaoRole         string `env:"AM_CERTS_OPENBAO_ROLE"           envDefault:"certs"`
-	OpenBaoServiceToken string `env:"AM_CERTS_SERVICE_TOKEN"          envDefault:""`
+	OpenBaoHost          string `env:"AM_CERTS_OPENBAO_HOST"           envDefault:"http://localhost:8200"`
+	OpenBaoAppRole       string `env:"AM_CERTS_OPENBAO_APP_ROLE"       envDefault:""`
+	OpenBaoAppSecret     string `env:"AM_CERTS_OPENBAO_APP_SECRET"     envDefault:""`
+	OpenBaoNamespace     string `env:"AM_CERTS_OPENBAO_NAMESPACE"      envDefault:""`
+	OpenBaoPKIPath       string `env:"AM_CERTS_OPENBAO_PKI_PATH"       envDefault:"pki"`
+	OpenBaoRole          string `env:"AM_CERTS_OPENBAO_ROLE"           envDefault:"certs"`
+	OpenBaoServiceToken  string `env:"AM_CERTS_SERVICE_TOKEN"          envDefault:""`
 	ServiceTokenPath     string `env:"AM_CERTS_SERVICE_TOKEN_PATH"      envDefault:""`
 	SecretIDPath         string `env:"AM_CERTS_SECRET_ID_PATH"          envDefault:""`
 	SecretRenewThreshold string `env:"AM_CERTS_SECRET_RENEW_THRESHOLD"  envDefault:"24h"`
