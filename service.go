@@ -228,6 +228,13 @@ func (s *service) RenewCert(ctx context.Context, session authn.Session, serialNu
 		return Certificate{}, errors.Wrap(ErrUpdateEntity, err)
 	}
 
+	entityID, err := s.repo.GetEntityIDBySerial(ctx, serialNumber)
+	if err == nil {
+		if err := s.repo.SaveCertEntityMapping(ctx, newCert.SerialNumber, entityID); err != nil {
+			return Certificate{}, errors.Wrap(ErrFailedCertCreation, err)
+		}
+	}
+
 	return newCert, nil
 }
 
