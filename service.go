@@ -15,15 +15,15 @@ import (
 )
 
 const (
-	PrivateKeyBytes               = 2048
-	RootCAValidityPeriod          = time.Hour * 24 * 365 // 365 days
-	IntermediateCAValidityPeriod  = time.Hour * 24 * 90  // 90 days
-	certValidityPeriod            = time.Hour * 24 * 30  // 30 days
-	PrivateKey                    = "PRIVATE KEY"
-	RSAPrivateKey                 = "RSA PRIVATE KEY"
-	ECPrivateKey                  = "EC PRIVATE KEY"
-	PKCS8PrivateKey               = "PKCS8 PRIVATE KEY"
-	EDPrivateKey                  = "ED25519 PRIVATE KEY"
+	PrivateKeyBytes              = 2048
+	RootCAValidityPeriod         = time.Hour * 24 * 365 // 365 days
+	IntermediateCAValidityPeriod = time.Hour * 24 * 90  // 90 days
+	certValidityPeriod           = time.Hour * 24 * 30  // 30 days
+	PrivateKey                   = "PRIVATE KEY"
+	RSAPrivateKey                = "RSA PRIVATE KEY"
+	ECPrivateKey                 = "EC PRIVATE KEY"
+	PKCS8PrivateKey              = "PKCS8 PRIVATE KEY"
+	EDPrivateKey                 = "ED25519 PRIVATE KEY"
 )
 
 var (
