@@ -3,6 +3,8 @@
 
 package certs
 
+import "context"
+
 // Agent represents the PKI interface that all PKI implementations must satisfy.
 type Agent interface {
 	Issue(ttl string, ipAddrs []string, options SubjectOptions) (Certificate, error)
@@ -15,4 +17,5 @@ type Agent interface {
 	SignCSR(csr []byte, ttl string) (Certificate, error)
 	Renew(cert Certificate, increment string) (Certificate, error)
 	OCSP(serialNumber string, ocspRequestDER []byte) ([]byte, error)
+	StartSecretRenewal(ctx context.Context) error
 }
