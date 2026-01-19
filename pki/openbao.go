@@ -5,6 +5,7 @@
 package pki
 
 import (
+	"context"
 	"crypto"
 	"crypto/x509"
 	"encoding/json"
@@ -14,6 +15,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/absmach/certs"
@@ -34,6 +36,10 @@ const (
 	ocspPath     = "ocsp"
 	certsList    = "certs"
 	signVerbatim = "sign-verbatim"
+
+	defaultRenewThreshold      = 24 * time.Hour
+	defaultSecretIDTTL         = 72 * time.Hour
+	defaultSecretCheckInterval = 30 * time.Second
 )
 
 var (
@@ -43,32 +49,40 @@ var (
 )
 
 type openbaoPKIAgent struct {
-	appRole          string
-	appSecret        string
-	namespace        string
-	path             string
-	intermediatePath string
-	role             string
-	host             string
-	issueURL         string
-	signURL          string
-	signVerbatimURL  string
-	readURL          string
-	revokeURL        string
-	caURL            string
-	caChainURL       string
-	rootCAURL        string
-	rootCAChainURL   string
-	crlURL           string
-	ocspURL          string
-	certsURL         string
-	client           *api.Client
-	secret           *api.Secret
-	logger           *slog.Logger
+	appRole             string
+	appSecret           string
+	namespace           string
+	path                string
+	intermediatePath    string
+	role                string
+	host                string
+	issueURL            string
+	signURL             string
+	signVerbatimURL     string
+	readURL             string
+	revokeURL           string
+	caURL               string
+	caChainURL          string
+	rootCAURL           string
+	rootCAChainURL      string
+	crlURL              string
+	ocspURL             string
+	certsURL            string
+	secretIDPath        string
+	client              *api.Client
+	secret              *api.Secret
+	logger              *slog.Logger
+	serviceToken        string
+	renewThreshold      time.Duration
+	secretCheckInterval time.Duration
+	mu                  sync.RWMutex
+	secretAccessor      string
+	secretCreatedAt     time.Time
+	secretTTL           time.Duration
 }
 
 // NewAgent instantiates an OpenBao PKI client that implements certs.Agent.
-func NewAgent(appRole, appSecret, host, namespace, path, role string, logger *slog.Logger) (certs.Agent, error) {
+func NewAgent(appRole, appSecret, host, namespace, path, role, serviceToken, renewThreshold, secretIDTTL, secretCheckInterval string, logger *slog.Logger) (certs.Agent, error) {
 	conf := api.DefaultConfig()
 	conf.Address = host
 
@@ -82,28 +96,51 @@ func NewAgent(appRole, appSecret, host, namespace, path, role string, logger *sl
 
 	intermediatePath := path + "_int"
 
+	renewDuration, err := time.ParseDuration(renewThreshold)
+	if err != nil {
+		logger.Warn("Invalid renew threshold duration, using default 24h", "error", err, "provided", renewThreshold)
+		renewDuration = defaultRenewThreshold
+	}
+
+	ttlDuration, err := time.ParseDuration(secretIDTTL)
+	if err != nil {
+		logger.Warn("Invalid secret ID TTL duration, using default 72h", "error", err, "provided", secretIDTTL)
+		ttlDuration = defaultSecretIDTTL
+	}
+
+	checkInterval, err := time.ParseDuration(secretCheckInterval)
+	if err != nil {
+		logger.Warn("Invalid secret check interval duration, using default 30s", "error", err, "provided", secretCheckInterval)
+		checkInterval = defaultSecretCheckInterval
+	}
+
 	p := openbaoPKIAgent{
-		appRole:          appRole,
-		appSecret:        appSecret,
-		host:             host,
-		namespace:        namespace,
-		role:             role,
-		path:             path,
-		intermediatePath: intermediatePath,
-		client:           client,
-		logger:           logger,
-		issueURL:         fmt.Sprintf("%s/%s/%s", intermediatePath, issue, role),
-		signURL:          fmt.Sprintf("%s/%s/%s", intermediatePath, sign, role),
-		signVerbatimURL:  fmt.Sprintf("%s/%s/%s", intermediatePath, signVerbatim, role),
-		readURL:          fmt.Sprintf("%s/%s/", intermediatePath, cert),
-		revokeURL:        fmt.Sprintf("%s/%s", intermediatePath, revoke),
-		caURL:            fmt.Sprintf("%s/%s", intermediatePath, ca),
-		caChainURL:       fmt.Sprintf("%s/%s", intermediatePath, caChain),
-		rootCAURL:        fmt.Sprintf("%s/%s", path, ca),
-		rootCAChainURL:   fmt.Sprintf("%s/%s", path, caChain),
-		crlURL:           fmt.Sprintf("%s/%s", intermediatePath, crl),
-		ocspURL:          fmt.Sprintf("%s/%s", intermediatePath, ocspPath),
-		certsURL:         fmt.Sprintf("%s/%s", intermediatePath, certsList),
+		appRole:             appRole,
+		appSecret:           appSecret,
+		host:                host,
+		namespace:           namespace,
+		role:                role,
+		path:                path,
+		intermediatePath:    intermediatePath,
+		client:              client,
+		logger:              logger,
+		serviceToken:        serviceToken,
+		renewThreshold:      renewDuration,
+		secretCheckInterval: checkInterval,
+		secretTTL:           ttlDuration,
+		issueURL:            fmt.Sprintf("%s/%s/%s", intermediatePath, issue, role),
+		signURL:             fmt.Sprintf("%s/%s/%s", intermediatePath, sign, role),
+		signVerbatimURL:     fmt.Sprintf("%s/%s/%s", intermediatePath, signVerbatim, role),
+		readURL:             fmt.Sprintf("%s/%s/", intermediatePath, cert),
+		revokeURL:           fmt.Sprintf("%s/%s", intermediatePath, revoke),
+		caURL:               fmt.Sprintf("%s/%s", intermediatePath, ca),
+		caChainURL:          fmt.Sprintf("%s/%s", intermediatePath, caChain),
+		rootCAURL:           fmt.Sprintf("%s/%s", path, ca),
+		rootCAChainURL:      fmt.Sprintf("%s/%s", path, caChain),
+		crlURL:              fmt.Sprintf("%s/%s", intermediatePath, crl),
+		ocspURL:             fmt.Sprintf("%s/%s", intermediatePath, ocspPath),
+		certsURL:            fmt.Sprintf("%s/%s", intermediatePath, certsList),
+		secretIDPath:        fmt.Sprintf("auth/approle/role/%s/secret-id", role),
 	}
 	return &p, nil
 }
@@ -448,16 +485,26 @@ func (agent *openbaoPKIAgent) ListCerts(pm certs.PageMetadata) (certs.Certificat
 }
 
 func (agent *openbaoPKIAgent) LoginAndRenew() error {
-	if agent.secret != nil && agent.secret.Auth != nil && agent.secret.Auth.ClientToken != "" {
+	agent.mu.RLock()
+	hasValidToken := agent.secret != nil && agent.secret.Auth != nil && agent.secret.Auth.ClientToken != ""
+	agent.mu.RUnlock()
+
+	if hasValidToken {
 		_, err := agent.client.Auth().Token().LookupSelf()
 		if err == nil {
 			return nil
 		}
+		agent.logger.Warn("Token validation failed, re-authenticating", "error", err)
 	}
 
+	agent.mu.RLock()
+	roleID := agent.appRole
+	secretID := agent.appSecret
+	agent.mu.RUnlock()
+
 	authData := map[string]any{
-		"role_id":   agent.appRole,
-		"secret_id": agent.appSecret,
+		"role_id":   roleID,
+		"secret_id": secretID,
 	}
 
 	authResp, err := agent.client.Logical().Write("auth/approle/login", authData)
@@ -469,8 +516,10 @@ func (agent *openbaoPKIAgent) LoginAndRenew() error {
 		return errNoAuthInfo
 	}
 
+	agent.mu.Lock()
 	agent.secret = authResp
 	agent.client.SetToken(authResp.Auth.ClientToken)
+	agent.mu.Unlock()
 
 	if authResp.Auth.Renewable {
 		watcher, err := agent.client.NewLifetimeWatcher(&api.LifetimeWatcherInput{
@@ -799,4 +848,136 @@ func (agent *openbaoPKIAgent) getIssuerCertificate() (*x509.Certificate, error) 
 	}
 
 	return cert, nil
+}
+
+func (agent *openbaoPKIAgent) StartSecretRenewal(ctx context.Context) error {
+	if agent.serviceToken == "" {
+		agent.logger.Info("No service token provided, secret renewal is disabled")
+		return nil
+	}
+
+	if err := agent.LoginAndRenew(); err != nil {
+		return fmt.Errorf("initial login failed: %w", err)
+	}
+
+	if err := agent.lookupSecretMetadata(); err != nil {
+		agent.logger.Warn("Failed to lookup secret metadata, secret renewal may not work properly", "error", err)
+	}
+
+	go agent.monitorSecretExpiration(ctx)
+
+	return nil
+}
+
+func (agent *openbaoPKIAgent) lookupSecretMetadata() error {
+	tempClient, err := api.NewClient(agent.client.CloneConfig())
+	if err != nil {
+		return fmt.Errorf("failed to create temp client: %w", err)
+	}
+	if agent.namespace != "" {
+		tempClient.SetNamespace(agent.namespace)
+	}
+	tempClient.SetToken(agent.serviceToken)
+
+	agent.mu.Lock()
+	agent.secretCreatedAt = time.Now().UTC()
+	agent.mu.Unlock()
+
+	agent.logger.Info("Secret metadata initialized", "created_at", agent.secretCreatedAt, "ttl", agent.secretTTL.String())
+	return nil
+}
+
+func (agent *openbaoPKIAgent) monitorSecretExpiration(ctx context.Context) {
+	ticker := time.NewTicker(agent.secretCheckInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			agent.logger.Info("Secret renewal monitoring stopped")
+			return
+		case <-ticker.C:
+			agent.mu.RLock()
+			createdAt := agent.secretCreatedAt
+			ttl := agent.secretTTL
+			agent.mu.RUnlock()
+
+			if createdAt.IsZero() {
+				continue
+			}
+
+			expiryTime := createdAt.Add(ttl)
+			timeUntilExpiry := time.Until(expiryTime)
+
+			if timeUntilExpiry <= agent.renewThreshold {
+				agent.logger.Warn("Secret ID approaching expiration and will be renewed", "time_until_expiry", timeUntilExpiry, "renew_threshold", agent.renewThreshold, "expiry_time", expiryTime)
+
+				if err := agent.renewSecretID(); err != nil {
+					agent.logger.Error("Failed to renew secret ID", "error", err)
+					continue
+				}
+
+				agent.logger.Info("Successfully renewed secret ID")
+			} else {
+				agent.logger.Debug("Secret ID still valid", "time_until_expiry", timeUntilExpiry, "expiry_time", expiryTime)
+			}
+		}
+	}
+}
+
+func (agent *openbaoPKIAgent) renewSecretID() error {
+	tempClient, err := api.NewClient(agent.client.CloneConfig())
+	if err != nil {
+		return fmt.Errorf("failed to create temp client: %w", err)
+	}
+	if agent.namespace != "" {
+		tempClient.SetNamespace(agent.namespace)
+	}
+	tempClient.SetToken(agent.serviceToken)
+
+	if err := agent.renewServiceToken(tempClient); err != nil {
+		agent.logger.Warn("Failed to renew service token", "error", err)
+	}
+
+	secret, err := tempClient.Logical().Write(agent.secretIDPath, map[string]interface{}{})
+	if err != nil {
+		return fmt.Errorf("failed to generate new secret ID: %w", err)
+	}
+
+	if secret == nil || secret.Data == nil {
+		return fmt.Errorf("no data returned when generating secret ID")
+	}
+
+	newSecretID, ok := secret.Data["secret_id"].(string)
+	if !ok || newSecretID == "" {
+		return fmt.Errorf("secret_id not found in response")
+	}
+
+	secretAccessor, _ := secret.Data["secret_id_accessor"].(string)
+
+	agent.mu.Lock()
+	agent.appSecret = newSecretID
+	agent.secretAccessor = secretAccessor
+	agent.secretCreatedAt = time.Now().UTC()
+	agent.secret = nil
+	agent.mu.Unlock()
+
+	if err := agent.LoginAndRenew(); err != nil {
+		return fmt.Errorf("authentication failed with new secret: %w", err)
+	}
+
+	return nil
+}
+
+func (agent *openbaoPKIAgent) renewServiceToken(client *api.Client) error {
+	renewable, err := client.Auth().Token().RenewSelf(0)
+	if err != nil {
+		return fmt.Errorf("failed to renew service token: %w", err)
+	}
+
+	if renewable == nil || renewable.Auth == nil {
+		return fmt.Errorf("no auth information returned from token renewal")
+	}
+
+	return nil
 }
