@@ -106,6 +106,72 @@ func (_c *Repository_GetEntityIDBySerial_Call) RunAndReturn(run func(ctx context
 	return _c
 }
 
+// GetNamespaceByDomain provides a mock function for the type Repository
+func (_mock *Repository) GetNamespaceByDomain(ctx context.Context, domainID string) (string, error) {
+	ret := _mock.Called(ctx, domainID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetNamespaceByDomain")
+	}
+
+	var r0 string
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (string, error)); ok {
+		return returnFunc(ctx, domainID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) string); ok {
+		r0 = returnFunc(ctx, domainID)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, domainID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// Repository_GetNamespaceByDomain_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetNamespaceByDomain'
+type Repository_GetNamespaceByDomain_Call struct {
+	*mock.Call
+}
+
+// GetNamespaceByDomain is a helper method to define mock.On call
+//   - ctx context.Context
+//   - domainID string
+func (_e *Repository_Expecter) GetNamespaceByDomain(ctx interface{}, domainID interface{}) *Repository_GetNamespaceByDomain_Call {
+	return &Repository_GetNamespaceByDomain_Call{Call: _e.mock.On("GetNamespaceByDomain", ctx, domainID)}
+}
+
+func (_c *Repository_GetNamespaceByDomain_Call) Run(run func(ctx context.Context, domainID string)) *Repository_GetNamespaceByDomain_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *Repository_GetNamespaceByDomain_Call) Return(s string, err error) *Repository_GetNamespaceByDomain_Call {
+	_c.Call.Return(s, err)
+	return _c
+}
+
+func (_c *Repository_GetNamespaceByDomain_Call) RunAndReturn(run func(ctx context.Context, domainID string) (string, error)) *Repository_GetNamespaceByDomain_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListCertsByEntityID provides a mock function for the type Repository
 func (_mock *Repository) ListCertsByEntityID(ctx context.Context, entityID string) ([]string, error) {
 	ret := _mock.Called(ctx, entityID)
@@ -290,6 +356,75 @@ func (_c *Repository_SaveCertEntityMapping_Call) Return(err error) *Repository_S
 }
 
 func (_c *Repository_SaveCertEntityMapping_Call) RunAndReturn(run func(ctx context.Context, serialNumber string, entityID string) error) *Repository_SaveCertEntityMapping_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SaveDomainCAMapping provides a mock function for the type Repository
+func (_mock *Repository) SaveDomainCAMapping(ctx context.Context, domainID string, namespace string, createdBy string) error {
+	ret := _mock.Called(ctx, domainID, namespace, createdBy)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SaveDomainCAMapping")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string) error); ok {
+		r0 = returnFunc(ctx, domainID, namespace, createdBy)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// Repository_SaveDomainCAMapping_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveDomainCAMapping'
+type Repository_SaveDomainCAMapping_Call struct {
+	*mock.Call
+}
+
+// SaveDomainCAMapping is a helper method to define mock.On call
+//   - ctx context.Context
+//   - domainID string
+//   - namespace string
+//   - createdBy string
+func (_e *Repository_Expecter) SaveDomainCAMapping(ctx interface{}, domainID interface{}, namespace interface{}, createdBy interface{}) *Repository_SaveDomainCAMapping_Call {
+	return &Repository_SaveDomainCAMapping_Call{Call: _e.mock.On("SaveDomainCAMapping", ctx, domainID, namespace, createdBy)}
+}
+
+func (_c *Repository_SaveDomainCAMapping_Call) Run(run func(ctx context.Context, domainID string, namespace string, createdBy string)) *Repository_SaveDomainCAMapping_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *Repository_SaveDomainCAMapping_Call) Return(err error) *Repository_SaveDomainCAMapping_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *Repository_SaveDomainCAMapping_Call) RunAndReturn(run func(ctx context.Context, domainID string, namespace string, createdBy string) error) *Repository_SaveDomainCAMapping_Call {
 	_c.Call.Return(run)
 	return _c
 }

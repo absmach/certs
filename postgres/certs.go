@@ -104,6 +104,29 @@ func (repo certsRepo) RemoveCertEntityMapping(ctx context.Context, serialNumber 
 	return nil
 }
 
+// SaveDomainCAMapping saves the mapping between domain ID and OpenBao namespace.
+func (repo certsRepo) SaveDomainCAMapping(ctx context.Context, domainID, namespace, createdBy string) error {
+	q := `INSERT INTO domain_ca_mappings (domain_id, namespace, created_by) VALUES ($1, $2, $3)`
+	_, err := repo.db.ExecContext(ctx, q, domainID, namespace, createdBy)
+	if err != nil {
+		return handleError(ErrCreateEntity, err)
+	}
+	return nil
+}
+
+// GetNamespaceByDomain retrieves the OpenBao namespace for a given domain ID.
+func (repo certsRepo) GetNamespaceByDomain(ctx context.Context, domainID string) (string, error) {
+	q := `SELECT namespace FROM domain_ca_mappings WHERE domain_id = $1`
+	var namespace string
+	if err := repo.db.QueryRowxContext(ctx, q, domainID).Scan(&namespace); err != nil {
+		if err == sql.ErrNoRows {
+			return "", errors.Wrap(ErrNotFound, err)
+		}
+		return "", handleError(ErrNotFound, err)
+	}
+	return namespace, nil
+}
+
 func handleError(wrapper, err error) error {
 	pqErr, ok := err.(*pgconn.PgError)
 	if ok {

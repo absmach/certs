@@ -71,16 +71,20 @@ func (am *authorizationMiddleware) GetEntityID(ctx context.Context, serialNumber
 	return am.svc.GetEntityID(ctx, serialNumber)
 }
 
-func (am *authorizationMiddleware) OCSP(ctx context.Context, serialNumber string, ocspRequestDER []byte) ([]byte, error) {
-	return am.svc.OCSP(ctx, serialNumber, ocspRequestDER)
+func (am *authorizationMiddleware) OCSP(ctx context.Context, session authn.Session, serialNumber string, ocspRequestDER []byte) ([]byte, error) {
+	return am.svc.OCSP(ctx, session, serialNumber, ocspRequestDER)
 }
 
-func (am *authorizationMiddleware) GenerateCRL(ctx context.Context) ([]byte, error) {
-	return am.svc.GenerateCRL(ctx)
+func (am *authorizationMiddleware) GenerateCRL(ctx context.Context, session authn.Session) ([]byte, error) {
+	return am.svc.GenerateCRL(ctx, session)
 }
 
-func (am *authorizationMiddleware) RetrieveCAChain(ctx context.Context) (crt.Certificate, error) {
-	return am.svc.RetrieveCAChain(ctx)
+func (am *authorizationMiddleware) RetrieveCAChain(ctx context.Context, session authn.Session) (crt.Certificate, error) {
+	return am.svc.RetrieveCAChain(ctx, session)
+}
+
+func (am *authorizationMiddleware) ViewCA(ctx context.Context, session authn.Session) (crt.Certificate, error) {
+	return am.svc.ViewCA(ctx, session)
 }
 
 func (am *authorizationMiddleware) IssueFromCSR(ctx context.Context, session authn.Session, entityID, ttl string, csr crt.CSR) (crt.Certificate, error) {
@@ -92,6 +96,10 @@ func (am *authorizationMiddleware) IssueFromCSR(ctx context.Context, session aut
 
 func (am *authorizationMiddleware) IssueFromCSRInternal(ctx context.Context, entityID, ttl string, csr crt.CSR) (crt.Certificate, error) {
 	return am.svc.IssueFromCSRInternal(ctx, entityID, ttl, csr)
+}
+
+func (am *authorizationMiddleware) CreateDomainCA(ctx context.Context, domainID, createdBy string, options crt.CAOptions) error {
+	return am.svc.CreateDomainCA(ctx, domainID, createdBy, options)
 }
 
 func (am *authorizationMiddleware) checkUserDomainPermission(ctx context.Context, session authn.Session, permission string) error {

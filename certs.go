@@ -146,22 +146,42 @@ type Service interface {
 
 	// OCSP forwards OCSP requests to OpenBao's OCSP endpoint.
 	// If ocspRequestDER is provided, it will be used directly; otherwise, a request will be built from the serialNumber.
-	OCSP(ctx context.Context, serialNumber string, ocspRequestDER []byte) ([]byte, error)
+	OCSP(ctx context.Context, session authn.Session, serialNumber string, ocspRequestDER []byte) ([]byte, error)
 
 	// GetEntityID retrieves the entity ID for a certificate.
 	GetEntityID(ctx context.Context, serialNumber string) (string, error)
 
 	// GenerateCRL creates cert revocation list.
-	GenerateCRL(ctx context.Context) ([]byte, error)
+	GenerateCRL(ctx context.Context, session authn.Session) ([]byte, error)
 
 	// RetrieveCAChain retrieves the chain of CA i.e. root and intermediate cert concat together.
-	RetrieveCAChain(ctx context.Context) (Certificate, error)
+	RetrieveCAChain(ctx context.Context, session authn.Session) (Certificate, error)
+
+	// ViewCA retrieves the intermediate CA certificate.
+	ViewCA(ctx context.Context, session authn.Session) (Certificate, error)
 
 	// IssueFromCSR creates a certificate from a given CSR.
 	IssueFromCSR(ctx context.Context, session authn.Session, entityID, ttl string, csr CSR) (Certificate, error)
 
 	// IssueFromCSRInternal creates a certificate from a given CSR using agent token authentication.
 	IssueFromCSRInternal(ctx context.Context, entityID, ttl string, csr CSR) (Certificate, error)
+
+	// CreateDomainCA creates a dedicated CA infrastructure for a domain in OpenBao.
+	CreateDomainCA(ctx context.Context, domainID, createdBy string, options CAOptions) error
+}
+
+type CAOptions struct {
+	CommonName     string
+	Organization   string
+	Country        string
+	Province       string
+	Locality       string
+	StreetAddress  string
+	PostalCode     string
+	DNSNames       string
+	IPAddresses    string
+	URISANs        string
+	EmailAddresses string
 }
 
 type Repository interface {
@@ -176,4 +196,10 @@ type Repository interface {
 
 	// RemoveCertEntityMapping removes the mapping between certificate and entity ID.
 	RemoveCertEntityMapping(ctx context.Context, serialNumber string) error
+
+	// SaveDomainCAMapping saves the mapping between domain ID and OpenBao namespace.
+	SaveDomainCAMapping(ctx context.Context, domainID, namespace, createdBy string) error
+
+	// GetNamespaceByDomain retrieves the OpenBao namespace for a given domain ID.
+	GetNamespaceByDomain(ctx context.Context, domainID string) (string, error)
 }

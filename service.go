@@ -63,11 +63,37 @@ func NewService(ctx context.Context, pki Agent, repo Repository) (Service, error
 	return &svc, nil
 }
 
+// switchToDomainNamespace switches to the domain-specific namespace if domainID is provided.
+// It returns a cleanup function that must be deferred to restore the original namespace.
+func (s *service) switchToDomainNamespace(ctx context.Context, session authn.Session) (func(), error) {
+	if session.DomainID == "" {
+		return func() {}, nil
+	}
+
+	namespace, err := s.repo.GetNamespaceByDomain(ctx, session.DomainID)
+	if err != nil {
+		return nil, errors.Wrap(ErrNotFound, fmt.Errorf("namespace not found for domain %s: %w", session.DomainID, err))
+	}
+
+	originalNamespace := s.pki.GetCurrentNamespace()
+	s.pki.SetNamespace(namespace)
+
+	return func() {
+		s.pki.SetNamespace(originalNamespace)
+	}, nil
+}
+
 // IssueCert generates and issues a certificate for a given entityID.
 // It uses the PKI agent to generate and issue a certificate.
 // The certificate is managed by OpenBao PKI internally.
 // EntityType is used to customize certificate properties based on the entity type.
 func (s *service) IssueCert(ctx context.Context, session authn.Session, entityID, ttl string, ipAddrs []string, options SubjectOptions) (Certificate, error) {
+	cleanup, err := s.switchToDomainNamespace(ctx, session)
+	if err != nil {
+		return Certificate{}, err
+	}
+	defer cleanup()
+
 	cert, err := s.pki.Issue(ttl, ipAddrs, options)
 	if err != nil {
 		return Certificate{}, errors.Wrap(ErrFailedCertCreation, err)
@@ -83,6 +109,12 @@ func (s *service) IssueCert(ctx context.Context, session authn.Session, entityID
 }
 
 func (s *service) ListCerts(ctx context.Context, session authn.Session, pm PageMetadata) (CertificatePage, error) {
+	cleanup, err := s.switchToDomainNamespace(ctx, session)
+	if err != nil {
+		return CertificatePage{}, err
+	}
+	defer cleanup()
+
 	if pm.EntityID != "" {
 		serialNumbers, err := s.repo.ListCertsByEntityID(ctx, pm.EntityID)
 		if err != nil {
@@ -134,7 +166,13 @@ func (s *service) ListCerts(ctx context.Context, session authn.Session, pm PageM
 }
 
 func (s *service) RevokeBySerial(ctx context.Context, session authn.Session, serialNumber string) error {
-	err := s.pki.Revoke(serialNumber)
+	cleanup, err := s.switchToDomainNamespace(ctx, session)
+	if err != nil {
+		return err
+	}
+	defer cleanup()
+
+	err = s.pki.Revoke(serialNumber)
 	if err != nil {
 		return errors.Wrap(ErrUpdateEntity, err)
 	}
@@ -144,6 +182,12 @@ func (s *service) RevokeBySerial(ctx context.Context, session authn.Session, ser
 // RevokeAll revokes all certificates for a given entity ID.
 // It uses the repository to find all certificates for the entity ID, then revokes each one.
 func (s *service) RevokeAll(ctx context.Context, session authn.Session, entityID string) error {
+	cleanup, err := s.switchToDomainNamespace(ctx, session)
+	if err != nil {
+		return err
+	}
+	defer cleanup()
+
 	serialNumbers, err := s.repo.ListCertsByEntityID(ctx, entityID)
 	if err != nil {
 		return errors.Wrap(ErrViewEntity, err)
@@ -166,6 +210,12 @@ func (s *service) RevokeAll(ctx context.Context, session authn.Session, entityID
 }
 
 func (s *service) ViewCert(ctx context.Context, session authn.Session, serialNumber string) (Certificate, error) {
+	cleanup, err := s.switchToDomainNamespace(ctx, session)
+	if err != nil {
+		return Certificate{}, err
+	}
+	defer cleanup()
+
 	cert, err := s.pki.View(serialNumber)
 	if err != nil {
 		return Certificate{}, errors.Wrap(ErrViewEntity, err)
@@ -178,7 +228,13 @@ func (s *service) ViewCert(ctx context.Context, session authn.Session, serialNum
 	return cert, nil
 }
 
-func (s *service) ViewCA(ctx context.Context) (Certificate, error) {
+func (s *service) ViewCA(ctx context.Context, session authn.Session) (Certificate, error) {
+	cleanup, err := s.switchToDomainNamespace(ctx, session)
+	if err != nil {
+		return Certificate{}, err
+	}
+	defer cleanup()
+
 	caPEM, err := s.pki.GetCA()
 	if err != nil {
 		return Certificate{}, errors.Wrap(ErrViewEntity, err)
@@ -216,6 +272,12 @@ func (s *service) ViewCA(ctx context.Context) (Certificate, error) {
 // RenewCert renews a certificate by issuing a new certificate with the same parameters.
 // Returns the new certificate with extended TTL and a new serial number.
 func (s *service) RenewCert(ctx context.Context, session authn.Session, serialNumber string) (Certificate, error) {
+	cleanup, err := s.switchToDomainNamespace(ctx, session)
+	if err != nil {
+		return Certificate{}, err
+	}
+	defer cleanup()
+
 	cert, err := s.pki.View(serialNumber)
 	if err != nil {
 		return Certificate{}, errors.Wrap(ErrViewEntity, err)
@@ -233,7 +295,13 @@ func (s *service) RenewCert(ctx context.Context, session authn.Session, serialNu
 
 // OCSP forwards OCSP requests to OpenBao's OCSP endpoint.
 // If ocspRequestDER is provided, it will be used directly; otherwise, a request will be built from the serialNumber.
-func (s *service) OCSP(ctx context.Context, serialNumber string, ocspRequestDER []byte) ([]byte, error) {
+func (s *service) OCSP(ctx context.Context, session authn.Session, serialNumber string, ocspRequestDER []byte) ([]byte, error) {
+	cleanup, err := s.switchToDomainNamespace(ctx, session)
+	if err != nil {
+		return nil, err
+	}
+	defer cleanup()
+
 	return s.pki.OCSP(serialNumber, ocspRequestDER)
 }
 
@@ -245,7 +313,13 @@ func (s *service) GetEntityID(ctx context.Context, serialNumber string) (string,
 	return entityID, nil
 }
 
-func (s *service) GenerateCRL(ctx context.Context) ([]byte, error) {
+func (s *service) GenerateCRL(ctx context.Context, session authn.Session) ([]byte, error) {
+	cleanup, err := s.switchToDomainNamespace(ctx, session)
+	if err != nil {
+		return nil, err
+	}
+	defer cleanup()
+
 	crl, err := s.pki.GetCRL()
 	if err != nil {
 		return nil, errors.Wrap(ErrFailedCertCreation, err)
@@ -253,11 +327,23 @@ func (s *service) GenerateCRL(ctx context.Context) ([]byte, error) {
 	return crl, nil
 }
 
-func (s *service) RetrieveCAChain(ctx context.Context) (Certificate, error) {
+func (s *service) RetrieveCAChain(ctx context.Context, session authn.Session) (Certificate, error) {
+	cleanup, err := s.switchToDomainNamespace(ctx, session)
+	if err != nil {
+		return Certificate{}, err
+	}
+	defer cleanup()
+
 	return s.getConcatCAs(ctx)
 }
 
 func (s *service) IssueFromCSR(ctx context.Context, session authn.Session, entityID, ttl string, csr CSR) (Certificate, error) {
+	cleanup, err := s.switchToDomainNamespace(ctx, session)
+	if err != nil {
+		return Certificate{}, err
+	}
+	defer cleanup()
+
 	cert, err := s.pki.SignCSR(csr.CSR, ttl)
 	if err != nil {
 		return Certificate{}, errors.Wrap(ErrFailedCertCreation, err)
@@ -308,3 +394,35 @@ func (s *service) getConcatCAs(_ context.Context) (Certificate, error) {
 		ExpiryTime:  cert.NotAfter,
 	}, nil
 }
+
+// CreateDomainCA creates a dedicated CA infrastructure for a domain in OpenBao.
+// It creates a namespace for the domain, initializes root and intermediate CAs,
+// and saves the domain-namespace mapping in the database.
+func (s *service) CreateDomainCA(ctx context.Context, domainID, createdBy string, options CAOptions) error {
+	// Use domain ID as the namespace
+	namespace := domainID
+
+	// Create namespace in OpenBao
+	if err := s.pki.CreateNamespace(namespace); err != nil {
+		return errors.Wrap(ErrCreateEntity, fmt.Errorf("failed to create namespace: %w", err))
+	}
+
+	// Set common name if not provided
+	commonName := options.CommonName
+	if commonName == "" {
+		commonName = domainID
+	}
+
+	// Setup CA infrastructure in the namespace
+	if err := s.pki.SetupDomainCA(namespace, commonName, options); err != nil {
+		return errors.Wrap(ErrCreateEntity, fmt.Errorf("failed to setup domain CA: %w", err))
+	}
+
+	// Save domain-namespace mapping in database
+	if err := s.repo.SaveDomainCAMapping(ctx, domainID, namespace, createdBy); err != nil {
+		return errors.Wrap(ErrCreateEntity, fmt.Errorf("failed to save domain CA mapping: %w", err))
+	}
+
+	return nil
+}
+

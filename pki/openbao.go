@@ -981,3 +981,181 @@ func (agent *openbaoPKIAgent) renewServiceToken(client *api.Client) error {
 
 	return nil
 }
+
+// CreateNamespace creates a new namespace in OpenBao for domain isolation.
+func (agent *openbaoPKIAgent) CreateNamespace(namespace string) error {
+	if err := agent.LoginAndRenew(); err != nil {
+		return fmt.Errorf("failed to login: %w", err)
+	}
+
+	// Create namespace using sys/namespaces endpoint
+	path := fmt.Sprintf("sys/namespaces/%s", namespace)
+	_, err := agent.client.Logical().Write(path, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create namespace %s: %w", namespace, err)
+	}
+
+	agent.logger.Info("Created namespace", "namespace", namespace)
+	return nil
+}
+
+// SetupDomainCA initializes root and intermediate CA for a specific namespace.
+func (agent *openbaoPKIAgent) SetupDomainCA(namespace, commonName string, options certs.CAOptions) error {
+	if err := agent.LoginAndRenew(); err != nil {
+		return fmt.Errorf("failed to login: %w", err)
+	}
+
+	nsClient, err := agent.client.Clone()
+	if err != nil {
+		return fmt.Errorf("failed to clone client: %w", err)
+	}
+	nsClient.SetNamespace(namespace)
+	nsClient.SetToken(agent.client.Token())
+
+	// Enable PKI secrets engine for root CA
+	rootPath := agent.path
+	if err := nsClient.Sys().Mount(rootPath, &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			MaxLeaseTTL: "87600h", // 10 years
+		},
+	}); err != nil {
+		return fmt.Errorf("failed to enable root PKI: %w", err)
+	}
+
+	// Generate root CA
+	rootData := map[string]interface{}{
+		"common_name": commonName,
+		"ttl":         "87600h", // 10 years
+		"key_type":    "rsa",
+		"key_bits":    4096,
+	}
+	if options.Organization != "" {
+		rootData["organization"] = options.Organization
+	}
+	if options.Country != "" {
+		rootData["country"] = options.Country
+	}
+	if options.Province != "" {
+		rootData["province"] = options.Province
+	}
+	if options.Locality != "" {
+		rootData["locality"] = options.Locality
+	}
+
+	rootGenPath := fmt.Sprintf("%s/root/generate/internal", rootPath)
+	_, err = nsClient.Logical().Write(rootGenPath, rootData)
+	if err != nil {
+		return fmt.Errorf("failed to generate root CA: %w", err)
+	}
+
+	// Enable PKI secrets engine for intermediate CA
+	intermediatePath := rootPath + "_int"
+	if err := nsClient.Sys().Mount(intermediatePath, &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			MaxLeaseTTL: "43800h", // 5 years
+		},
+	}); err != nil {
+		return fmt.Errorf("failed to enable intermediate PKI: %w", err)
+	}
+
+	// Generate intermediate CSR
+	intCSRData := map[string]interface{}{
+		"common_name": commonName + " Intermediate Authority",
+		"key_type":    "rsa",
+		"key_bits":    4096,
+	}
+	if options.Organization != "" {
+		intCSRData["organization"] = options.Organization
+	}
+
+	intCSRPath := fmt.Sprintf("%s/intermediate/generate/internal", intermediatePath)
+	intCSRResp, err := nsClient.Logical().Write(intCSRPath, intCSRData)
+	if err != nil {
+		return fmt.Errorf("failed to generate intermediate CSR: %w", err)
+	}
+
+	csr, ok := intCSRResp.Data["csr"].(string)
+	if !ok {
+		return fmt.Errorf("failed to get CSR from response")
+	}
+
+	// Sign intermediate certificate with root CA
+	signData := map[string]interface{}{
+		"csr":    csr,
+		"format": "pem_bundle",
+		"ttl":    "43800h", // 5 years
+	}
+
+	signPath := fmt.Sprintf("%s/root/sign-intermediate", rootPath)
+	signResp, err := nsClient.Logical().Write(signPath, signData)
+	if err != nil {
+		return fmt.Errorf("failed to sign intermediate certificate: %w", err)
+	}
+
+	certificate, ok := signResp.Data["certificate"].(string)
+	if !ok {
+		return fmt.Errorf("failed to get certificate from response")
+	}
+
+	// Set signed certificate
+	setIntPath := fmt.Sprintf("%s/intermediate/set-signed", intermediatePath)
+	_, err = nsClient.Logical().Write(setIntPath, map[string]interface{}{
+		"certificate": certificate,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to set signed certificate: %w", err)
+	}
+
+	// Create role for certificate issuance
+	roleData := map[string]interface{}{
+		"allowed_domains":    []string{"*"},
+		"allow_subdomains":   true,
+		"allow_bare_domains": true,
+		"allow_ip_sans":      true,
+		"max_ttl":            "8760h", // 1 year
+		"ttl":                "2160h", // 90 days
+		"key_type":           "rsa",
+		"key_bits":           2048,
+	}
+
+	rolePath := fmt.Sprintf("%s/roles/%s", intermediatePath, agent.role)
+	_, err = nsClient.Logical().Write(rolePath, roleData)
+	if err != nil {
+		return fmt.Errorf("failed to create role: %w", err)
+	}
+
+	agent.logger.Info("Domain CA setup completed", "namespace", namespace, "common_name", commonName)
+	return nil
+}
+
+// SetNamespace switches the agent's active namespace context.
+func (agent *openbaoPKIAgent) SetNamespace(namespace string) {
+	agent.mu.Lock()
+	defer agent.mu.Unlock()
+	agent.namespace = namespace
+	agent.client.SetNamespace(namespace)
+	
+	// Update URLs with new namespace paths
+	intermediatePath := agent.path + "_int"
+	agent.issueURL = fmt.Sprintf("%s/%s/%s", intermediatePath, issue, agent.role)
+	agent.signURL = fmt.Sprintf("%s/%s/%s", intermediatePath, sign, agent.role)
+	agent.signVerbatimURL = fmt.Sprintf("%s/%s/%s", intermediatePath, signVerbatim, agent.role)
+	agent.readURL = fmt.Sprintf("%s/%s/", intermediatePath, cert)
+	agent.revokeURL = fmt.Sprintf("%s/%s", intermediatePath, revoke)
+	agent.caURL = fmt.Sprintf("%s/%s", intermediatePath, ca)
+	agent.caChainURL = fmt.Sprintf("%s/%s", intermediatePath, caChain)
+	agent.rootCAURL = fmt.Sprintf("%s/%s", agent.path, ca)
+	agent.rootCAChainURL = fmt.Sprintf("%s/%s", agent.path, caChain)
+	agent.crlURL = fmt.Sprintf("%s/%s", intermediatePath, crl)
+	agent.ocspURL = fmt.Sprintf("%s/%s", intermediatePath, ocspPath)
+	agent.certsURL = fmt.Sprintf("%s/%s", intermediatePath, certsList)
+}
+
+// GetCurrentNamespace returns the agent's current active namespace.
+func (agent *openbaoPKIAgent) GetCurrentNamespace() string {
+	agent.mu.Lock()
+	defer agent.mu.Unlock()
+	return agent.namespace
+}

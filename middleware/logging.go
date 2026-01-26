@@ -97,7 +97,7 @@ func (lm *loggingMiddleware) ViewCert(ctx context.Context, session authn.Session
 	return lm.svc.ViewCert(ctx, session, serialNumber)
 }
 
-func (lm *loggingMiddleware) OCSP(ctx context.Context, serialNumber string, ocspRequestDER []byte) (ocspBytes []byte, err error) {
+func (lm *loggingMiddleware) OCSP(ctx context.Context, session authn.Session, serialNumber string, ocspRequestDER []byte) (ocspBytes []byte, err error) {
 	defer func(begin time.Time) {
 		requestType := "serial_number"
 		if len(ocspRequestDER) > 0 {
@@ -110,7 +110,7 @@ func (lm *loggingMiddleware) OCSP(ctx context.Context, serialNumber string, ocsp
 		}
 		lm.logger.Info(message)
 	}(time.Now())
-	return lm.svc.OCSP(ctx, serialNumber, ocspRequestDER)
+	return lm.svc.OCSP(ctx, session, serialNumber, ocspRequestDER)
 }
 
 func (lm *loggingMiddleware) GetEntityID(ctx context.Context, serialNumber string) (entityID string, err error) {
@@ -125,7 +125,7 @@ func (lm *loggingMiddleware) GetEntityID(ctx context.Context, serialNumber strin
 	return lm.svc.GetEntityID(ctx, serialNumber)
 }
 
-func (lm *loggingMiddleware) GenerateCRL(ctx context.Context) (crl []byte, err error) {
+func (lm *loggingMiddleware) GenerateCRL(ctx context.Context, session authn.Session) (crl []byte, err error) {
 	defer func(begin time.Time) {
 		message := fmt.Sprintf("Method generate_crl took %s to complete", time.Since(begin))
 		if err != nil {
@@ -134,10 +134,10 @@ func (lm *loggingMiddleware) GenerateCRL(ctx context.Context) (crl []byte, err e
 		}
 		lm.logger.Info(message)
 	}(time.Now())
-	return lm.svc.GenerateCRL(ctx)
+	return lm.svc.GenerateCRL(ctx, session)
 }
 
-func (lm *loggingMiddleware) RetrieveCAChain(ctx context.Context) (cert certs.Certificate, err error) {
+func (lm *loggingMiddleware) RetrieveCAChain(ctx context.Context, session authn.Session) (cert certs.Certificate, err error) {
 	defer func(begin time.Time) {
 		message := fmt.Sprintf("Method retrieve_ca_chain took %s to complete", time.Since(begin))
 		if err != nil {
@@ -146,7 +146,19 @@ func (lm *loggingMiddleware) RetrieveCAChain(ctx context.Context) (cert certs.Ce
 		}
 		lm.logger.Info(fmt.Sprintf("%s without errors.", message))
 	}(time.Now())
-	return lm.svc.RetrieveCAChain(ctx)
+	return lm.svc.RetrieveCAChain(ctx, session)
+}
+
+func (lm *loggingMiddleware) ViewCA(ctx context.Context, session authn.Session) (cert certs.Certificate, err error) {
+	defer func(begin time.Time) {
+		message := fmt.Sprintf("Method view_ca took %s to complete", time.Since(begin))
+		if err != nil {
+			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
+			return
+		}
+		lm.logger.Info(fmt.Sprintf("%s without errors.", message))
+	}(time.Now())
+	return lm.svc.ViewCA(ctx, session)
 }
 
 func (lm *loggingMiddleware) IssueFromCSR(ctx context.Context, session authn.Session, entityID, ttl string, csr certs.CSR) (c certs.Certificate, err error) {
@@ -171,4 +183,17 @@ func (lm *loggingMiddleware) IssueFromCSRInternal(ctx context.Context, entityID,
 		lm.logger.Info(message)
 	}(time.Now())
 	return lm.svc.IssueFromCSRInternal(ctx, entityID, ttl, csr)
+}
+
+func (lm *loggingMiddleware) CreateDomainCA(ctx context.Context, domainID, createdBy string, options certs.CAOptions) (err error) {
+	defer func(begin time.Time) {
+		message := fmt.Sprintf("Method create_domain_ca for domain %s took %s to complete", domainID, time.Since(begin))
+		if err != nil {
+			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
+			return
+		}
+		lm.logger.Info(fmt.Sprintf("%s without errors.", message))
+	}(time.Now())
+
+	return lm.svc.CreateDomainCA(ctx, domainID, createdBy, options)
 }

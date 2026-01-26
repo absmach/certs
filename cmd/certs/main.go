@@ -16,6 +16,7 @@ import (
 	"github.com/absmach/certs"
 	certsgrpc "github.com/absmach/certs/api/grpc"
 	httpapi "github.com/absmach/certs/api/http"
+	certsevents "github.com/absmach/certs/events"
 	jaegerClient "github.com/absmach/certs/internal/jaeger"
 	"github.com/absmach/certs/internal/prometheus"
 	"github.com/absmach/certs/internal/server"
@@ -28,6 +29,8 @@ import (
 	smqlog "github.com/absmach/supermq/logger"
 	smqauthn "github.com/absmach/supermq/pkg/authn"
 	authsvcAuthn "github.com/absmach/supermq/pkg/authn/authsvc"
+	"github.com/absmach/supermq/pkg/events"
+	"github.com/absmach/supermq/pkg/events/store"
 	smqauthz "github.com/absmach/supermq/pkg/authz"
 	authsvcAuthz "github.com/absmach/supermq/pkg/authz/authsvc"
 	domainsAuthz "github.com/absmach/supermq/pkg/domains/grpcclient"
@@ -76,6 +79,25 @@ type config struct {
 	SecretRenewThreshold string `env:"AM_CERTS_SECRET_RENEW_THRESHOLD"  envDefault:"24h"`
 	SecretIDTTL          string `env:"AM_CERTS_OPENBAO_SECRET_ID_TTL"   envDefault:"72h"`
 	SecretCheckInterval  string `env:"AM_CERTS_SECRET_CHECK_INTERVAL"   envDefault:"30s"`
+
+	// Event Store settings
+	ESURL           string `env:"AM_ES_URL"            envDefault:"nats://localhost:4222"`
+	BaseStream      string `env:"AM_BASE_STREAM"       envDefault:"events.supermq.>"`
+	ESConsumerName  string `env:"AM_CERTS_ES_CONSUMER" envDefault:"certs"`
+
+	// CA Options for domain CAs
+	CACommonName      string `env:"AM_CERTS_OPENBAO_PKI_CA_CN"             envDefault:"Abstract Machines Certificate Authority"`
+	CAOrgUnit         string `env:"AM_CERTS_OPENBAO_PKI_CA_OU"             envDefault:""`
+	CAOrganization    string `env:"AM_CERTS_OPENBAO_PKI_CA_O"              envDefault:""`
+	CACountry         string `env:"AM_CERTS_OPENBAO_PKI_CA_C"              envDefault:""`
+	CALocality        string `env:"AM_CERTS_OPENBAO_PKI_CA_L"              envDefault:""`
+	CAState           string `env:"AM_CERTS_OPENBAO_PKI_CA_ST"             envDefault:""`
+	CAAddress         string `env:"AM_CERTS_OPENBAO_PKI_CA_ADDR"           envDefault:""`
+	CAPostalCode      string `env:"AM_CERTS_OPENBAO_PKI_CA_PO"             envDefault:""`
+	CADNSNames        string `env:"AM_CERTS_OPENBAO_PKI_CA_DNS_NAMES"      envDefault:""`
+	CAIPAddresses     string `env:"AM_CERTS_OPENBAO_PKI_CA_IP_ADDRESSES"   envDefault:""`
+	CAURISANs         string `env:"AM_CERTS_OPENBAO_PKI_CA_URI_SANS"       envDefault:""`
+	CAEmailAddresses  string `env:"AM_CERTS_OPENBAO_PKI_CA_EMAIL_ADDRESSES" envDefault:""`
 }
 
 func main() {
@@ -232,6 +254,12 @@ func main() {
 
 	svc := newService(ctx, db, dbConfig, tracer, logger, pkiAgent, authz)
 
+	if err := subscribeToES(ctx, svc, cfg, logger); err != nil {
+		logger.Error(fmt.Sprintf("failed to subscribe to event store: %s", err))
+		exitCode = 1
+		return
+	}
+
 	grpcServerConfig := smq.Config{Port: defSvcGRPCPort}
 	if err := env.ParseWithOptions(&grpcServerConfig, env.Options{Prefix: envPrefixGRPC}); err != nil {
 		log.Printf("failed to load %s gRPC server configuration : %s", svcName, err.Error())
@@ -279,6 +307,41 @@ func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, trac
 	svc = tracing.New(svc, tracer)
 
 	return svc
+}
+
+func subscribeToES(ctx context.Context, svc certs.Service, cfg config, logger *slog.Logger) error {
+	fmt.Printf("DEBUG: Event Store Configuration:\n")
+	fmt.Printf("  ESURL: %s\n", cfg.ESURL)
+	fmt.Printf("  BaseStream: %s\n", cfg.BaseStream)
+	fmt.Printf("  ESConsumerName: %s\n", cfg.ESConsumerName)
+
+	subscriber, err := store.NewSubscriber(ctx, cfg.ESURL, logger)
+	if err != nil {
+		return err
+	}
+
+	// Build default CA options from config for domain CAs
+	defaultCAOptions := certs.CAOptions{
+		CommonName:     cfg.CACommonName,
+		Organization:   cfg.CAOrganization,
+		Country:        cfg.CACountry,
+		Province:       cfg.CAState,
+		Locality:       cfg.CALocality,
+		StreetAddress:  cfg.CAAddress,
+		PostalCode:     cfg.CAPostalCode,
+		DNSNames:       cfg.CADNSNames,
+		IPAddresses:    cfg.CAIPAddresses,
+		URISANs:        cfg.CAURISANs,
+		EmailAddresses: cfg.CAEmailAddresses,
+	}
+
+	subConfig := events.SubscriberConfig{
+		Stream:   cfg.BaseStream,
+		Consumer: cfg.ESConsumerName,
+		Handler:  certsevents.NewEventHandler(svc, logger, defaultCAOptions),
+	}
+
+	return subscriber.Subscribe(ctx, subConfig)
 }
 
 func initLogger(levelText string) (*slog.Logger, error) {

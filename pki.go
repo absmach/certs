@@ -18,4 +18,16 @@ type Agent interface {
 	Renew(cert Certificate, increment string) (Certificate, error)
 	OCSP(serialNumber string, ocspRequestDER []byte) ([]byte, error)
 	StartSecretRenewal(ctx context.Context) error
+	
+	// CreateNamespace creates a new namespace in OpenBao for domain isolation.
+	CreateNamespace(namespace string) error
+	
+	// SetupDomainCA initializes root and intermediate CA for a specific namespace.
+	SetupDomainCA(namespace, commonName string, options CAOptions) error
+	
+	// SetNamespace switches the agent's active namespace context.
+	SetNamespace(namespace string)
+	
+	// GetCurrentNamespace returns the agent's current active namespace.
+	GetCurrentNamespace() string
 }

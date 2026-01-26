@@ -41,6 +41,57 @@ func (_m *Agent) EXPECT() *Agent_Expecter {
 	return &Agent_Expecter{mock: &_m.Mock}
 }
 
+// CreateNamespace provides a mock function for the type Agent
+func (_mock *Agent) CreateNamespace(namespace string) error {
+	ret := _mock.Called(namespace)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateNamespace")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(string) error); ok {
+		r0 = returnFunc(namespace)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// Agent_CreateNamespace_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateNamespace'
+type Agent_CreateNamespace_Call struct {
+	*mock.Call
+}
+
+// CreateNamespace is a helper method to define mock.On call
+//   - namespace string
+func (_e *Agent_Expecter) CreateNamespace(namespace interface{}) *Agent_CreateNamespace_Call {
+	return &Agent_CreateNamespace_Call{Call: _e.mock.On("CreateNamespace", namespace)}
+}
+
+func (_c *Agent_CreateNamespace_Call) Run(run func(namespace string)) *Agent_CreateNamespace_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *Agent_CreateNamespace_Call) Return(err error) *Agent_CreateNamespace_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *Agent_CreateNamespace_Call) RunAndReturn(run func(namespace string) error) *Agent_CreateNamespace_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetCA provides a mock function for the type Agent
 func (_mock *Agent) GetCA() ([]byte, error) {
 	ret := _mock.Called()
@@ -202,6 +253,50 @@ func (_c *Agent_GetCRL_Call) Return(bytes []byte, err error) *Agent_GetCRL_Call 
 }
 
 func (_c *Agent_GetCRL_Call) RunAndReturn(run func() ([]byte, error)) *Agent_GetCRL_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetCurrentNamespace provides a mock function for the type Agent
+func (_mock *Agent) GetCurrentNamespace() string {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetCurrentNamespace")
+	}
+
+	var r0 string
+	if returnFunc, ok := ret.Get(0).(func() string); ok {
+		r0 = returnFunc()
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	return r0
+}
+
+// Agent_GetCurrentNamespace_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetCurrentNamespace'
+type Agent_GetCurrentNamespace_Call struct {
+	*mock.Call
+}
+
+// GetCurrentNamespace is a helper method to define mock.On call
+func (_e *Agent_Expecter) GetCurrentNamespace() *Agent_GetCurrentNamespace_Call {
+	return &Agent_GetCurrentNamespace_Call{Call: _e.mock.On("GetCurrentNamespace")}
+}
+
+func (_c *Agent_GetCurrentNamespace_Call) Run(run func()) *Agent_GetCurrentNamespace_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Agent_GetCurrentNamespace_Call) Return(s string) *Agent_GetCurrentNamespace_Call {
+	_c.Call.Return(s)
+	return _c
+}
+
+func (_c *Agent_GetCurrentNamespace_Call) RunAndReturn(run func() string) *Agent_GetCurrentNamespace_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -519,6 +614,109 @@ func (_c *Agent_Revoke_Call) Return(err error) *Agent_Revoke_Call {
 }
 
 func (_c *Agent_Revoke_Call) RunAndReturn(run func(serialNumber string) error) *Agent_Revoke_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetNamespace provides a mock function for the type Agent
+func (_mock *Agent) SetNamespace(namespace string) {
+	_mock.Called(namespace)
+	return
+}
+
+// Agent_SetNamespace_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetNamespace'
+type Agent_SetNamespace_Call struct {
+	*mock.Call
+}
+
+// SetNamespace is a helper method to define mock.On call
+//   - namespace string
+func (_e *Agent_Expecter) SetNamespace(namespace interface{}) *Agent_SetNamespace_Call {
+	return &Agent_SetNamespace_Call{Call: _e.mock.On("SetNamespace", namespace)}
+}
+
+func (_c *Agent_SetNamespace_Call) Run(run func(namespace string)) *Agent_SetNamespace_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *Agent_SetNamespace_Call) Return() *Agent_SetNamespace_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *Agent_SetNamespace_Call) RunAndReturn(run func(namespace string)) *Agent_SetNamespace_Call {
+	_c.Run(run)
+	return _c
+}
+
+// SetupDomainCA provides a mock function for the type Agent
+func (_mock *Agent) SetupDomainCA(namespace string, commonName string, options certs.CAOptions) error {
+	ret := _mock.Called(namespace, commonName, options)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetupDomainCA")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(string, string, certs.CAOptions) error); ok {
+		r0 = returnFunc(namespace, commonName, options)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// Agent_SetupDomainCA_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetupDomainCA'
+type Agent_SetupDomainCA_Call struct {
+	*mock.Call
+}
+
+// SetupDomainCA is a helper method to define mock.On call
+//   - namespace string
+//   - commonName string
+//   - options certs.CAOptions
+func (_e *Agent_Expecter) SetupDomainCA(namespace interface{}, commonName interface{}, options interface{}) *Agent_SetupDomainCA_Call {
+	return &Agent_SetupDomainCA_Call{Call: _e.mock.On("SetupDomainCA", namespace, commonName, options)}
+}
+
+func (_c *Agent_SetupDomainCA_Call) Run(run func(namespace string, commonName string, options certs.CAOptions)) *Agent_SetupDomainCA_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 certs.CAOptions
+		if args[2] != nil {
+			arg2 = args[2].(certs.CAOptions)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *Agent_SetupDomainCA_Call) Return(err error) *Agent_SetupDomainCA_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *Agent_SetupDomainCA_Call) RunAndReturn(run func(namespace string, commonName string, options certs.CAOptions) error) *Agent_SetupDomainCA_Call {
 	_c.Call.Return(run)
 	return _c
 }

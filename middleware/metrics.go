@@ -78,12 +78,12 @@ func (mm *metricsMiddleware) ViewCert(ctx context.Context, session authn.Session
 	return mm.svc.ViewCert(ctx, session, serialNumber)
 }
 
-func (mm *metricsMiddleware) OCSP(ctx context.Context, serialNumber string, ocspRequestDER []byte) ([]byte, error) {
+func (mm *metricsMiddleware) OCSP(ctx context.Context, session authn.Session, serialNumber string, ocspRequestDER []byte) ([]byte, error) {
 	defer func(begin time.Time) {
 		mm.counter.With("method", "ocsp").Add(1)
 		mm.latency.With("method", "ocsp").Observe(time.Since(begin).Seconds())
 	}(time.Now())
-	return mm.svc.OCSP(ctx, serialNumber, ocspRequestDER)
+	return mm.svc.OCSP(ctx, session, serialNumber, ocspRequestDER)
 }
 
 func (mm *metricsMiddleware) GetEntityID(ctx context.Context, serialNumber string) (string, error) {
@@ -94,20 +94,28 @@ func (mm *metricsMiddleware) GetEntityID(ctx context.Context, serialNumber strin
 	return mm.svc.GetEntityID(ctx, serialNumber)
 }
 
-func (mm *metricsMiddleware) GenerateCRL(ctx context.Context) ([]byte, error) {
+func (mm *metricsMiddleware) GenerateCRL(ctx context.Context, session authn.Session) ([]byte, error) {
 	defer func(begin time.Time) {
 		mm.counter.With("method", "generate_crl").Add(1)
 		mm.latency.With("method", "generate_crl").Observe(time.Since(begin).Seconds())
 	}(time.Now())
-	return mm.svc.GenerateCRL(ctx)
+	return mm.svc.GenerateCRL(ctx, session)
 }
 
-func (mm *metricsMiddleware) RetrieveCAChain(ctx context.Context) (certs.Certificate, error) {
+func (mm *metricsMiddleware) RetrieveCAChain(ctx context.Context, session authn.Session) (certs.Certificate, error) {
 	defer func(begin time.Time) {
 		mm.counter.With("method", "retrieve_ca_chain").Add(1)
 		mm.latency.With("method", "retrieve_ca_chain").Observe(time.Since(begin).Seconds())
 	}(time.Now())
-	return mm.svc.RetrieveCAChain(ctx)
+	return mm.svc.RetrieveCAChain(ctx, session)
+}
+
+func (mm *metricsMiddleware) ViewCA(ctx context.Context, session authn.Session) (certs.Certificate, error) {
+	defer func(begin time.Time) {
+		mm.counter.With("method", "view_ca").Add(1)
+		mm.latency.With("method", "view_ca").Observe(time.Since(begin).Seconds())
+	}(time.Now())
+	return mm.svc.ViewCA(ctx, session)
 }
 
 func (mm *metricsMiddleware) IssueFromCSR(ctx context.Context, session authn.Session, entityID, ttl string, csr certs.CSR) (certs.Certificate, error) {
@@ -124,4 +132,13 @@ func (mm *metricsMiddleware) IssueFromCSRInternal(ctx context.Context, entityID,
 		mm.latency.With("method", "issue_from_csr_internal").Observe(time.Since(begin).Seconds())
 	}(time.Now())
 	return mm.svc.IssueFromCSRInternal(ctx, entityID, ttl, csr)
+}
+
+func (mm *metricsMiddleware) CreateDomainCA(ctx context.Context, domainID, createdBy string, options certs.CAOptions) error {
+	defer func(begin time.Time) {
+		mm.counter.With("method", "create_domain_ca").Add(1)
+		mm.latency.With("method", "create_domain_ca").Observe(time.Since(begin).Seconds())
+	}(time.Now())
+
+	return mm.svc.CreateDomainCA(ctx, domainID, createdBy, options)
 }

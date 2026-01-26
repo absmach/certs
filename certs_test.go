@@ -555,7 +555,7 @@ func TestGenerateCRL(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			agentCall := agent.On("GetCRL").Return(tc.crlBytes, tc.agentErr)
 
-			crlBytes, err := svc.GenerateCRL(context.Background())
+			crlBytes, err := svc.GenerateCRL(context.Background(), smqauthn.Session{})
 			if tc.err != nil {
 				assert.Error(t, err)
 			} else {

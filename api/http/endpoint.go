@@ -173,9 +173,14 @@ func ocspEndpoint(svc certs.Service) endpoint.Endpoint {
 			return nil, err
 		}
 
+		session, ok := ctx.Value(authn.SessionKey).(authn.Session)
+		if !ok {
+			return nil, svcerr.ErrAuthentication
+		}
+
 		var resBytes []byte
 		if req.SerialNumber != "" {
-			resBytes, err = svc.OCSP(ctx, req.SerialNumber, nil)
+			resBytes, err = svc.OCSP(ctx, session, req.SerialNumber, nil)
 			if err != nil {
 				return nil, err
 			}
@@ -184,7 +189,7 @@ func ocspEndpoint(svc certs.Service) endpoint.Endpoint {
 			if err != nil {
 				return nil, err
 			}
-			resBytes, err = svc.OCSP(ctx, "", ocspRequestDER)
+			resBytes, err = svc.OCSP(ctx, session, "", ocspRequestDER)
 			if err != nil {
 				return nil, err
 			}
@@ -203,7 +208,12 @@ func generateCRLEndpoint(svc certs.Service) endpoint.Endpoint {
 			return crlRes{}, err
 		}
 
-		crlBytes, err := svc.GenerateCRL(ctx)
+		session, ok := ctx.Value(authn.SessionKey).(authn.Session)
+		if !ok {
+			return crlRes{}, svcerr.ErrAuthentication
+		}
+
+		crlBytes, err := svc.GenerateCRL(ctx, session)
 		if err != nil {
 			return crlRes{}, err
 		}
@@ -221,7 +231,12 @@ func downloadCAEndpoint(svc certs.Service) endpoint.Endpoint {
 			return fileDownloadRes{}, err
 		}
 
-		cert, err := svc.RetrieveCAChain(ctx)
+		session, ok := ctx.Value(authn.SessionKey).(authn.Session)
+		if !ok {
+			return fileDownloadRes{}, svcerr.ErrAuthentication
+		}
+
+		cert, err := svc.RetrieveCAChain(ctx, session)
 		if err != nil {
 			return fileDownloadRes{}, err
 		}
@@ -241,7 +256,12 @@ func viewCAEndpoint(svc certs.Service) endpoint.Endpoint {
 			return viewCertRes{}, err
 		}
 
-		cert, err := svc.RetrieveCAChain(ctx)
+		session, ok := ctx.Value(authn.SessionKey).(authn.Session)
+		if !ok {
+			return viewCertRes{}, svcerr.ErrAuthentication
+		}
+
+		cert, err := svc.RetrieveCAChain(ctx, session)
 		if err != nil {
 			return viewCertRes{}, err
 		}
