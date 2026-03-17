@@ -30,10 +30,10 @@ jobs:
           protolint .
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v9
+        uses: golangci/golangci-lint-action@v9.2.0
         with:
-          version: v2.4.0
-          args: --config ./.golangci.yaml
+          version: v2.10.1
+          args: --config .golangci.yaml
 
       - name: Build all Binaries
         run: make all
