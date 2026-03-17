@@ -14,14 +14,22 @@ on:
 jobs:
   check-generated-files:
     runs-on: ubuntu-latest
+    env:
+      PROTOC_VERSION: "33.0"
+      PROTOC_GEN_GO_VERSION: "v1.36.11"
+      PROTOC_GEN_GO_GRPC_VERSION: "v1.6.0"
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
 
+      - name: Get Go version from go.mod
+        id: go-version
+        run: echo "version=$(grep '^go ' go.mod | awk '{print $2}')" >> $GITHUB_OUTPUT
+
       - name: Install Go
         uses: actions/setup-go@v6
         with:
-          go-version: 1.25.x
+          go-version: ${{ steps.go-version.outputs.version }}
           cache-dependency-path: "go.sum"
 
       - name: Set GOBIN
@@ -30,6 +38,10 @@ jobs:
       - name: Add GOBIN to PATH
         run: echo "$HOME/.local/bin" >> $GITHUB_PATH
 
+      - name: Check for changes in go.mod
+        run: |
+          go mod tidy
+          git diff --exit-code
 
       - name: Check for changes in go.mod
         run: |
@@ -51,27 +63,18 @@ jobs:
               - "mocks/agent.go"
               - "mocks/service.go"
 
-      - name: Set up protoc
+      - name: Install Protoc
+        if: steps.changes.outputs.proto == 'true'
+        uses: arduino/setup-protoc@v3
+        with:
+          version: ${{ env.PROTOC_VERSION }}
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Go Protobuf Plugins
         if: steps.changes.outputs.proto == 'true'
         run: |
-          PROTOC_VERSION=32.0
-          PROTOC_GEN_VERSION=v1.36.8
-          PROTOC_GRPC_VERSION=v1.5.1
-
-          # Download and install protoc
-          PROTOC_ZIP=protoc-$PROTOC_VERSION-linux-x86_64.zip
-          curl -0L -o $PROTOC_ZIP https://github.com/protocolbuffers/protobuf/releases/download/v$PROTOC_VERSION/$PROTOC_ZIP
-          unzip -o $PROTOC_ZIP -d protoc3
-          sudo mv protoc3/bin/* /usr/local/bin/
-          sudo mv protoc3/include/* /usr/local/include/
-          rm -rf $PROTOC_ZIP protoc3
-
-          # Install protoc-gen-go and protoc-gen-go-grpc
-          go install google.golang.org/protobuf/cmd/protoc-gen-go@$PROTOC_GEN_VERSION
-          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@$PROTOC_GRPC_VERSION
-
-          # Add protoc to the PATH
-          export PATH=$PATH:/usr/local/bin/protoc
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@$PROTOC_GEN_GO_VERSION
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@$PROTOC_GEN_GO_GRPC_VERSION
 
       - name: Check Protobuf is up to Date
         if: steps.changes.outputs.proto == 'true'
