@@ -50,7 +50,7 @@ jobs:
           node-version: lts/*
 
       - name: Check for changes in services
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@v4
         id: filter
         with:
           base: main
@@ -90,7 +90,7 @@ jobs:
         run: go test --race -v -count=1 -coverprofile=coverage/sdk.out ./sdk/...
 
       - name: Upload coverage
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
         with:
           token: ${{ secrets.CODECOV }}
           files: ./coverage/*.out
