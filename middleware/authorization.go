@@ -7,6 +7,7 @@ import (
 	"context"
 
 	crt "github.com/absmach/certs"
+	"github.com/absmach/supermq/auth"
 	"github.com/absmach/supermq/pkg/authn"
 	"github.com/absmach/supermq/pkg/authz"
 	"github.com/absmach/supermq/pkg/errors"
@@ -104,7 +105,20 @@ func (am *authorizationMiddleware) checkUserDomainPermission(ctx context.Context
 		ObjectType:  policies.DomainType,
 		Object:      session.DomainID,
 	}
-	if err := am.authz.Authorize(ctx, req); err != nil {
+
+	var pat *authz.PATReq
+	if session.PatID != "" {
+		pat = &authz.PATReq{
+			PatID:      session.PatID,
+			Domain:     session.DomainID,
+			Operation:  permission,
+			UserID:     session.UserID,
+			EntityID:   session.DomainID,
+			EntityType: auth.DomainsType.String(),
+		}
+	}
+
+	if err := am.authz.Authorize(ctx, req, pat); err != nil {
 		return errors.Wrap(svcerr.ErrAuthorization, err)
 	}
 	return nil
