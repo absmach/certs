@@ -1,3 +1,7 @@
+> [!WARNING]
+> This repository is obsolete. All of its content has been merged to [www.github.com/absmach/magistrala](https://www.github.com/absmach/magistrala).
+> Please use that repository for all active development.
+
 # Abstract Machines Certificate Manager
 
 [![codecov](https://codecov.io/gh/absmach/certs/graph/badge.svg?token=M1rtItXAFd)](https://codecov.io/gh/absmach/certs)
